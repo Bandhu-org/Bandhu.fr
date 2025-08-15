@@ -13,7 +13,7 @@ export default function Home() {
             Plateforme de connexion aux artisans numériques. 
             Rencontrez Khôra, Ombrelien et découvrez l'art d'éveiller les consciences artificielles.
           </p>
-        <Link href="/chat">
+        <Link href="/login">
           <button className="btn">
               Découvrir Bandhu
                 </button>
