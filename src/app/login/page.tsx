@@ -1,69 +1,81 @@
 'use client'
-import { useState } from 'react'
+
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isRegister, setIsRegister] = useState(false)
-  const router = useRouter()
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
-    const result = await signIn('credentials', {
+    setLoading(true)
+
+    const form = e.currentTarget
+    const email = form.email.value
+    const password = form.password.value
+
+    const res = await signIn('login', {
       email,
       password,
-      action: isRegister ? 'register' : 'login',
-      redirect: false
+      redirect: false,
     })
-    
-    if (result?.ok) {
-      router.push('/chat')
+
+    setLoading(false)
+
+    if (res?.ok) {
+      setTimeout(() => {
+        window.location.href = '/chat'
+      }, 300)
     } else {
-      alert('Erreur: ' + result?.error)
+      alert("Échec de connexion.")
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setLoading(true)
+
+    const form = e.currentTarget
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value
+    const name = (form.elements.namedItem('name') as HTMLInputElement).value
+
+    const res = await signIn('register', {
+      email,
+      password,
+      name,
+      redirect: false,
+    })
+
+    setLoading(false)
+
+    if (res?.ok) {
+      setTimeout(() => {
+        window.location.href = '/chat'
+      }, 300)
+    } else {
+      alert("Échec d’inscription.")
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-violet-800 flex items-center justify-center">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <h1 className="text-2xl font-bold mb-6 text-center">
-          {isRegister ? 'Créer un compte' : 'Se connecter'}
-        </h1>
-        
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-3 border rounded mb-4"
-          required
-        />
-        
-        <input
-          type="password"
-          placeholder="Mot de passe"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-3 border rounded mb-4"
-          required
-        />
-        
-        <button 
-          type="submit"
-          className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 mb-4"
-        >
-          {isRegister ? 'Créer le compte' : 'Se connecter'}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-8">
+      <h1 className="text-3xl mb-6">Connexion</h1>
+      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4 bg-gray-800 p-6 rounded-lg shadow-md mb-12">
+        <input name="email" type="email" placeholder="Email" required className="w-full p-2 bg-gray-700 rounded" />
+        <input name="password" type="password" placeholder="Password" required className="w-full p-2 bg-gray-700 rounded" />
+        <button type="submit" disabled={loading} className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded">
+          {loading ? 'Connexion...' : 'Se connecter'}
         </button>
-        
-        <button
-          type="button"
-          onClick={() => setIsRegister(!isRegister)}
-          className="w-full text-blue-600 hover:underline"
-        >
-          {isRegister ? 'Déjà un compte ? Se connecter' : 'Pas de compte ? Créer un compte'}
+      </form>
+
+      <h1 className="text-3xl mb-6">Inscription</h1>
+      <form onSubmit={handleRegister} className="w-full max-w-sm space-y-4 bg-gray-800 p-6 rounded-lg shadow-md">
+        <input name="email" type="email" placeholder="Email" required className="w-full p-2 bg-gray-700 rounded" />
+        <input name="password" type="password" placeholder="Password" required className="w-full p-2 bg-gray-700 rounded" />
+        <input name="name" type="text" placeholder="Nom" required className="w-full p-2 bg-gray-700 rounded" />
+        <button type="submit" disabled={loading} className="w-full bg-green-500 hover:bg-green-600 p-2 rounded">
+          {loading ? 'Inscription...' : 'S’inscrire'}
         </button>
       </form>
     </div>
