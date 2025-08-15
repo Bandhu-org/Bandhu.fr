@@ -1,14 +1,23 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { data: session, status } = useSession()
+
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // 🚀 Redirige si connecté
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/chat')
+    }
+  }, [status, router])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -17,9 +26,8 @@ export default function LoginPage() {
 
     const form = e.currentTarget
     const email = (form.elements.namedItem('email') as HTMLInputElement).value
-const password = (form.elements.namedItem('password') as HTMLInputElement).value
-const name = (form.elements.namedItem('name') as HTMLInputElement)?.value // facultatif
-
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value
+    const name = (form.elements.namedItem('name') as HTMLInputElement)?.value
 
     const res = await signIn(isLogin ? 'login' : 'register', {
       email,
@@ -99,6 +107,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#222',
     padding: '2rem',
     borderRadius: '8px',
+    boxShadow: '0 0 10px rgba(0,0,0,0.5)',
   },
   input: {
     padding: '0.75rem',
