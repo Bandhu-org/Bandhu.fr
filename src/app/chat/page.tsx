@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useSession, signIn, signOut } from 'next-auth/react'
 
 interface Message {
   id: number
@@ -51,7 +52,30 @@ interface Message {
     console.error('Error:', error)
   }
 }
+const { data: session, status } = useSession()
 
+console.log('Session:', session)
+console.log('Status:', status)
+
+if (status === 'loading') {
+  return <div>Loading...</div>
+}
+
+if (!session) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-violet-800 flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-white mb-8">Bandhu Chat</h1>
+        <a 
+          href="/login"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg inline-block"
+        >
+          Se connecter
+        </a>
+      </div>
+    </div>
+  )
+}
                                                                               return (
                                                                           <div style={{ display: 'flex', height: '100vh', background: '#0f0f23' }}>
                                                                                 
