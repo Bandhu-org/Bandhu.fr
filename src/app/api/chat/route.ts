@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "../auth/[...nextauth]/route"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,8 +12,17 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, conversationId, userId } = await request.json();
-
+    const session: any = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+    
+    const { message } = await request.json()
+    const userId = session.user.id
+    const conversationId = `conv_${userId}_main`  // Une conversation par user pour l'instant
+    
+    // Le reste du code...
 // CRÉER USER D'ABORD !
 let user = await prisma.user.findUnique({
   where: { id: userId }

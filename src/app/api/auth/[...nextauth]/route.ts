@@ -1,10 +1,10 @@
 import NextAuth from 'next-auth'
-import { PrismaClient } from "@prisma/client"
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -13,22 +13,21 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials: any) {
-        if (!credentials?.email || !credentials?.password) return null
-        
-        // Find or create user
-        let user: any = await prisma.user.findUnique({
+        if (!credentials?.email) return null
+
+        let user = await prisma.user.findUnique({
           where: { email: credentials.email }
         })
-        
+
         if (!user) {
           user = await prisma.user.create({
             data: {
-              email: credentials.email,
+              email: credentials.email
             }
           })
         }
-        
-        return { id: user.id, email: user.email, name: user.name }
+
+        return { id: user.id, email: user.email }
       }
     })
   ],
@@ -44,11 +43,16 @@ const handler = NextAuth({
         session.user.id = token.id
       }
       return session
-    },
+    }
+  },
+  pages: {
+    signIn: '/login' // ✅ Pour permettre redirect après signOut
   },
   session: {
-    strategy: "jwt" as const
-  },
-}) as any
+    strategy: 'jwt'
+  }
+} as any
+
+const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST }

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 interface Message {
   id: number
@@ -80,12 +81,19 @@ if (!session) {
                                                                           <div style={{ display: 'flex', height: '100vh', background: '#0f0f23' }}>
                                                                                 
                                                                                       {/* Sidebar */}
-                                                                                            <div style={{ width: '250px', background: '#1a1a2e', padding: '20px', color: 'white' }}>
-                                                                                                    <h2 style={{ marginBottom: '20px' }}>Chat avec Ombrelien</h2>
-                                                                                                            <button style={{ width: '100%', padding: '10px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '5px' }}>
-                                                                                                                      + Nouvelle conversation
-                                                                                                                              </button>
-                                                                                                                                    </div>
+<div style={{ width: '250px', background: '#1a1a2e', padding: '20px', color: 'white' }}>
+  
+  {/* INFO USER */}
+  <div style={{ marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '15px' }}>
+    <p style={{ fontSize: '14px', color: '#888' }}>Connecté en tant que</p>
+    <p style={{ fontWeight: 'bold' }}>{session?.user?.email}</p>
+  </div>
+
+  <h2 style={{ marginBottom: '20px' }}>Chat avec Ombrelien</h2>
+  <button style={{ width: '100%', padding: '10px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '5px' }}>
+    + Nouvelle conversation
+  </button>
+</div>
 
                                                                                                                                           {/* Chat Area */}
                                                                                                                                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
