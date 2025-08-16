@@ -6,6 +6,8 @@ import { PasswordSecurity } from '@/app/lib/password'
 //import { sendVerificationEmail } from '@/lib/email'
 import crypto from 'crypto'
 import { PrismaAdapter } from '@auth/prisma-adapter'
+import { Resend } from 'resend'
+
 const prisma = new PrismaClient()
 
 export const authOptions = {
@@ -18,7 +20,16 @@ export const authOptions = {
     console.log('🔥 Email à envoyer à:', email)
     console.log('🔥 Token:', token)
     console.log('🔥 URL:', url)
-    // TODO: Implémenter l'envoi d'email plus tard
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    
+    await resend.emails.send({
+      from: 'noreply@bandhu.fr',
+      to: email,
+      subject: '🔥 Ton lien de connexion Bandhu !',
+      html: `<a href="${url}">Clique ici pour te connecter</a>`
+    })
+    
+    console.log('✅ Email envoyé !')
   },
 }),
 
@@ -32,10 +43,12 @@ export const authOptions = {
       },
       async authorize(credentials: any) {
         console.log('🚀 LOGIN attempt:', credentials?.email)
-        
-        if (!credentials?.email || !credentials?.password) {
+        console.log('🔥 Données reçues:', credentials)
+
+        if (!credentials?.email || !credentials?.password || !credentials?.name) {
           console.log('❌ Missing credentials')
           return null
+          console.log('🔥 Credentials OK, checking existing user...')
         }
         
         // Find user
@@ -49,9 +62,9 @@ export const authOptions = {
         }
 
         // 🔥 TEMPORAIREMENT ON SKIP LA VERIF EMAIL
-        // if (!user.emailVerified) {
-        //   throw new Error('Please verify your email before logging in')
-        // }
+        if (!user.emailVerified) {
+           throw new Error('Please verify your email before logging in')
+         }
   
         // Verify password
         const isValid = await PasswordSecurity.verifyPassword(
@@ -108,7 +121,7 @@ export const authOptions = {
             email: credentials.email,
             password: hashedPassword,
             name: credentials.name || credentials.email.split('@')[0],
-            emailVerified: new Date(), // 🔥 Auto-vérifié pour l'instant
+            //emailVerified: new Date(), // 🔥 Auto-vérifié pour l'instant
             verificationToken,
             verificationExpires
           } as any
