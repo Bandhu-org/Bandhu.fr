@@ -70,6 +70,8 @@ model Conversation {
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  VerificationToken   String?   @unique
+  VerificationExpires  DateTime?
 }
 
 model Message {

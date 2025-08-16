@@ -38,11 +38,13 @@ export default function LoginPage() {
 
     setLoading(false)
 
-    if (res?.error) {
-      setError('Email ou mot de passe invalide')
-    } else {
-      router.push('/chat')
-    }
+  if (res?.error) {
+  console.log('🔥 ERREUR DÉTAILLÉE:', res.error)
+  setError(`Erreur: ${res.error}`)
+} else {
+  console.log('✅ SUCCESS:', res)
+  router.push('/chat')
+}
   }
 
   return (
