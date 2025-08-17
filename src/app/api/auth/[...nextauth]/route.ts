@@ -133,7 +133,7 @@ export const authOptions = {
 // Envoie l'email via le provider email
 // (On va utiliser Resend direct pour l'instant)
 const resend = new Resend(process.env.RESEND_API_KEY)
-const verifyUrl = `${process.env.NEXTAUTH_URL}/email-verify?token=${VerificationToken}`
+const verifyUrl = `${process.env.NEXTAUTH_URL}/emailverify?token=${VerificationToken}`
 console.log('🔗 Lien généré:', verifyUrl)
 
 await resend.emails.send({

@@ -2,6 +2,5 @@
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/page": "app/page.js",
   "/login/page": "app/login/page.js",
-  "/api/auth/verify-request/page": "app/api/auth/verify-request/page.js",
-  "/test/page": "app/test/page.js"
+  "/api/auth/verify-request/page": "app/api/auth/verify-request/page.js"
 }

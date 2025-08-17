@@ -5,7 +5,7 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+  const verifyUrl = `${process.env.NEXTAUTH_URL}/emailverify?token=${token}`;
 
   await resend.emails.send({
     from: "noreply@bandhu.fr",
