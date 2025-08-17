@@ -3,7 +3,6 @@ import { PrismaClient } from "@prisma/client"
 import CredentialsProvider from 'next-auth/providers/credentials'
 import EmailProvider from 'next-auth/providers/email'
 import { PasswordSecurity } from '@/app/lib/password'
-//import { sendVerificationEmail } from '@/lib/email'
 import crypto from 'crypto'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { Resend } from 'resend'
@@ -11,27 +10,27 @@ import { Resend } from 'resend'
 const prisma = new PrismaClient()
 
 export const authOptions = {
-    adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma),
   providers: [
     // 🔥 EMAIL PROVIDER (Magic Link)
     EmailProvider({
-  from: 'noreply@bandhu.fr',
-  sendVerificationRequest: async ({ identifier: email, url, token }) => {
-    console.log('🔥 Email à envoyer à:', email)
-    console.log('🔥 Token:', token)
-    console.log('🔥 URL:', url)
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    
-    await resend.emails.send({
       from: 'noreply@bandhu.fr',
-      to: email,
-      subject: '🔥 Ton lien de connexion Bandhu !',
-      html: `<a href="${url}">Clique ici pour te connecter</a>`
-    })
-    
-    console.log('✅ Email envoyé !')
-  },
-}),
+      sendVerificationRequest: async ({ identifier: email, url, token }) => {
+        console.log('🔥 Email à envoyer à:', email)
+        console.log('🔥 Token:', token)
+        console.log('🔥 URL:', url)
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        
+        await resend.emails.send({
+          from: 'noreply@bandhu.fr',
+          to: email,
+          subject: '🔥 Ton lien de connexion Bandhu !',
+          html: `<a href="${url}">Clique ici pour te connecter</a>`
+        })
+        
+        console.log('✅ Email envoyé !')
+      },
+    }),
 
     // 🎯 LOGIN PROVIDER
     CredentialsProvider({
@@ -43,42 +42,41 @@ export const authOptions = {
       },
       async authorize(credentials: any) {
         console.log('🚀 LOGIN attempt:', credentials?.email)
-        console.log('🔥 Données reçues:', credentials)
-
+        
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing credentials')
-          return null
+          throw new Error('MISSING_FIELDS')
         }
-        console.log('🔥 Credentials OK, checking existing user...')
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(credentials.email)) {
+          throw new Error('INVALID_EMAIL_FORMAT')
+        }
         
         // Find user
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         })
         
-        if (!user || !(user as any).password) {
-          console.log('❌ User not found or no password')
-          return null
+        if (!user) {
+          throw new Error('EMAIL_NOT_REGISTERED')
         }
-
-        // 🔥 TEMPORAIREMENT ON SKIP LA VERIF EMAIL
+        
         if (!user.emailVerified) {
-           throw new Error('Please verify your email before logging in')
-         }
-  
+          throw new Error('EMAIL_NOT_VERIFIED')
+        }
+        
         // Verify password
         const isValid = await PasswordSecurity.verifyPassword(
           credentials.password, 
-          (user as any).password
+          user.password
         )
         
         if (!isValid) {
-          console.log('❌ Invalid password')
-          return null
+          throw new Error('INVALID_PASSWORD')
         }
         
-        console.log('✅ Login success for:', user.email)
-        return { id: user.id, email: user.email, name: (user as any).name }
+        return { id: user.id, email: user.email, name: user.name }
       }
     }),
 
@@ -94,9 +92,19 @@ export const authOptions = {
       async authorize(credentials: any) {
         console.log('🚀 REGISTER attempt:', credentials?.email)
         
-        if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing credentials')
-          return null
+        if (!credentials?.email || !credentials?.password || !credentials?.name) {
+          throw new Error('MISSING_FIELDS')
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(credentials.email)) {
+          throw new Error('INVALID_EMAIL_FORMAT')
+        }
+        
+        // Validate password (min 6 chars)
+        if (credentials.password.length < 6) {
+          throw new Error('INVALID_PASSWORD_FORMAT')
         }
         
         // Check if user exists
@@ -105,8 +113,7 @@ export const authOptions = {
         })
         
         if (existingUser) {
-          console.log('❌ User already exists')
-          throw new Error('User already exists') // 🔥 Throw error au lieu de return null
+          throw new Error('USER_ALREADY_EXISTS')
         }
         
         // Hash password and create user
@@ -121,7 +128,6 @@ export const authOptions = {
             email: credentials.email,
             password: hashedPassword,
             name: credentials.name || credentials.email.split('@')[0],
-            //emailVerified: new Date(), // 🔥 Auto-vérifié pour l'instant
             VerificationToken,
             VerificationExpires
           } as any
@@ -129,25 +135,19 @@ export const authOptions = {
         
         console.log('✅ User created:', newUser.email)
 
+        // Envoie l'email de vérification
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        const verifyUrl = `${process.env.NEXTAUTH_URL}/emailverify?token=${VerificationToken}`
+        console.log('🔗 Lien généré:', verifyUrl)
 
-// Envoie l'email via le provider email
-// (On va utiliser Resend direct pour l'instant)
-const resend = new Resend(process.env.RESEND_API_KEY)
-const verifyUrl = `${process.env.NEXTAUTH_URL}/emailverify?token=${VerificationToken}`
-console.log('🔗 Lien généré:', verifyUrl)
+        await resend.emails.send({
+          from: 'noreply@bandhu.fr',
+          to: credentials.email,
+          subject: '🔥 Vérifie ton email Bandhu !',
+          html: `<a href="${verifyUrl}">Clique ici pour vérifier ton email</a>`
+        })
 
-await resend.emails.send({
-  from: 'noreply@bandhu.fr',
-  to: credentials.email,
-  subject: '🔥 Vérifie ton email Bandhu !',
-  html: `<a href="${verifyUrl}">Clique ici pour vérifier ton email</a>`
-})
-
-console.log('📧 Email de vérification envoyé !')
-
-
-        // TODO: Send verification email here later
-        // console.log(`Verification token for ${credentials.email}: ${verificationToken}`)
+        console.log('📧 Email de vérification envoyé !')
         
         return null
       }

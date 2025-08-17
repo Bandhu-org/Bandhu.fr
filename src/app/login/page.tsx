@@ -40,23 +40,44 @@ export default function LoginPage() {
 
   if (res?.error) {
   if (isLogin) {
-    // 🔥 Pour LOGIN, on affiche l'erreur
-    if (res.error.includes('verify')) {
-      router.push('/api/auth/verify-request')
+    // 🔥 Messages LOGIN
+    if (res.error === 'EMAIL_NOT_VERIFIED') {
+      setError('📧 Votre email n\'est pas encore vérifié. Consultez votre boîte mail.')
+    } else if (res.error === 'INVALID_PASSWORD') {
+      setError('❌ Mot de passe incorrect.')
+    } else if (res.error === 'EMAIL_NOT_REGISTERED') {
+      setError('❌ Aucun compte trouvé avec cet email.')
+    } else if (res.error === 'INVALID_EMAIL_FORMAT') {
+      setError('❌ Format d\'email invalide.')
+    } else if (res.error === 'MISSING_FIELDS') {
+      setError('❌ Veuillez remplir tous les champs.')
     } else {
-      setError('Erreur: ' + res.error)
+      setError('❌ Erreur de connexion.')
     }
   } else {
-    // 🔥 Pour REGISTER, on ignore l'erreur et on redirige toujours
-    router.push('/api/auth/verify-request')
+    // 🔥 Messages REGISTER
+    if (res.error === 'USER_ALREADY_EXISTS') {
+      setError('⚠️ Un compte existe déjà avec cet email.')
+    } else if (res.error === 'INVALID_EMAIL_FORMAT') {
+      setError('❌ Format d\'email invalide.')
+    } else if (res.error === 'INVALID_PASSWORD_FORMAT') {
+      setError('❌ Le mot de passe doit contenir au moins 6 caractères.')
+    } else if (res.error === 'MISSING_FIELDS') {
+      setError('❌ Veuillez remplir tous les champs.')
+    } else {
+      // 🔥 SEULEMENT si erreur inconnue
+      router.push('/api/auth/verify-request')
+    }
   }
 } else {
+  // 🔥 PAS D'ERREUR = SUCCÈS
   if (isLogin) {
     router.push('/chat')  
   } else {
-    router.push('/')
+    router.push('/api/auth/verify-request')  // Register réussi
   }
 
+  
   
 }
   }
