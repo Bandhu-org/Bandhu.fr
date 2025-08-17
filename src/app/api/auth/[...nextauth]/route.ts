@@ -45,11 +45,11 @@ export const authOptions = {
         console.log('🚀 LOGIN attempt:', credentials?.email)
         console.log('🔥 Données reçues:', credentials)
 
-        if (!credentials?.email || !credentials?.password || !credentials?.name) {
+        if (!credentials?.email || !credentials?.password) {
           console.log('❌ Missing credentials')
           return null
-          console.log('🔥 Credentials OK, checking existing user...')
         }
+        console.log('🔥 Credentials OK, checking existing user...')
         
         // Find user
         const user = await prisma.user.findUnique({
@@ -113,8 +113,8 @@ export const authOptions = {
         const hashedPassword = await PasswordSecurity.hashPassword(credentials.password)
         
         // Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString('hex')
-        const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+        const VerificationToken = crypto.randomBytes(32).toString('hex')
+        const VerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
         
         const newUser = await prisma.user.create({
           data: {
@@ -122,8 +122,8 @@ export const authOptions = {
             password: hashedPassword,
             name: credentials.name || credentials.email.split('@')[0],
             //emailVerified: new Date(), // 🔥 Auto-vérifié pour l'instant
-            verificationToken,
-            verificationExpires
+            VerificationToken,
+            VerificationExpires
           } as any
         })
         
@@ -132,7 +132,7 @@ export const authOptions = {
         // TODO: Send verification email here later
         // console.log(`Verification token for ${credentials.email}: ${verificationToken}`)
         
-        return { id: newUser.id, email: newUser.email, name: newUser.name }
+        return null
       }
     })
   ],
@@ -156,7 +156,7 @@ export const authOptions = {
   },
 
   pages: {
-    verifyRequest: '/auth/verify-request',
+    verifyRequest: '/api/auth/verify-request',
   },
 } as any
 

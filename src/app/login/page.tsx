@@ -39,11 +39,25 @@ export default function LoginPage() {
     setLoading(false)
 
   if (res?.error) {
-  console.log('🔥 ERREUR DÉTAILLÉE:', res.error)
-  setError(`Erreur: ${res.error}`)
+  if (isLogin) {
+    // 🔥 Pour LOGIN, on affiche l'erreur
+    if (res.error.includes('verify')) {
+      router.push('/api/auth/verify-request')
+    } else {
+      setError('Erreur: ' + res.error)
+    }
+  } else {
+    // 🔥 Pour REGISTER, on ignore l'erreur et on redirige toujours
+    router.push('/api/auth/verify-request')
+  }
 } else {
-  console.log('✅ SUCCESS:', res)
-  router.push('/chat')
+  if (isLogin) {
+    router.push('/chat')  
+  } else {
+    router.push('/')
+  }
+
+  
 }
   }
 
