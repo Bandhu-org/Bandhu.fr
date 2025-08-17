@@ -128,7 +128,24 @@ export const authOptions = {
         })
         
         console.log('✅ User created:', newUser.email)
-        
+
+
+// Envoie l'email via le provider email
+// (On va utiliser Resend direct pour l'instant)
+const resend = new Resend(process.env.RESEND_API_KEY)
+const verifyUrl = `${process.env.NEXTAUTH_URL}/email-verify?token=${VerificationToken}`
+console.log('🔗 Lien généré:', verifyUrl)
+
+await resend.emails.send({
+  from: 'noreply@bandhu.fr',
+  to: credentials.email,
+  subject: '🔥 Vérifie ton email Bandhu !',
+  html: `<a href="${verifyUrl}">Clique ici pour vérifier ton email</a>`
+})
+
+console.log('📧 Email de vérification envoyé !')
+
+
         // TODO: Send verification email here later
         // console.log(`Verification token for ${credentials.email}: ${verificationToken}`)
         
