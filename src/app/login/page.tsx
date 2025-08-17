@@ -98,6 +98,17 @@ export default function LoginPage() {
         <button type="submit" style={styles.button} disabled={loading}>
           {loading ? 'En cours...' : isLogin ? 'Se connecter' : 'S’inscrire'}
         </button>
+        {isLogin && (
+  <div style={{ textAlign: 'center', marginTop: '15px' }}>
+    <a 
+      href="/auth/forgot-password" 
+      style={{ color: '#3b82f6', fontSize: '14px', textDecoration: 'underline' }}
+    >
+      Mot de passe oublié ?
+    </a>
+  </div>
+)}
+
         {error && <div style={styles.error}>{error}</div>}
       </form>
     </div>

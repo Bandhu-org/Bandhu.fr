@@ -1,8 +1,10 @@
 {
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/chat/route": "app/api/chat/route.js",
+  "/api/auth/reset-password/route": "app/api/auth/reset-password/route.js",
+  "/api/auth/verify-request/page": "app/api/auth/verify-request/page.js",
+  "/auth/reset-sent/page": "app/auth/reset-sent/page.js",
+  "/auth/reset-password/page": "app/auth/reset-password/page.js",
+  "/auth/reset-success/page": "app/auth/reset-success/page.js",
   "/login/page": "app/login/page.js",
-  "/emailverify/page": "app/emailverify/page.js",
-  "/page": "app/page.js",
   "/chat/page": "app/chat/page.js"
 }

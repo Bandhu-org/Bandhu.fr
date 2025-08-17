@@ -51,6 +51,8 @@ model User {
   
   VerificationToken   String?   @unique
   VerificationExpires  DateTime?
+  resetToken      String?
+  resetTokenExpiry    DateTime?
 
   accounts      Account[]
   sessions      Session[]
