@@ -26,6 +26,9 @@ export default function VerifyEmailPage() {
       .then(data => {
         if (data.success) {
           setStatus("success")
+          setTimeout(() => {
+    window.location.href = '/chat'
+  }, 2000) // 2 secondes pour voir le message
         } else {
           setStatus("error")
         }

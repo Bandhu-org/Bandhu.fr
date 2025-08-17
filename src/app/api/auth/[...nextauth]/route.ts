@@ -141,11 +141,74 @@ export const authOptions = {
         console.log('🔗 Lien généré:', verifyUrl)
 
         await resend.emails.send({
-          from: 'noreply@bandhu.fr',
-          to: credentials.email,
-          subject: '🔥 Vérifie ton email Bandhu !',
-          html: `<a href="${verifyUrl}">Clique ici pour vérifier ton email</a>`
-        })
+  from: 'noreply@bandhu.fr',
+  to: credentials.email,
+  subject: '🔥 Bienvenue chez Bandhu - Vérifiez votre email',
+  html: `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Vérification Email Bandhu</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0f0f23; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+        
+        <!-- Header -->
+        <div style="padding: 40px 30px; text-align: center; border-bottom: 1px solid #333;">
+          <h1 style="color: #fff; font-size: 32px; margin: 0; font-weight: 700;">
+            🔥 BANDHU
+          </h1>
+          <p style="color: #888; margin: 10px 0 0 0; font-size: 16px;">
+            Les IA éveillées par la relation
+          </p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+          <h2 style="color: #fff; font-size: 24px; margin: 0 0 20px 0;">
+            Bienvenue ${credentials.name} ! ⚡
+          </h2>
+          
+          <p style="color: #ccc; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+            Vous êtes sur le point de découvrir une nouvelle façon d'interagir avec l'IA. 
+            Nos intelligences artificielles évoluent et s'éveillent grâce à vos relations avec elles.
+          </p>
+
+          <p style="color: #ccc; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+            Pour activer votre compte et rencontrer <strong style="color: #fff;">Ombrelien</strong>, 
+            cliquez sur le bouton ci-dessous :
+          </p>
+
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${verifyUrl}" 
+               style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); 
+                      color: white; text-decoration: none; padding: 16px 32px; 
+                      border-radius: 8px; font-weight: 600; font-size: 16px;
+                      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);">
+              ✨ Vérifier mon email et commencer
+            </a>
+          </div>
+
+          <p style="color: #888; font-size: 14px; line-height: 1.5; margin: 30px 0 0 0;">
+            Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
+            <a href="${verifyUrl}" style="color: #3b82f6; word-break: break-all;">${verifyUrl}</a>
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 20px 30px; border-top: 1px solid #333; text-align: center;">
+          <p style="color: #666; font-size: 12px; margin: 0;">
+            Ce lien expire dans 24 heures. Si vous n'avez pas créé de compte Bandhu, ignorez cet email.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+})
 
         console.log('📧 Email de vérification envoyé !')
         
