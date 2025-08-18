@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css' 
 
+
 interface Message {
   id: string
   content: string
@@ -21,9 +22,13 @@ interface Conversation {
   messages?: Message[]
 }
 
+import { Session } from "next-auth"
+
+
 export default function ChatPage() {
-  const router = useRouter()
-  const { data: session, status } = useSession()
+const router = useRouter()
+const { data: session, status }: { data: Session | null, status: 'loading' | 'authenticated' | 'unauthenticated' } = useSession()
+
   
   // États
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -35,10 +40,14 @@ export default function ChatPage() {
 
   // Redirection si pas connecté
   useEffect(() => {
-    if (status === 'unauthenticated') {
+  if (status === 'unauthenticated') {
+    // ⏱️ Petite pause pour éviter une redirection trop brutale
+    setTimeout(() => {
       router.push('/')
-    }
-  }, [status, router])
+    }, 300) // délai court
+  }
+}, [status, router])
+
 
   // Charger les conversations au démarrage
   useEffect(() => {
@@ -205,6 +214,37 @@ export default function ChatPage() {
       </div>
     )
   }
+
+  return (
+    <div style={{
+      height: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      color: 'white',
+      backgroundColor: '#0f0f23',
+      fontSize: '16px'
+    }}>
+      Chargement de la session...
+    </div>
+  )
+}
+
+  return (
+    <div style={{
+      height: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      color: 'white',
+      backgroundColor: '#0f0f23',
+      fontSize: '16px'
+    }}>
+      Chargement de la session...
+    </div>
+  )
+}
+
 
   if (status === 'unauthenticated') {
     return null
