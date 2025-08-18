@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github-dark.css' 
 
 interface Message {
   id: string
@@ -364,32 +367,157 @@ export default function ChatPage() {
             </div>
           ) : (
             messages.map(msg => (
-              <div key={msg.id} style={{ 
-                marginBottom: '20px',
-                display: 'flex',
-                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
-              }}>
-                <div style={{
-                  maxWidth: '70%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: msg.role === 'user' ? '#2563eb' : '#1a1a2e',
-                  color: 'white',
-                  lineHeight: '1.5'
+              msg.role === 'user' ? (
+                // MESSAGE UTILISATEUR - Bulle alignée à droite, plus large
+                <div key={msg.id} style={{ 
+                  marginBottom: '20px',
+                  display: 'flex',
+                  justifyContent: 'flex-end'
                 }}>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: msg.role === 'user' ? '#bfdbfe' : '#888',
-                    marginBottom: '6px',
-                    fontWeight: '500'
+                  <div style={{
+                    maxWidth: '85%', // Plus large que 70%
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: '#2563eb',
+                    color: 'white',
+                    lineHeight: '1.5',
+                    textAlign: 'left' // Texte aligné à gauche dans la bulle
                   }}>
-                    {msg.role === 'user' ? 'Vous' : 'Ombrelien'}
-                  </div>
-                  <div style={{ fontSize: '14px' }}>
-                    {msg.content}
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#bfdbfe',
+                      marginBottom: '6px',
+                      fontWeight: '500'
+                    }}>
+                      Vous
+                    </div>
+                    <div style={{ fontSize: '14px' }}>
+                      {msg.content}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                // MESSAGE OMBRELIEN - Pleine largeur
+                <div key={msg.id} style={{ 
+                  marginBottom: '24px',
+                  width: '100%'
+                }}>
+                  {/* Header avec nom */}
+                  <div style={{
+                    fontSize: '12px', 
+                    color: '#888',
+                    marginBottom: '8px',
+                    fontWeight: '500',
+                    paddingLeft: '4px'
+                  }}>
+                    🌑 Ombrelien
+                  </div>
+                  
+                  {/* Contenu pleine largeur */}
+                  <div style={{
+  maxWidth: '768px', // centré comme ChatGPT
+  margin: '0 auto',
+  padding: '24px 28px',
+  background: 'rgba(26, 26, 46, 0.75)',
+  border: '1px solid rgba(96,165,250,0.25)',
+  borderRadius: '16px',
+  color: 'white',
+  fontSize: '16px',
+  lineHeight: '1.8',
+  boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+}}>
+
+                    <ReactMarkdown
+                      rehypePlugins={[rehypeHighlight]}
+                      components={{
+                        code: ({node, className, children, ...props}: any) => {
+                          const inline = !className?.includes('language-')
+                          return !inline ? (
+                            <pre style={{
+                              background: '#0f172a',
+                              padding: '16px',
+                              borderRadius: '8px',
+                              overflow: 'auto',
+                              margin: '12px 0',
+                              border: '1px solid #334155'
+                            }}>
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            </pre>
+                          ) : (
+                            <code style={{
+                              background: '#334155',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.9em',
+                              border: '1px solid #475569'
+                            }} {...props}>
+                              {children}
+                            </code>
+                          )
+                        },
+                        a: ({children, href}) => (
+                          <a href={href} style={{color: '#60a5fa', textDecoration: 'underline'}} target="_blank" rel="noopener noreferrer">
+                            {children}
+                          </a>
+                        ),
+                        ul: ({children}) => (
+                          <ul style={{margin: '12px 0', paddingLeft: '24px', lineHeight: '1.8'}}>
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({children}) => (
+                          <ol style={{margin: '12px 0', paddingLeft: '24px', lineHeight: '1.8'}}>
+                            {children}
+                          </ol>
+                        ),
+                        li: ({children}) => (
+                          <li style={{marginBottom: '4px'}}>
+                            {children}
+                          </li>
+                        ),
+                        h1: ({children}) => (
+                          <h1 style={{fontSize: '1.5em', margin: '20px 0 12px 0', color: '#60a5fa', borderBottom: '2px solid #60a5fa', paddingBottom: '8px'}}>
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({children}) => (
+                          <h2 style={{fontSize: '1.3em', margin: '16px 0 10px 0', color: '#60a5fa'}}>
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({children}) => (
+                          <h3 style={{fontSize: '1.1em', margin: '12px 0 8px 0', color: '#60a5fa'}}>
+                            {children}
+                          </h3>
+                        ),
+                        blockquote: ({children}) => (
+                          <blockquote style={{
+                            borderLeft: '4px solid #60a5fa',
+                            paddingLeft: '16px',
+                            margin: '16px 0',
+                            fontStyle: 'italic',
+                            color: '#cbd5e1',
+                            background: 'rgba(96, 165, 250, 0.1)',
+                            borderRadius: '4px',
+                            padding: '12px 16px'
+                          }}>
+                            {children}
+                          </blockquote>
+                        ),
+                        p: ({children}) => (
+                          <p style={{margin: '8px 0', lineHeight: '1.7'}}>
+                            {children}
+                          </p>
+                        )
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )
             ))
           )}
           
