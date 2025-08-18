@@ -21,6 +21,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/login/page.js"
     ],
+    "/chat/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/chat/page.js"
+    ],
     "/api/auth/verify-request/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -36,10 +41,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/verifyemail/route.js"
     ],
-    "/chat/page": [
+    "/api/chat/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/chat/page.js"
+      "static/chunks/app/api/chat/route.js"
     ],
     "/auth/forgot-password/page": [
       "static/chunks/webpack.js",
