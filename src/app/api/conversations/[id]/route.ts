@@ -88,7 +88,7 @@ export async function DELETE(
     }
 
     // Supprimer la conversation (les messages seront supprimés en cascade)
-    await prisma.conversation.delete({
+    await prisma.conversation.deleteMany({
       where: { id: conversationId }
     })
 

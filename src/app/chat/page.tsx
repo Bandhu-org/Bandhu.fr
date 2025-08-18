@@ -374,7 +374,7 @@ export default function ChatPage() {
         </div>
 
         {/* LISTE DES CONVERSATIONS */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'visible' }}>
           {isLoading ? (
             <div style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
               Chargement...
@@ -393,7 +393,7 @@ export default function ChatPage() {
                   background: currentConversation?.id === conv.id ? '#2563eb' : 'transparent',
                   border: currentConversation?.id === conv.id ? '1px solid #3b82f6' : '1px solid transparent',
                   borderRadius: '8px',
-                  overflow: 'hidden'
+                  overflow: 'visible'
                 }}
               >
                 {editingId === conv.id ? (
@@ -532,12 +532,13 @@ export default function ChatPage() {
                           border: '1px solid #4b5563',
                           borderRadius: '6px',
                           padding: '4px',
-                          zIndex: 10,
+                          zIndex: 1000,
                           minWidth: '120px'
                         }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
+                              console.log('Clique renommer pour:', conv.id)
                               startEditing(conv)
                             }}
                             style={{
@@ -557,6 +558,7 @@ export default function ChatPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
+                              console.log('Clique supprimer pour:', conv.id)
                               setDeleteConfirm(conv.id)
                               setOpenMenuId(null)
                             }}
