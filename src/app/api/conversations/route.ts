@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { PrismaClient } from '@prisma/client'
+import { authOptions } from '../auth/[...nextauth]/options'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient()
-
-// GET /api/conversations - Récupérer toutes les conversations de l'utilisateur
+// GET /api/conversations
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    
+    const session = await getServerSession(authOptions)
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
     })
@@ -22,7 +20,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
     }
 
-    // Récupérer les conversations
     const conversations = await prisma.conversation.findMany({
       where: { userId: user.id },
       orderBy: { updatedAt: 'desc' },
@@ -37,8 +34,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ 
-      conversations: conversations.map(conv => ({
+    return NextResponse.json({
+      conversations: conversations.map((conv) => ({
         ...conv,
         messageCount: conv._count.messages
       }))
@@ -50,18 +47,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/conversations - Créer une nouvelle conversation
+// POST /api/conversations
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
-    
+    const session = await getServerSession(authOptions)
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    const { title } = await request.json()
+    const { title, folderId } = await request.json()
 
-    // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
     })
@@ -70,11 +66,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
     }
 
-    // Créer la conversation
     const conversation = await prisma.conversation.create({
       data: {
         title: title || 'Nouvelle conversation',
-        userId: user.id
+        userId: user.id,
+        folderId: folderId || null // si tu veux permettre l’ajout direct à un dossier
       }
     })
 

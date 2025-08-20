@@ -48,10 +48,11 @@ model User {
   image         String?
   password      String
   createdAt     DateTime  @default(now())
-  
+  folders       Folder[]
+
   VerificationToken   String?   @unique
-  VerificationExpires  DateTime?
-  resetToken      String?
+  VerificationExpires DateTime?
+  resetToken          String?
   resetTokenExpiry    DateTime?
 
   accounts      Account[]
@@ -67,15 +68,26 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Folder {
+  id            String         @id @default(cuid())
+  name          String
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  conversations Conversation[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
 model Conversation {
   id        String    @id @default(cuid())
   title     String?
+  folderId  String? // ← clé étrangère vers Folder
+  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
   userId    String
-  messages  Message[]
   user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
- 
 }
 
 model Message {
