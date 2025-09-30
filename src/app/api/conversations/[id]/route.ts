@@ -4,10 +4,9 @@ import { authOptions } from '../../auth/[...nextauth]/options'; // <- à adapter
 import { prisma } from '@/lib/prisma';
 
 // GET /api/conversations/[id]
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: Request, context: { params: { id: string } }) {
+  const { params } = context;
+
   try {
     const session = await getServerSession(authOptions);
 

@@ -4,7 +4,14 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
-import 'highlight.js/styles/github-dark.css' 
+import 'highlight.js/styles/github-dark.css'
+
+interface Folder {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 
 interface Message {
   id: string
@@ -14,6 +21,7 @@ interface Message {
 }
 
 interface Conversation {
+  folderId: string
   id: string
   title: string | null
   createdAt: string
@@ -22,6 +30,9 @@ interface Conversation {
 }
 
 export default function ChatPage() {
+  const [folders, setFolders] = useState<Folder[]>([])
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+
   const router = useRouter()
   const { data: session, status } = useSession()
   
@@ -32,7 +43,8 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
-  
+   
+
   // États pour la gestion des conversations
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -52,6 +64,7 @@ export default function ChatPage() {
   // Charger les conversations au démarrage
   useEffect(() => {
     if (session?.user) {
+      loadFolders();
       loadConversations()
     }
   }, [session])
@@ -63,6 +76,19 @@ export default function ChatPage() {
       editInputRef.current.select()
     }
   }, [editingId])
+
+  const loadFolders = async () => {
+  try {
+    const res = await fetch('/api/folder');
+    if (res.ok) {
+      const data = await res.json();
+      setFolders(data.folders);
+    }
+  } catch (err) {
+    console.error('Erreur chargement folders', err);
+  }
+};
+
 
   // Charger la liste des conversations
   const loadConversations = async () => {
@@ -108,7 +134,8 @@ export default function ChatPage() {
       const response = await fetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Nouvelle conversation' })
+        body: JSON.stringify({ title: 'Nouvelle conversation',
+          folderId: selectedFolderId })
       })
       
       if (response.ok) {
@@ -202,13 +229,18 @@ export default function ChatPage() {
   }
 
   // Trier les conversations
-  const sortedConversations = [...conversations].sort((a, b) => {
+  const filteredConversations = conversations.filter(conv =>
+  selectedFolderId ? conv.folderId === selectedFolderId : true
+);
+
+  const sortedConversations = conversations ? [...conversations].sort((a, b) => {
+  
     if (sortOrder === 'date') {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     } else {
       return (a.title || 'Conversation sans titre').localeCompare(b.title || 'Conversation sans titre')
     }
-  })
+  }) : []
 
   // Envoyer un message (fonction existante)
   const sendMessage = async () => {
@@ -337,6 +369,38 @@ export default function ChatPage() {
           <h2 style={{ margin: '0 0 15px 0', fontSize: '18px', color: '#60a5fa' }}>Chat avec Ombrelien</h2>
           
           {/* Boutons d'action */}
+          
+          <button
+  onClick={async () => {
+    const name = prompt('Nom du dossier ?');
+    if (!name) return;
+    const res = await fetch('/api/folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setFolders(prev => [data.folder, ...(prev || [])]);
+    }
+  }}
+  style={{
+    padding: '10px',
+    background: '#10b981',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    marginBottom: '8px'
+  }}
+>
+  + Dossier
+</button>
+
+
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
             <button 
               onClick={createNewConversation}
@@ -374,6 +438,32 @@ export default function ChatPage() {
         </div>
 
         {/* LISTE DES CONVERSATIONS */}
+
+        <div style={{ marginBottom: '15px' }}>
+  <h4 style={{ fontSize: '13px', color: '#aaa', marginBottom: '6px' }}>Dossiers</h4>
+  {(folders || []).filter(f => f && f.id).map(folder => (
+    <div
+      key={folder.id}
+      onClick={() => setSelectedFolderId(folder.id)}
+      style={{
+        padding: '8px 12px',
+        background: (selectedFolderId === folder?.id) ? '#2563eb' : 'transparent',
+        color: (selectedFolderId === folder?.id) ? 'white' : '#ccc',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        marginBottom: '4px'
+      }}
+    >
+      {folder?.name}
+    </div>
+  ))}
+  {(!folders || folders.length === 0) && (
+    <div style={{ fontSize: '12px', color: '#666' }}>Aucun dossier</div>
+  )}
+</div>
+
+        
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'visible' }}>
           {isLoading ? (
             <div style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
