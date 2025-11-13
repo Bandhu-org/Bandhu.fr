@@ -538,7 +538,7 @@ export default function ChatPage() {
         )}
 
       {/* Messages */}
-<div className="flex-1 p-5 overflow-y-auto bg-bandhu-dark">
+<div className="flex-1 p-5 pb-32 overflow-y-auto bg-bandhu-dark scrollbar-bandhu">
   {!currentConversation ? (
     <div className="flex items-center justify-center h-full text-gray-500 text-base">
       Sélectionnez une conversation ou créez-en une nouvelle
@@ -632,50 +632,55 @@ export default function ChatPage() {
   )}
   
   {isSending && (
-    <div className="mb-5 flex justify-center">
-      <div className="w-full max-w-3xl">
-        <div className="text-xs text-gray-500 mb-2 font-medium pl-1">
-          🌑 Ombrelien
-        </div>
-        <div className="px-6 py-5 bg-bandhu-card/60 border border-bandhu-cardBorder rounded-xl text-gray-500 leading-relaxed animate-pulse">
-          En train de réfléchir...
-        </div>
+  <div className="mb-5 flex justify-center">
+    <div className="w-full max-w-4xl">
+      <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
+        <span className="text-lg">🌑</span> Ombrelien
+      </div>
+      <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl text-gray-500 leading-relaxed animate-pulse">
+        En train de réfléchir...
       </div>
     </div>
-  )}
+  </div>
+)}
 </div>
 
-        {/* Input */}
-        <div className="p-5 border-t border-gray-800 bg-gray-900/30">
-          <div className="flex gap-3 items-end">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Parlez à Ombrelien..."
-              className="flex-1 px-3 py-3 bg-gray-900 text-white border border-gray-700 rounded-lg text-sm leading-tight resize-none min-h-[44px] max-h-[120px] focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              disabled={isSending}
-            />
-            <button 
-              onClick={sendMessage}
-              disabled={!input.trim() || isSending}
-              className={`px-5 py-3 rounded-lg text-sm font-medium min-h-[44px] transition-transform ${
-                input.trim() && !isSending
-                  ? 'bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white hover:scale-105 cursor-pointer'
-                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isSending ? 'Envoi...' : 'Envoyer'}
-            </button>
-          </div>
-        </div>
-
-      </div>
+       {/* Input - Floating au-dessus, VRAIMENT centré */}
+<div className="absolute bottom-8 left-80 right-0 flex justify-center pointer-events-none">
+  <div className="w-full max-w-3xl px-5 pointer-events-auto">
+    <div className="flex gap-3 items-end bg-blue-800/95 backdrop-blur-sm p-3 rounded-2xl shadow-2xl border border-blue-600">
+      <textarea
+  value={input}
+  onChange={(e) => {
+    setInput(e.target.value)
+    e.target.style.height = 'auto'
+    e.target.style.height = e.target.scrollHeight + 'px'
+  }}
+  placeholder="Parlez à Ombrelien..."
+  className="flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500 scrollbar-bandhu"
+  style={{ minHeight: '42px', maxHeight: '200px' }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }}
+  disabled={isSending}
+/>
+      <button 
+        onClick={sendMessage}
+        disabled={!input.trim() || isSending}
+        className={`px-5 py-2.5 rounded-xl text-sm font-medium min-h-[42px] transition-transform ${
+          input.trim() && !isSending
+            ? 'bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white hover:scale-105 cursor-pointer shadow-lg'
+            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        {isSending ? 'Envoi...' : 'Envoyer'}
+      </button>
+    </div>
+  </div>
+</div>
       
       {/* Click outside pour fermer les menus */}
       {openMenuId && (
@@ -684,6 +689,7 @@ export default function ChatPage() {
           onClick={() => setOpenMenuId(null)}
         />
       )}
+    </div>
     </div>
   )
 }
