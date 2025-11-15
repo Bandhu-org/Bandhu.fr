@@ -117,4 +117,5 @@ enum EventType {
   USER_MESSAGE
   AI_MESSAGE
   SYSTEM_NOTE
+  FRESH_CHAT
 }

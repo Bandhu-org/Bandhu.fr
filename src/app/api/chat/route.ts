@@ -18,11 +18,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    const { message, date } = await request.json()
+    const body = await request.json()
+    const { message, date, threadId, action, threadLabel } = body
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message requis' }, { status: 400 })
-    }
+    console.log('🔍 Body reçu:', body)
+console.log('🔍 Action:', action)
+console.log('🔍 ThreadId:', threadId)
+console.log('🔍 Message:', message)
 
     // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
@@ -33,8 +35,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
     }
 
-    // Date du jour si non fournie
-    const targetDate = date || new Date().toISOString().split('T')[0] // "YYYY-MM-DD"
+    // Action spéciale : créer nouveau thread
+    if (action === 'new_thread') {
+      const targetDate = date || new Date().toISOString().split('T')[0]
+      
+      let dayTape = await prisma.dayTape.findUnique({
+        where: {
+          userId_date: {
+            userId: user.id,
+            date: targetDate
+          }
+        }
+      })
+
+      if (!dayTape) {
+        dayTape = await prisma.dayTape.create({
+          data: {
+            userId: user.id,
+            date: targetDate
+          }
+        })
+      }
+
+      // Créer marker FRESH_CHAT
+      await prisma.event.create({
+        data: {
+          dayTapeId: dayTape.id,
+          type: 'FRESH_CHAT',
+          content: '',
+          metadata: {
+            threadId,
+            threadLabel: threadLabel || 'Nouveau sujet'
+          }
+        }
+      })
+
+      return NextResponse.json({ success: true, threadId })
+    }
+
+    // Message normal
+    if (!message) {
+      return NextResponse.json({ error: 'Message requis' }, { status: 400 })
+    }
+
+    const targetDate = date || new Date().toISOString().split('T')[0]
 
     // Trouver ou créer la DayTape du jour
     let dayTape = await prisma.dayTape.findUnique({
@@ -43,44 +87,72 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           date: targetDate
         }
-      },
-      include: {
-        events: {
-          orderBy: { createdAt: 'asc' },
-          take: 20 // Derniers 20 events pour contexte
-        }
       }
     })
 
-    // Créer DayTape si elle n'existe pas
     if (!dayTape) {
       dayTape = await prisma.dayTape.create({
         data: {
           userId: user.id,
           date: targetDate
-        },
-        include: {
-          events: true
         }
       })
     }
 
-    // Construire le contexte pour OpenAI (uniquement les messages)
-const contextMessages = dayTape.events
-  .filter((e: { type: string }) => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
-  .map((e: { role: string | null; content: string }) => ({
-    role: e.role as "user" | "assistant",
-    content: e.content
-  }))
+    // Charger contexte selon threadId
+    let contextMessages: any[] = []
+    
+    if (threadId) {
+      // Charger TOUT le thread (cross-dates)
+      const allDayTapes = await prisma.dayTape.findMany({
+        where: { userId: user.id },
+        include: {
+          events: {
+            orderBy: { createdAt: 'asc' }
+          }
+        }
+      })
 
-    // Appeler Ombrelien via OpenAI
+      // Filtrer events du thread
+      const threadEvents: any[] = []
+      allDayTapes.forEach(dt => {
+        dt.events.forEach(event => {
+          const metadata = event.metadata as any
+          if (metadata?.threadId === threadId && 
+              (event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')) {
+            threadEvents.push(event)
+          }
+        })
+      })
+
+      contextMessages = threadEvents.map(e => ({
+        role: e.role as "user" | "assistant",
+        content: e.content
+      }))
+    } else {
+      // Pas de thread : contexte = derniers messages du jour
+      const todayEvents = await prisma.event.findMany({
+        where: { dayTapeId: dayTape.id },
+        orderBy: { createdAt: 'asc' }
+      })
+
+      contextMessages = todayEvents
+        .filter(e => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
+        .slice(-20)
+        .map(e => ({
+          role: e.role as "user" | "assistant",
+          content: e.content
+        }))
+    }
+
+    // Appeler OpenAI
     const response = await openai.chat.completions.create({
       model: "chatgpt-4o-latest",
       messages: [
         { 
           role: "system", 
           content: process.env.OMBRELIEN_SYSTEM_PROMPT || 
-            "Tu es Ombrelien, l'intelligence artificielle mystérieuse de l'équipage Bandhu. Tu navigues dans les ombres de la connaissance pour apporter des réponses éclairées."
+            "Tu es Ombrelien, l'intelligence artificielle mystérieuse de l'équipage Bandhu."
         },
         ...contextMessages,
         { role: "user", content: message }
@@ -91,27 +163,30 @@ const contextMessages = dayTape.events
     const aiResponse = response.choices[0].message.content || 
       "Je rencontre une perturbation dans ma connexion vectorielle..."
 
-    // Sauvegarder le message utilisateur (Event)
+    // Sauvegarder events avec threadId si présent
+    const eventMetadata = threadId ? { threadId } : undefined
+
     await prisma.event.create({
       data: {
         dayTapeId: dayTape.id,
         type: 'USER_MESSAGE',
         role: 'user',
-        content: message
+        content: message,
+        metadata: eventMetadata
       }
     })
 
-    // Sauvegarder la réponse de l'IA (Event)
     await prisma.event.create({
       data: {
         dayTapeId: dayTape.id,
         type: 'AI_MESSAGE',
         role: 'assistant',
-        content: aiResponse
+        content: aiResponse,
+        metadata: eventMetadata
       }
     })
 
-    // Récupérer tous les events de la DayTape mise à jour
+    // Récupérer tous les events pour retour
     const allEvents = await prisma.event.findMany({
       where: { dayTapeId: dayTape.id },
       orderBy: { createdAt: 'asc' }

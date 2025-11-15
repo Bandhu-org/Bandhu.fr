@@ -9,8 +9,8 @@ import 'highlight.js/styles/github-dark.css'
 interface Event {
   id: string
   content: string
-  role: 'user' | 'assistant'
-  type: string
+  role: 'user' | 'assistant' | null
+  type: 'USER_MESSAGE' | 'AI_MESSAGE' | 'SYSTEM_NOTE' | 'FRESH_CHAT'
   createdAt: string
 }
 
@@ -21,12 +21,22 @@ interface DayTape {
   createdAt: string
 }
 
+interface Thread {
+  id: string
+  label: string
+  messageCount: number
+  lastActivity: string
+  activeDates: string[]
+}
+
 export default function ChatPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   
   // États simplifiés
   const [dayTapes, setDayTapes] = useState<DayTape[]>([])
+  const [threads, setThreads] = useState<Thread[]>([])
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const [currentDate, setCurrentDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   )
@@ -46,6 +56,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (session?.user) {
       loadDayTapes()
+      loadThreads()
       loadEventsForDate(currentDate)
     }
   }, [session])
@@ -69,6 +80,63 @@ export default function ChatPage() {
       console.error('Erreur chargement DayTapes:', error)
     }
   }
+
+  // Charger les threads
+const loadThreads = async () => {
+  try {
+    const response = await fetch('/api/threads')
+    if (response.ok) {
+      const data = await response.json()
+      setThreads(data.threads || [])
+    }
+  } catch (error) {
+    console.error('Erreur chargement threads:', error)
+  }
+}
+
+// Créer nouveau thread
+const createNewThread = async () => {
+  const label = prompt('Nom du sujet ?') || 'Nouveau sujet'
+  const threadId = `thread-${Date.now()}`
+  const today = new Date().toISOString().split('T')[0]
+  
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'new_thread',
+        threadId,
+        threadLabel: label,
+        date: today,
+        message: ''
+      })
+    })
+    
+    if (response.ok) {
+      setActiveThreadId(threadId)
+      setEvents([])
+      loadThreads()
+    }
+  } catch (error) {
+    console.error('Erreur création thread:', error)
+  }
+}
+
+// Charger thread spécifique
+const loadThread = async (threadId: string) => {
+  try {
+    const response = await fetch(`/api/threads/${threadId}`)
+    if (response.ok) {
+      const data = await response.json()
+      setEvents(data.events || [])
+      setActiveThreadId(threadId)
+      setCurrentDate('') 
+    }
+  } catch (error) {
+    console.error('Erreur chargement thread:', error)
+  }
+}
 
   // Charger les events d'une date
   const loadEventsForDate = async (date: string) => {
@@ -114,16 +182,23 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: userMessage,
-          date: currentDate
+          date: currentDate || new Date().toISOString().split('T')[0],
+          threadId: activeThreadId
         })
       })
       
       if (response.ok) {
         const data = await response.json()
+
+        if (activeThreadId) {
+    await loadThread(activeThreadId)
+  } else {
+    
         setEvents(data.events || [])
-        
+        }
         // Recharger la liste des DayTapes (sidebar)
         loadDayTapes()
+        loadThreads()
       }
     } catch (error) {
       console.error('Erreur envoi message:', error)
@@ -167,80 +242,116 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark">
       
-      {/* Sidebar temporelle */}
-      <div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 text-white border-r border-gray-800 flex flex-col">
+      {/* Sidebar avec threads */}
+<div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 text-white border-r border-gray-800 flex flex-col">
+  
+  {/* INFO USER */}
+  <div className="mb-5 border-b border-gray-800 pb-4">
+    <p className="text-xs text-gray-500 mb-1">Connecté en tant que</p>
+    <p className="font-bold text-sm">{session?.user?.email}</p>
+  </div>
+
+  {/* HEADER */}
+  <div className="mb-5">
+    <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
+      Chat avec Ombrelien
+    </h2>
+    
+    {/* Bouton nouveau sujet */}
+    <button
+      onClick={createNewThread}
+      className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
+    >
+      ➕ Nouveau sujet
+    </button>
+  </div>
+
+  {/* THREADS GROUPÉS PAR JOUR */}
+  <div className="flex-1 overflow-y-auto">
+    {isLoading ? (
+      <div className="text-center text-gray-500 p-5 text-sm">
+        Chargement...
+      </div>
+    ) : threads.length === 0 ? (
+      <div className="text-center text-gray-500 p-5 text-sm">
+        Commencez une conversation !
+      </div>
+    ) : (
+      // Grouper threads par date
+      (() => {
+        // Créer un map de threads par date
+        const threadsByDate = new Map<string, typeof threads>()
         
-        {/* INFO USER */}
-        <div className="mb-5 border-b border-gray-800 pb-4">
-          <p className="text-xs text-gray-500 mb-1">Connecté en tant que</p>
-          <p className="font-bold text-sm">{session?.user?.email}</p>
-        </div>
-
-        {/* HEADER */}
-        <div className="mb-5">
-          <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
-            Chat avec Ombrelien
-          </h2>
-          
-          {/* Bouton aujourd'hui */}
-          <button
-            onClick={() => setCurrentDate(new Date().toISOString().split('T')[0])}
-            className="w-full px-4 py-2.5 bg-gradient-to-br from-purple-900/90 to-blue-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform mb-2"
-          >
-            📅 Aujourd'hui
-          </button>
-        </div>
-
-        {/* LISTE DES JOURS */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="text-xs text-gray-500 mb-2 font-medium">
-            Historique
-          </div>
-          
-          {isLoading ? (
-            <div className="text-center text-gray-500 p-5 text-sm">
-              Chargement...
+        threads.forEach(thread => {
+          thread.activeDates.forEach(date => {
+            if (!threadsByDate.has(date)) {
+              threadsByDate.set(date, [])
+            }
+            // Éviter les doublons
+            if (!threadsByDate.get(date)!.find(t => t.id === thread.id)) {
+              threadsByDate.get(date)!.push(thread)
+            }
+          })
+        })
+        
+        // Trier par date décroissante
+        const sortedDates = Array.from(threadsByDate.keys()).sort((a, b) => 
+          new Date(b).getTime() - new Date(a).getTime()
+        )
+        
+        return sortedDates.map(date => (
+          <div key={date} className="mb-5">
+            {/* Séparateur de date */}
+            <div className="text-xs font-medium text-gray-500 mb-2 pb-2 border-b border-gray-800">
+              📅 {formatDate(date)}
             </div>
-          ) : dayTapes.length === 0 ? (
-            <div className="text-center text-gray-500 p-5 text-sm">
-              Commencez une conversation !
-            </div>
-          ) : (
-            dayTapes.map(dt => (
+            
+            {/* Threads de ce jour */}
+            {threadsByDate.get(date)!.map(thread => (
               <div
-                key={dt.id}
-                onClick={() => setCurrentDate(dt.date)}
+                key={thread.id}
+                onClick={() => loadThread(thread.id)}
                 className={`mb-2 p-3 rounded-lg cursor-pointer transition ${
-                  currentDate === dt.date
-                    ? 'bg-bandhu-primary/20 border border-bandhu-primary'
+                  activeThreadId === thread.id
+                    ? 'bg-green-900/30 border border-green-600'
                     : 'hover:bg-gray-800/50 border border-transparent'
                 }`}
               >
-                <div className={`text-sm font-medium mb-1 ${
-                  currentDate === dt.date ? 'text-white' : 'text-gray-300'
+                <div className={`text-sm font-medium mb-1 flex items-center gap-2 ${
+                  activeThreadId === thread.id ? 'text-green-400' : 'text-gray-300'
                 }`}>
-                  {formatDate(dt.date)}
+                  <span>🧵</span>
+                  <span className="flex-1 truncate">{thread.label}</span>
                 </div>
-                <div className={`text-xs ${
-                  currentDate === dt.date ? 'text-bandhu-primary/80' : 'text-gray-500'
-                }`}>
-                  {dt.eventCount || 0} messages
+                <div className="text-xs text-gray-500">
+                  {thread.messageCount} msg
+                  {thread.activeDates.length > 1 && (
+                    <span className="ml-2">
+                      • {thread.activeDates.length} jours
+                    </span>
+                  )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+            ))}
+          </div>
+        ))
+      })()
+    )}
+  </div>
+</div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         
         {/* Header Chat */}
-        <div className="p-5 border-b border-gray-800 bg-gray-900/30">
-          <h3 className="text-bandhu-primary font-medium">
-            {formatDate(currentDate)}
-          </h3>
-        </div>
+<div className="p-5 border-b border-gray-800 bg-gray-900/30">
+  <h3 className="text-bandhu-primary font-medium">
+    {activeThreadId 
+      ? `🧵 ${threads.find(t => t.id === activeThreadId)?.label || 'Thread'}` 
+      : `📅 ${formatDate(currentDate)}`
+    }
+  </h3>
+</div>
 
         {/* Messages */}
         <div className="flex-1 p-5 pb-32 overflow-y-auto bg-bandhu-dark scrollbar-bandhu">
@@ -249,8 +360,10 @@ export default function ChatPage() {
               Commencez votre journée avec Ombrelien...
             </div>
           ) : (
-            events.map(event => (
-              <div key={event.id} className="mb-5 flex justify-center">
+            events
+  .filter(event => event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')
+  .map(event => (
+    <div key={event.id} className="mb-5 flex justify-center">
                 <div className="w-full max-w-4xl">
                   {event.role === 'user' ? (
                     // MESSAGE USER
