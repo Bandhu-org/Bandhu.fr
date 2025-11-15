@@ -54,19 +54,15 @@ export default function ChatPage() {
 
   // Charger les DayTapes au démarrage
   useEffect(() => {
-    if (session?.user) {
-      loadDayTapes()
-      loadThreads()
-      loadEventsForDate(currentDate)
-    }
-  }, [session])
-
-  // Charger events quand on change de date
-  useEffect(() => {
-    if (session?.user && currentDate) {
-      loadEventsForDate(currentDate)
-    }
-  }, [currentDate])
+  if (session?.user) {
+    loadDayTapes()
+    loadThreads()
+    // Démarrer avec une vue vide
+    setEvents([])
+    setCurrentDate('')
+    setActiveThreadId(null)
+  }
+}, [session])
 
   // Charger la liste des DayTapes (sidebar)
   const loadDayTapes = async () => {
@@ -138,6 +134,45 @@ const loadThread = async (threadId: string) => {
   }
 }
 
+// Renommer un thread
+const renameThread = async (threadId: string, newLabel: string) => {
+  try {
+    const response = await fetch('/api/threads/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, newLabel })
+    })
+    
+    if (response.ok) {
+      await loadThreads()
+    }
+  } catch (error) {
+    console.error('Erreur renommage thread:', error)
+  }
+}
+
+// Supprimer un thread
+const deleteThread = async (threadId: string) => {
+  try {
+    const response = await fetch('/api/threads/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId })
+    })
+    
+    if (response.ok) {
+      if (activeThreadId === threadId) {
+        setActiveThreadId(null)
+        setEvents([])
+      }
+      await loadThreads()
+      await loadDayTapes()
+    }
+  } catch (error) {
+    console.error('Erreur suppression thread:', error)
+  }
+}
+
   // Charger les events d'une date
   const loadEventsForDate = async (date: string) => {
     setIsLoading(true)
@@ -160,54 +195,71 @@ const loadThread = async (threadId: string) => {
 
   // Envoyer un message
   const sendMessage = async () => {
-    if (!input.trim() || isSending) return
+  if (!input.trim() || isSending) return
+  
+  setIsSending(true)
+  const userMessage = input.trim()
+  
+  // Si pas de thread actif, en créer un automatiquement
+  let threadToUse = activeThreadId
+  
+  if (!threadToUse) {
+    const newThreadId = `thread-${Date.now()}`
+    const today = new Date().toISOString().split('T')[0]
+    const autoLabel = `Conversation ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
     
-    setIsSending(true)
-    const userMessage = input.trim()
-    setInput('')
-
-    // Optimistic update
-    const tempEvent: Event = {
-      id: 'temp-' + Date.now(),
-      content: userMessage,
-      role: 'user',
-      type: 'USER_MESSAGE',
-      createdAt: new Date().toISOString()
-    }
-    setEvents(prev => [...prev, tempEvent])
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: userMessage,
-          date: currentDate || new Date().toISOString().split('T')[0],
-          threadId: activeThreadId
-        })
+    // Créer le thread en silence
+    await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'new_thread',
+        threadId: newThreadId,
+        threadLabel: autoLabel,
+        date: today,
+        message: ''
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-
-        if (activeThreadId) {
-    await loadThread(activeThreadId)
-  } else {
+    })
     
-        setEvents(data.events || [])
-        }
-        // Recharger la liste des DayTapes (sidebar)
-        loadDayTapes()
-        loadThreads()
-      }
-    } catch (error) {
-      console.error('Erreur envoi message:', error)
-      // Retirer le message temp si erreur
-      setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
-    } finally {
-      setIsSending(false)
-    }
+    threadToUse = newThreadId
+    setActiveThreadId(newThreadId)
   }
+  
+  setInput('')
+
+  // Optimistic update
+  const tempEvent: Event = {
+    id: 'temp-' + Date.now(),
+    content: userMessage,
+    role: 'user',
+    type: 'USER_MESSAGE',
+    createdAt: new Date().toISOString()
+  }
+  setEvents(prev => [...prev, tempEvent])
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: userMessage,
+        date: new Date().toISOString().split('T')[0],
+        threadId: threadToUse
+      })
+    })
+    
+    if (response.ok) {
+      await loadThread(threadToUse)
+      await loadThreads()
+      await loadDayTapes()
+    }
+  } catch (error) {
+    console.error('Erreur envoi message:', error)
+    setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+  } finally {
+    setIsSending(false)
+  }
+}  
 
   // Formater la date pour affichage
   const formatDate = (dateString: string) => {
@@ -257,12 +309,16 @@ const loadThread = async (threadId: string) => {
       Chat avec Ombrelien
     </h2>
     
-    {/* Bouton nouveau sujet */}
+    {/* Bouton nouvelle conversation */}
     <button
-      onClick={createNewThread}
+      onClick={() => {
+        setActiveThreadId(null)
+        setEvents([])
+        setCurrentDate('')
+      }}
       className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
     >
-      ➕ Nouveau sujet
+      ➕ Nouvelle conversation
     </button>
   </div>
 
@@ -277,9 +333,7 @@ const loadThread = async (threadId: string) => {
         Commencez une conversation !
       </div>
     ) : (
-      // Grouper threads par date
       (() => {
-        // Créer un map de threads par date
         const threadsByDate = new Map<string, typeof threads>()
         
         threads.forEach(thread => {
@@ -287,50 +341,79 @@ const loadThread = async (threadId: string) => {
             if (!threadsByDate.has(date)) {
               threadsByDate.set(date, [])
             }
-            // Éviter les doublons
             if (!threadsByDate.get(date)!.find(t => t.id === thread.id)) {
               threadsByDate.get(date)!.push(thread)
             }
           })
         })
         
-        // Trier par date décroissante
         const sortedDates = Array.from(threadsByDate.keys()).sort((a, b) => 
           new Date(b).getTime() - new Date(a).getTime()
         )
         
         return sortedDates.map(date => (
           <div key={date} className="mb-5">
-            {/* Séparateur de date */}
             <div className="text-xs font-medium text-gray-500 mb-2 pb-2 border-b border-gray-800">
               📅 {formatDate(date)}
             </div>
             
-            {/* Threads de ce jour */}
             {threadsByDate.get(date)!.map(thread => (
               <div
                 key={thread.id}
-                onClick={() => loadThread(thread.id)}
-                className={`mb-2 p-3 rounded-lg cursor-pointer transition ${
+                className={`mb-2 p-3 rounded-lg transition group relative ${
                   activeThreadId === thread.id
                     ? 'bg-green-900/30 border border-green-600'
                     : 'hover:bg-gray-800/50 border border-transparent'
                 }`}
               >
-                <div className={`text-sm font-medium mb-1 flex items-center gap-2 ${
-                  activeThreadId === thread.id ? 'text-green-400' : 'text-gray-300'
-                }`}>
-                  <span>🧵</span>
-                  <span className="flex-1 truncate">{thread.label}</span>
+                <div 
+                  onClick={() => loadThread(thread.id)}
+                  className="cursor-pointer"
+                >
+                  <div className={`text-sm font-medium mb-1 flex items-center gap-2 ${
+                    activeThreadId === thread.id ? 'text-green-400' : 'text-gray-300'
+                  }`}>
+                    <span>🧵</span>
+                    <span className="flex-1 truncate">{thread.label}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {thread.messageCount} msg
+                    {thread.activeDates.length > 1 && (
+                      <span className="ml-2">
+                        • {thread.activeDates.length} jours
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  {thread.messageCount} msg
-                  {thread.activeDates.length > 1 && (
-                    <span className="ml-2">
-                      • {thread.activeDates.length} jours
-                    </span>
-                  )}
-                </div>
+                
+                {/* Boutons actions */}
+<div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+  <button
+    onClick={(e) => {
+      e.stopPropagation()
+      const newLabel = prompt('Nouveau nom :', thread.label)
+      if (newLabel && newLabel !== thread.label) {
+        renameThread(thread.id, newLabel)  // ← UTILISE LA VRAIE FONCTION
+      }
+    }}
+    className="p-1.5 hover:bg-gray-700 rounded text-xs"
+    title="Renommer"
+  >
+    ✏️
+  </button>
+  <button
+    onClick={(e) => {
+      e.stopPropagation()
+      if (confirm('Supprimer ce thread ?')) {
+        deleteThread(thread.id)  // ← UTILISE LA VRAIE FONCTION
+      }
+    }}
+    className="p-1.5 hover:bg-red-900 rounded text-xs"
+    title="Supprimer"
+  >
+    🗑️
+  </button>
+</div>
               </div>
             ))}
           </div>
@@ -348,7 +431,7 @@ const loadThread = async (threadId: string) => {
   <h3 className="text-bandhu-primary font-medium">
     {activeThreadId 
       ? `🧵 ${threads.find(t => t.id === activeThreadId)?.label || 'Thread'}` 
-      : `📅 ${formatDate(currentDate)}`
+      : '💬 Nouvelle conversation'
     }
   </h3>
 </div>
