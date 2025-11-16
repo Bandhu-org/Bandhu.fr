@@ -30,10 +30,14 @@ interface Thread {
   activeDates: string[]
 }
 
+// ========== CONSTANTE ==========
+const BOTTOM_SPACER = 755 // Marge fixe confortable
+
 export default function ChatPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
 
+  // ========== ÉTATS ==========
   const [dayTapes, setDayTapes] = useState<DayTape[]>([])
   const [threads, setThreads] = useState<Thread[]>([])
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
@@ -42,56 +46,50 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [showScrollButton, setShowScrollButton] = useState(false)
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({})
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-const inputContainerRef = useRef<HTMLDivElement | null>(null) // la carte bleue entière
-const lastMessageRef = useRef<HTMLDivElement | null>(null)
-
-
-
-
-// hauteur de “coussin” en bas du chat
-const [bottomSpacer, setBottomSpacer] = useState(160)
-
+  // ========== AUTO-RESIZE TEXTAREA ==========
   useEffect(() => {
-  const el = textareaRef.current
-  if (!el) return
+    const el = textareaRef.current
+    if (!el) return
 
-  // On repart d'une base "auto"
-  el.style.height = 'auto'
+    el.style.height = 'auto'
+    const min = 42
+    const max = 500
+    const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
+    el.style.height = `${newHeight}px`
+  }, [input])
 
-  const min = 42          // hauteur mini (px)
-  const max = 500         // hauteur maxi (px) = ton maxHeight
-  const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
+  // ========== DÉTECTER SI ON EST EN BAS (pour afficher le bouton) ==========
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
 
-  el.style.height = `${newHeight}px`
-}, [input])
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+      setShowScrollButton(!isNearBottom)
+    }
 
+    container.addEventListener('scroll', handleScroll)
+    handleScroll() // Check initial state
 
-  // Redirection si pas connecté
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [events])
+
+  // ========== REDIRECTION SI PAS CONNECTÉ ==========
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/')
     }
   }, [status, router])
 
-  // Charger les threads
-  const loadThreads = async () => {
-    try {
-      const response = await fetch('/api/threads')
-      if (response.ok) {
-        const data = await response.json()
-        setThreads(data.threads || [])
-      }
-    } catch (error) {
-      console.error('Erreur chargement threads:', error)
-    }
-  }
-
-  // Charger DayTapes + threads au démarrage
+  // ========== CHARGER DAYTAPES + THREADS AU DÉMARRAGE ==========
   useEffect(() => {
     if (session?.user) {
       loadDayTapes()
@@ -102,23 +100,7 @@ const [bottomSpacer, setBottomSpacer] = useState(160)
     }
   }, [session])
 
- const scrollToBottom = () => {
-  const container = scrollContainerRef.current
-  if (!container) return
-
-  const allUserMessages = container.querySelectorAll('[data-message-type="user"]')
-  const lastUserMessage = allUserMessages[allUserMessages.length - 1] as HTMLElement
-  
-  if (lastUserMessage) {
-    // Scroll pour mettre le message user au milieu vertical
-    lastUserMessage.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'center'  // Centre verticalement
-    })
-  }
-}
-
-// Charger la liste des DayTapes
+  // ========== FONCTIONS API ==========
   const loadDayTapes = async () => {
     try {
       const response = await fetch('/api/daytapes')
@@ -131,95 +113,18 @@ const [bottomSpacer, setBottomSpacer] = useState(160)
     }
   }
 
-useEffect(() => {
-  if (!inputContainerRef.current) return
-
-  const el = inputContainerRef.current
-
-  const observer = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const target = entry.target as HTMLElement
-      const h = target.offsetHeight || entry.contentRect.height || 80
-      
-      setBottomSpacer(h + 40)
-    }
-  })
-
-  observer.observe(el)
-  return () => observer.disconnect()
-}, [])
-
- // useEffect(() => {
-  //if (events.length === 0) return
-
-  // On ne regarde que les vrais messages (user + IA)
- // const filtered = events.filter(
-  //  e => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE',
- // )
-  //const last = filtered[filtered.length - 1]
- // if (!last) return
-
-  // 👉 Auto-scroll seulement quand le DERNIER message est un message USER
- // if (last.role === 'user') {
-  //  const timer = setTimeout(() => {
-   //   scrollToBottom()
-  //  }, 30)
-
- //   return () => clearTimeout(timer)
- // }
-//}, [events.length])
-
-
-  // 🔍 Observer la hauteur de la BARRE (carte bleue entière)
-useEffect(() => {
-  if (!inputContainerRef.current) return
-
-  const el = inputContainerRef.current
-
-  const observer = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const target = entry.target as HTMLElement
-      const h = target.offsetHeight || entry.contentRect.height || 80
-      // on rajoute un petit buffer pour être sûr que les messages ne collent pas à la barre
-      setBottomSpacer(h + 40)
-    }
-  })
-
-  observer.observe(el)
-
-  return () => observer.disconnect()
-}, [])
-
-  // Créer nouveau thread
-  const createNewThread = async () => {
-    const label = prompt('Nom du sujet ?') || 'Nouveau sujet'
-    const threadId = `thread-${Date.now()}`
-    const today = new Date().toISOString().split('T')[0]
-
+  const loadThreads = async () => {
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'new_thread',
-          threadId,
-          threadLabel: label,
-          date: today,
-          message: '',
-        }),
-      })
-
+      const response = await fetch('/api/threads')
       if (response.ok) {
-        setActiveThreadId(threadId)
-        setEvents([])
-        loadThreads()
+        const data = await response.json()
+        setThreads(data.threads || [])
       }
     } catch (error) {
-      console.error('Erreur création thread:', error)
+      console.error('Erreur chargement threads:', error)
     }
   }
 
-  // Charger un thread
   const loadThread = async (threadId: string) => {
     try {
       const response = await fetch(`/api/threads/${threadId}`)
@@ -235,7 +140,6 @@ useEffect(() => {
     }
   }
 
-  // Renommer un thread
   const renameThread = async (threadId: string, newLabel: string) => {
     try {
       const response = await fetch('/api/threads/rename', {
@@ -252,7 +156,6 @@ useEffect(() => {
     }
   }
 
-  // Supprimer un thread
   const deleteThread = async (threadId: string) => {
     try {
       const response = await fetch('/api/threads/delete', {
@@ -274,26 +177,42 @@ useEffect(() => {
     }
   }
 
-  // Optionnel : load events pour une date
-  const loadEventsForDate = async (date: string) => {
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/daytapes/${date}`)
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(data.dayTape?.events || [])
-      } else if (response.status === 404) {
-        setEvents([])
-      }
-    } catch (error) {
-      console.error('Erreur chargement events:', error)
-      setEvents([])
-    } finally {
-      setIsLoading(false)
+  // ========== SCROLL TO BOTTOM (sur clic bouton uniquement) ==========
+  const scrollToBottom = () => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    // Trouver tous les messages user
+    const allUserMessages = container.querySelectorAll('[data-message-type="user"]')
+    const lastUserMessage = allUserMessages[allUserMessages.length - 1] as HTMLElement
+
+    if (!lastUserMessage) {
+      // Fallback : scroll tout en bas
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      })
+      return
     }
+
+    // Forcer un reflow
+    lastUserMessage.getBoundingClientRect()
+
+    const messageTop = lastUserMessage.offsetTop
+    const messageHeight = lastUserMessage.offsetHeight
+    const messageBottom = messageTop + messageHeight
+    const containerHeight = container.clientHeight
+
+    // Position cible : bas du message au milieu de l'écran
+    const targetScroll = messageBottom - containerHeight * 0.5
+
+    container.scrollTo({
+      top: Math.max(0, targetScroll),
+      behavior: 'smooth',
+    })
   }
 
-  // Envoyer un message
+  // ========== SEND MESSAGE (SANS auto-scroll) ==========
   const sendMessage = async () => {
     if (!input.trim() || isSending) return
 
@@ -301,12 +220,10 @@ useEffect(() => {
     const userMessage = input.trim()
     setInput('')
 
-    // Replier visuellement la barre tout de suite
+    // Replier la barre visuellement
     if (textareaRef.current) {
       textareaRef.current.style.height = '42px'
     }
-
-    setBottomSpacer(160)
 
     // Si pas de thread actif, en créer un automatiquement
     let threadToUse = activeThreadId
@@ -336,25 +253,22 @@ useEffect(() => {
     }
 
     // Optimistic update
-    const tempEvent: Event = {
-      id: 'temp-' + Date.now(),
-      content: userMessage,
-      role: 'user',
-      type: 'USER_MESSAGE',
-      createdAt: new Date().toISOString(),
-    }
-    setEvents(prev => [...prev, tempEvent])
+const tempEvent: Event = {
+  id: 'temp-' + Date.now(),
+  content: userMessage,
+  role: 'user',
+  type: 'USER_MESSAGE',
+  createdAt: new Date().toISOString(),
+}
+setEvents(prev => [...prev, tempEvent])
 
-// 👇 SCROLL une fois ici
+// Auto-scroll uniquement AU MOMENT DU SEND
 setTimeout(() => {
   scrollToBottom()
-}, 100)
+}, 50)
 
-// Petit délai avant de montrer le typing indicator
-await new Promise(resolve => setTimeout(resolve, 100))
-
-    try {
-      const response = await fetch('/api/chat', {
+try {
+  const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -379,7 +293,7 @@ await new Promise(resolve => setTimeout(resolve, 100))
     }
   }
 
-  // Format date pour la sidebar
+  // ========== FORMAT DATE ==========
   const formatDate = (dateString: string) => {
     const date = new Date(dateString + 'T00:00:00')
     const today = new Date()
@@ -397,7 +311,7 @@ await new Promise(resolve => setTimeout(resolve, 100))
     })
   }
 
-  // États transitoires
+  // ========== ÉTATS TRANSITOIRES ==========
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
@@ -410,10 +324,10 @@ await new Promise(resolve => setTimeout(resolve, 100))
     return null
   }
 
-  // --------- RENDER PRINCIPAL ---------
+  // ========== RENDER ==========
   return (
     <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
-      {/* Sidebar avec threads */}
+      {/* ========== SIDEBAR ========== */}
       <div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
         {/* INFO USER */}
         <div className="mb-5 border-b border-gray-800 pb-4">
@@ -440,7 +354,7 @@ await new Promise(resolve => setTimeout(resolve, 100))
         </div>
 
         {/* THREADS GROUPÉS PAR JOUR */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-bandhu">
           {isLoading ? (
             <div className="text-center text-gray-500 p-5 text-sm">
               Chargement...
@@ -512,10 +426,7 @@ await new Promise(resolve => setTimeout(resolve, 100))
                         <button
                           onClick={e => {
                             e.stopPropagation()
-                            const newLabel = prompt(
-                              'Nouveau nom :',
-                              thread.label,
-                            )
+                            const newLabel = prompt('Nouveau nom :', thread.label)
                             if (newLabel && newLabel !== thread.label) {
                               renameThread(thread.id, newLabel)
                             }
@@ -547,171 +458,236 @@ await new Promise(resolve => setTimeout(resolve, 100))
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* ========== CHAT AREA ========== */}
       <div className="flex-1 flex flex-col relative">
-        {/* Header Chat */}
+        {/* Header */}
         <div className="p-5 border-b border-gray-800 bg-gray-900/30">
           <h3 className="text-bandhu-primary font-medium">
             {activeThreadId
-              ? `🧵 ${
-                  threads.find(t => t.id === activeThreadId)?.label || 'Thread'
-                }`
+              ? `🧵 ${threads.find(t => t.id === activeThreadId)?.label || 'Thread'}`
               : '💬 Nouvelle conversation'}
           </h3>
         </div>
 
         {/* Messages */}
-<div
-  ref={scrollContainerRef}
-  className="flex-1 p-5 overflow-y-auto bg-bandhu-dark scrollbar-bandhu"
->
-  {events.length === 0 && !isSending ? (
-    <div className="flex items-center justify-center h-full text-gray-500 text-base">
-      Commencez votre journée avec Ombrelien...
-    </div>
-  ) : (
-    <>
-      {events
-        .filter(
-          event =>
-            event.type === 'USER_MESSAGE' ||
-            event.type === 'AI_MESSAGE',
-        )
-        .map((event, index, filtered) => {
-          const isLast = index === filtered.length - 1
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 p-5 overflow-y-auto bg-bandhu-dark scrollbar-bandhu"
+        >
+          {events.length === 0 && !isSending ? (
+            <div className="flex items-center justify-center h-full text-gray-500 text-base">
+              Commencez votre journée avec Ombrelien...
+            </div>
+          ) : (
+            <>
+              {events
+                .filter(
+                  event =>
+                    event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE',
+                )
+                .map(event => (
+                  <div key={event.id} className="mb-5 flex justify-center">
+                    <div className="w-full max-w-4xl">
+                      {event.role === 'user' ? (
+                        <div className="max-w-md relative" data-message-type="user">
+                          <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
+                            Vous
+                          </div>
+                          
+                          <div className="relative">
+                            <div
+                              className="px-5 py-3 rounded-xl bg-gradient-to-br from-blue-900/90 to-blue-700/90 border border-bandhu-primary/30 text-gray-100 shadow-lg overflow-hidden relative"
+                              style={{
+                                maxHeight: expandedMessages[event.id] ? 'none' : (event.content.length > 1000 ? '14.4em' : 'none'),
+                              }}
+                            >
+                              <div className="text-base leading-relaxed" style={{ lineHeight: '1.6em' }}>
+                                <ReactMarkdown
+                                  rehypePlugins={[rehypeHighlight]}
+                                  components={{
+                                    code: ({ node, inline, className, children, ...props }: any) => {
+                                      const isInline = !className?.includes('language-')
+                                      return !isInline ? (
+                                        <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-blue-400/20">
+                                          <code className={className} {...props}>
+                                            {children}
+                                          </code>
+                                        </pre>
+                                      ) : (
+                                        <code
+                                          className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200"
+                                          {...props}
+                                        >
+                                          {children}
+                                        </code>
+                                      )
+                                    },
+                                    a: ({ children, href, ...props }: any) => (
+                                      <a
+                                        href={href}
+                                        className="text-blue-200 hover:text-blue-100 underline transition"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        {...props}
+                                      >
+                                        {children}
+                                      </a>
+                                    ),
+                                    p: ({ children, ...props }: any) => (
+                                      <p className="my-2 leading-relaxed text-gray-100" {...props}>
+                                        {children}
+                                      </p>
+                                    ),
+                                  }}
+                                >
+                                  {event.content}
+                                </ReactMarkdown>
+                              </div>
+                              
+                              {!expandedMessages[event.id] && event.content.length > 1000 && (
+                                <div 
+                                  className="absolute bottom-0 left-0 right-0 pointer-events-none"
+                                  style={{ 
+                                    height: '3.2em',
+                                    background: 'linear-gradient(to top, rgb(30, 58, 138), rgba(30, 58, 138, 0.8), transparent)'
+                                  }}
+                                />
+                              )}
+                            </div>
+                            
+                            {!expandedMessages[event.id] && event.content.length > 1000 && (
+                              <button
+                                onClick={() =>
+                                  setExpandedMessages(prev => ({ ...prev, [event.id]: true }))
+                                }
+                                className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+                              >
+                                Afficher plus
+                              </button>
+                            )}
 
-          return (
-            <div
-              key={event.id}
-              ref={isLast ? lastMessageRef : null}
-              className="mb-5 flex justify-center"
-            >
-              <div className="w-full max-w-4xl">
-                {event.role === 'user' ? (
-                  <div className="max-w-md" data-message-type="user">
-                    <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
-                      Vous
-                    </div>
-                    <div className="px-5 py-3 rounded-xl bg-gradient-to-br from-blue-900/90 to-blue-700/90 border border-bandhu-primary/30 text-gray-100 shadow-lg">
-                      <div className="text-base leading-relaxed">
-                        {event.content}
-                      </div>
+                            {expandedMessages[event.id] && event.content.length > 1000 && (
+                              <button
+                                onClick={() =>
+                                  setExpandedMessages(prev => ({ ...prev, [event.id]: false }))
+                                }
+                                className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+                              >
+                                Replier
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
+                            <span className="text-lg">🌑</span> Ombrelien
+                          </div>
+
+                          <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl text-gray-100 shadow-lg">
+                            <ReactMarkdown
+                              rehypePlugins={[rehypeHighlight]}
+                              components={{
+                                code: ({ node, inline, className, children, ...props }: any) => {
+                                  const isInline = !className?.includes('language-')
+                                  return !isInline ? (
+                                    <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-bandhu-primary/20">
+                                      <code className={className} {...props}>
+                                        {children}
+                                      </code>
+                                    </pre>
+                                  ) : (
+                                    <code
+                                      className="bg-bandhu-primary/20 px-2 py-0.5 rounded text-sm text-bandhu-primary"
+                                      {...props}
+                                    >
+                                      {children}
+                                    </code>
+                                  )
+                                },
+                                a: ({ children, href, ...props }: any) => (
+                                  <a
+                                    href={href}
+                                    className="text-bandhu-primary hover:text-bandhu-secondary underline transition"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </a>
+                                ),
+                                p: ({ children, ...props }: any) => (
+                                  <p className="my-2 leading-7 text-gray-200" {...props}>
+                                    {children}
+                                  </p>
+                                ),
+                              }}
+                            >
+                              {event.content}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <div>
+                ))}
+
+              {/* Typing indicator */}
+              {isSending && (
+                <div className="mb-5 flex justify-center animate-fadeIn">
+                  <div className="w-full max-w-4xl">
                     <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
                       <span className="text-lg">🌑</span> Ombrelien
                     </div>
-
-                    <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl text-gray-100 shadow-lg">
-                      <ReactMarkdown
-                        rehypePlugins={[rehypeHighlight]}
-                        components={{
-                          code: ({
-                            node,
-                            inline,
-                            className,
-                            children,
-                            ...props
-                          }: any) => {
-                            const isInline =
-                              !className?.includes('language-')
-                            return !isInline ? (
-                              <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-bandhu-primary/20">
-                                <code className={className} {...props}>
-                                  {children}
-                                </code>
-                              </pre>
-                            ) : (
-                              <code
-                                className="bg-bandhu-primary/20 px-2 py-0.5 rounded text-sm text-bandhu-primary"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            )
-                          },
-                          a: ({ children, href, ...props }: any) => (
-                            <a
-                              href={href}
-                              className="text-bandhu-primary hover:text-bandhu-secondary underline transition"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              {...props}
-                            >
-                              {children}
-                            </a>
-                          ),
-                          p: ({ children, ...props }: any) => (
-                            <p
-                              className="my-2 leading-7 text-gray-200"
-                              {...props}
-                            >
-                              {children}
-                            </p>
-                          ),
-                        }}
-                      >
-                        {event.content}
-                      </ReactMarkdown>
+                    <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl">
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <div className="flex gap-1">
+                          <span
+                            className="w-2 h-2 bg-bandhu-primary rounded-full animate-bounce"
+                            style={{ animationDelay: '0ms' }}
+                          ></span>
+                          <span
+                            className="w-2 h-2 bg-bandhu-primary rounded-full animate-bounce"
+                            style={{ animationDelay: '150ms' }}
+                          ></span>
+                          <span
+                            className="w-2 h-2 bg-bandhu-primary rounded-full animate-bounce"
+                            style={{ animationDelay: '300ms' }}
+                          ></span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-
-      {/* Typing indicator */}
-      {isSending && (
-        <div className="mb-5 flex justify-center animate-fadeIn">
-          <div className="w-full max-w-4xl">
-            <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
-              <span className="text-lg">🌑</span> Ombrelien
-            </div>
-            <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl">
-              <div className="flex items-center gap-2 text-gray-400">
-                <div className="flex gap-1">
-                  <span
-                    className="w-2 h-2 bg-bandhu-primary rounded-full animate-bounce"
-                    style={{ animationDelay: '0ms' }}
-                  ></span>
-                  <span
-                    className="w-2 h-2 bg-bandhu-primary rounded-full animate-bounce"
-                    style={{ animationDelay: '150ms' }}
-                  ></span>
-                  <span
-                    className="w-2 h-2 bg-bandhu-primary rounded-full animate-bounce"
-                    style={{ animationDelay: '300ms' }}
-                  ></span>
                 </div>
-              </div>
-            </div>
-          </div>
+              )}
+
+              {/* Bottom spacer FIXE */}
+              <div style={{ height: BOTTOM_SPACER }} />
+            </>
+          )}
         </div>
-      )}
 
-      <div ref={messagesEndRef} />
-      {/* si tu utilises bottomSpacer : */}
-      <div style={{ height: bottomSpacer }} />
-    </>
-  )}
-</div>
+        {/* ========== BOUTON SCROLL TO BOTTOM ========== */}
+        {showScrollButton && events.length > 0 && (
+          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 pointer-events-none">
+            <button
+              onClick={scrollToBottom}
+              className="pointer-events-auto px-4 py-2 bg-bandhu-primary/90 hover:bg-bandhu-primary text-white rounded-full shadow-lg text-sm font-medium flex items-center gap-2 transition-all hover:scale-105"
+            >
+              <span>⬇</span>
+              Revenir au dernier échange
+            </button>
+          </div>
+        )}
 
-
-        {/* Input flottant */}
+        {/* ========== INPUT FLOTTANT ========== */}
         <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none">
           <div className="w-full max-w-3xl px-5 pointer-events-auto">
-            <div
-      ref={inputContainerRef}
-             className="flex gap-3 items-end bg-blue-800/95 backdrop-blur-sm p-3 rounded-2xl shadow-2xl border border-blue-600">
+            <div className="flex gap-3 items-end bg-blue-800/95 backdrop-blur-sm p-3 rounded-2xl shadow-2xl border border-blue-600">
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={e => {
-                  setInput(e.target.value)
-                }}
+                onChange={e => setInput(e.target.value)}
                 placeholder="Parlez à Ombrelien..."
                 className="scrollbar-bandhu flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500"
                 style={{ minHeight: '42px', maxHeight: '500px' }}
