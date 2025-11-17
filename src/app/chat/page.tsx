@@ -55,6 +55,8 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({})
+  const [hasInitialized, setHasInitialized] = useState(false)
+
 
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -107,25 +109,30 @@ useEffect(() => {
 }, [events, session?.user?.email, activeThreadId])
 
 
-  // ========== REDIRECTION SI PAS CONNECTÉ ==========
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/')
-    }
-  }, [status, router])
+  // Auth + init une seule fois au login
+useEffect(() => {
+  // 1) Si pas connecté → on renvoie vers /
+  if (status === 'unauthenticated') {
+    router.push('/')
+    return
+  }
 
-  // ========== CHARGER DAYTAPES + THREADS AU DÉMARRAGE ==========
-  // ========== CHARGER DAYTAPES + THREADS AU DÉMARRAGE ==========
-  useEffect(() => {
-    if (!session?.user) return
+  // 2) Si pas encore authentifié ou pas de user → on attend
+  if (status !== 'authenticated' || !session?.user) return
 
-    loadDayTapes()
-    loadThreads()
+  // 3) On recharge les données (threads + daytapes)
+  loadDayTapes()
+  loadThreads()
 
-    // Au login : on se met comme si on avait cliqué sur "Nouvelle conversation"
-    handleNewConversation()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  // 4) On ne fait "nouvelle conversation" qu'une seule fois
+  if (!hasInitialized) {
+    setHasInitialized(true)
+    setActiveThreadId(null)
+    setEvents([])
+    setCurrentDate('')
+  }
+}, [status, session?.user, hasInitialized, router])
+
 
 
 
