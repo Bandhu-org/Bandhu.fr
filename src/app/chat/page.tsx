@@ -30,6 +30,13 @@ interface Thread {
   activeDates: string[]
 }
 
+// Générer une base de clé locale par utilisateur
+const getActiveThreadKey = (userEmail?: string | null) => {
+  if (!userEmail) return null
+  return `bandhu_active_thread_${userEmail}`
+}
+
+
 // ========== CONSTANTE ==========
 const BOTTOM_SPACER = 755 // Marge fixe confortable
 
@@ -65,22 +72,32 @@ export default function ChatPage() {
     el.style.height = `${newHeight}px`
   }, [input])
 
-  // ========== DÉTECTER SI ON EST EN BAS (pour afficher le bouton) ==========
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
+  // ========== DÉTECTER SI ON EST EN BAS + SAUVER LA POSITION DE SCROLL ==========
+useEffect(() => {
+  const container = scrollContainerRef.current
+  if (!container) return
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
-      setShowScrollButton(!isNearBottom)
+  const handleScroll = () => {
+    const { scrollTop, scrollHeight, clientHeight } = container
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+    setShowScrollButton(!isNearBottom)
+
+    // Sauvegarder la position de scroll par user + thread
+    const baseKey = getActiveThreadKey(session?.user?.email)
+    if (!baseKey || !activeThreadId) return
+
+    if (typeof window !== 'undefined') {
+      const scrollKey = `${baseKey}_scroll_${activeThreadId}`
+      localStorage.setItem(scrollKey, String(scrollTop))
     }
+  }
 
-    container.addEventListener('scroll', handleScroll)
-    handleScroll() // Check initial state
+  container.addEventListener('scroll', handleScroll)
+  handleScroll() // État initial
 
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [events])
+  return () => container.removeEventListener('scroll', handleScroll)
+}, [events, session?.user?.email, activeThreadId])
+
 
   // ========== REDIRECTION SI PAS CONNECTÉ ==========
   useEffect(() => {
@@ -90,15 +107,29 @@ export default function ChatPage() {
   }, [status, router])
 
   // ========== CHARGER DAYTAPES + THREADS AU DÉMARRAGE ==========
-  useEffect(() => {
-    if (session?.user) {
-      loadDayTapes()
-      loadThreads()
-      setEvents([])
-      setCurrentDate('')
-      setActiveThreadId(null)
+useEffect(() => {
+  if (!session?.user) return
+
+  loadDayTapes()
+  loadThreads()
+
+  // Essayer de recharger le dernier thread actif
+  const baseKey = getActiveThreadKey(session.user.email)
+  if (typeof window !== 'undefined' && baseKey) {
+    const lastThreadId = localStorage.getItem(baseKey)
+    if (lastThreadId) {
+      // On recharge ce thread et on s'arrête là
+      loadThread(lastThreadId)
+      return
     }
-  }, [session])
+  }
+
+  // Sinon : état neutre
+  setEvents([])
+  setCurrentDate('')
+  setActiveThreadId(null)
+}, [session])
+
 
   // ========== FONCTIONS API ==========
   const loadDayTapes = async () => {
@@ -126,19 +157,49 @@ export default function ChatPage() {
   }
 
   const loadThread = async (threadId: string) => {
-    try {
-      const response = await fetch(`/api/threads/${threadId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(data.events || [])
-        setActiveThreadId(threadId)
-        setCurrentDate('')
-        setIsSending(false)
+  try {
+    const response = await fetch(`/api/threads/${threadId}`)
+
+    if (!response.ok) {
+      // Si le thread n'existe plus, on nettoie la clé de thread actif
+      const baseKey = getActiveThreadKey(session?.user?.email)
+      if (baseKey && typeof window !== 'undefined') {
+        localStorage.removeItem(baseKey)
       }
-    } catch (error) {
-      console.error('Erreur chargement thread:', error)
+      return
     }
+
+    const data = await response.json()
+    setEvents(data.events || [])
+    setActiveThreadId(threadId)
+    setCurrentDate('')
+    setIsSending(false)
+
+    // Mémoriser ce thread comme dernier thread actif
+    const baseKey = getActiveThreadKey(session?.user?.email)
+    if (baseKey && typeof window !== 'undefined') {
+      localStorage.setItem(baseKey, threadId)
+
+      // Essayer de restaurer la position de scroll
+      const scrollKey = `${baseKey}_scroll_${threadId}`
+      const savedScroll = localStorage.getItem(scrollKey)
+
+      if (savedScroll) {
+        const scrollValue = parseInt(savedScroll, 10)
+        if (!Number.isNaN(scrollValue)) {
+          setTimeout(() => {
+            const container = scrollContainerRef.current
+            if (!container) return
+            container.scrollTop = scrollValue
+          }, 50)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Erreur chargement thread:', error)
   }
+}
+
 
   const renameThread = async (threadId: string, newLabel: string) => {
     try {
@@ -498,7 +559,7 @@ try {
                             <div
                               className="px-5 py-3 rounded-xl bg-gradient-to-br from-blue-900/90 to-blue-700/90 border border-bandhu-primary/30 text-gray-100 shadow-lg overflow-hidden relative"
                               style={{
-                                maxHeight: expandedMessages[event.id] ? 'none' : (event.content.length > 1000 ? '14.4em' : 'none'),
+                                maxHeight: expandedMessages[event.id] ? 'none' : (event.content.length > 750 ? '14.4em' : 'none'),
                               }}
                             >
                               <div className="text-base leading-relaxed" style={{ lineHeight: '1.6em' }}>
