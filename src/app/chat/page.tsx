@@ -589,7 +589,7 @@ try {
                               style={{
                                 maxHeight: expandedMessages[event.id]
                                   ? 'none'
-                                  : event.content.length > 750
+                                  : event.content.length > 1000
                                   ? '14.4em'
                                   : 'none',
                               }}
