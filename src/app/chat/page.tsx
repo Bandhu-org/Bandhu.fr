@@ -60,6 +60,14 @@ export default function ChatPage() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
+    // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
+  const handleNewConversation = () => {
+    setActiveThreadId(null)
+    setEvents([])
+    setCurrentDate('')
+  }
+
+
   // ========== AUTO-RESIZE TEXTAREA ==========
   useEffect(() => {
     const el = textareaRef.current
@@ -107,28 +115,18 @@ useEffect(() => {
   }, [status, router])
 
   // ========== CHARGER DAYTAPES + THREADS AU DÉMARRAGE ==========
-useEffect(() => {
-  if (!session?.user) return
+  // ========== CHARGER DAYTAPES + THREADS AU DÉMARRAGE ==========
+  useEffect(() => {
+    if (!session?.user) return
 
-  loadDayTapes()
-  loadThreads()
+    loadDayTapes()
+    loadThreads()
 
-  // Essayer de recharger le dernier thread actif
-  const baseKey = getActiveThreadKey(session.user.email)
-  if (typeof window !== 'undefined' && baseKey) {
-    const lastThreadId = localStorage.getItem(baseKey)
-    if (lastThreadId) {
-      // On recharge ce thread et on s'arrête là
-      loadThread(lastThreadId)
-      return
-    }
-  }
+    // Au login : on se met comme si on avait cliqué sur "Nouvelle conversation"
+    handleNewConversation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
 
-  // Sinon : état neutre
-  setEvents([])
-  setCurrentDate('')
-  setActiveThreadId(null)
-}, [session])
 
 
   // ========== FONCTIONS API ==========
@@ -403,15 +401,12 @@ try {
           </h2>
 
           <button
-            onClick={() => {
-              setActiveThreadId(null)
-              setEvents([])
-              setCurrentDate('')
-            }}
-            className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
-          >
-            ➕ Nouvelle conversation
-          </button>
+  onClick={handleNewConversation}
+  className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
+>
+  ➕ Nouvelle conversation
+</button>
+
         </div>
 
         {/* THREADS GROUPÉS PAR JOUR */}
