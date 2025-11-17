@@ -243,6 +243,32 @@ useEffect(() => {
     }
   }
 
+    // ========== COPY HELPER ==========
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback pour vieux navigateurs
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+      }
+    } catch (error) {
+      console.error('Erreur copie presse-papier :', error)
+    }
+  }
+
+  const handleCopyMessage = (content: string) => {
+    copyToClipboard(content)
+    // plus tard on pourra ajouter un petit toast "Copié"
+  }
+
+
   // ========== SCROLL TO BOTTOM (sur clic bouton uniquement) ==========
   const scrollToBottom = () => {
     const container = scrollContainerRef.current
@@ -543,7 +569,7 @@ try {
             </div>
           ) : (
             <>
-              {events
+                            {events
                 .filter(
                   event =>
                     event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE',
@@ -556,20 +582,34 @@ try {
                           <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
                             Vous
                           </div>
-                          
+
                           <div className="relative">
                             <div
                               className="px-5 py-3 rounded-xl bg-gradient-to-br from-blue-900/90 to-blue-700/90 border border-bandhu-primary/30 text-gray-100 shadow-lg overflow-hidden relative"
                               style={{
-                                maxHeight: expandedMessages[event.id] ? 'none' : (event.content.length > 750 ? '14.4em' : 'none'),
+                                maxHeight: expandedMessages[event.id]
+                                  ? 'none'
+                                  : event.content.length > 750
+                                  ? '14.4em'
+                                  : 'none',
                               }}
                             >
-                              <div className="text-base leading-relaxed" style={{ lineHeight: '1.6em' }}>
+                              <div
+                                className="text-base leading-relaxed"
+                                style={{ lineHeight: '1.6em' }}
+                              >
                                 <ReactMarkdown
                                   rehypePlugins={[rehypeHighlight]}
                                   components={{
-                                    code: ({ node, inline, className, children, ...props }: any) => {
-                                      const isInline = !className?.includes('language-')
+                                    code: ({
+                                      node,
+                                      inline,
+                                      className,
+                                      children,
+                                      ...props
+                                    }: any) => {
+                                      const isInline =
+                                        !className?.includes('language-')
                                       return !isInline ? (
                                         <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-blue-400/20">
                                           <code className={className} {...props}>
@@ -597,7 +637,10 @@ try {
                                       </a>
                                     ),
                                     p: ({ children, ...props }: any) => (
-                                      <p className="my-2 leading-relaxed text-gray-100" {...props}>
+                                      <p
+                                        className="my-2 leading-relaxed text-gray-100"
+                                        {...props}
+                                      >
                                         {children}
                                       </p>
                                     ),
@@ -606,39 +649,61 @@ try {
                                   {event.content}
                                 </ReactMarkdown>
                               </div>
-                              
-                              {!expandedMessages[event.id] && event.content.length > 1000 && (
-                                <div 
-                                  className="absolute bottom-0 left-0 right-0 pointer-events-none"
-                                  style={{ 
-                                    height: '3.2em',
-                                    background: 'linear-gradient(to top, rgb(30, 58, 138), rgba(30, 58, 138, 0.8), transparent)'
-                                  }}
-                                />
-                              )}
-                            </div>
-                            
-                            {!expandedMessages[event.id] && event.content.length > 1000 && (
-                              <button
-                                onClick={() =>
-                                  setExpandedMessages(prev => ({ ...prev, [event.id]: true }))
-                                }
-                                className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
-                              >
-                                Afficher plus
-                              </button>
-                            )}
 
-                            {expandedMessages[event.id] && event.content.length > 1000 && (
+                              {!expandedMessages[event.id] &&
+                                event.content.length > 1000 && (
+                                  <div
+                                    className="absolute bottom-0 left-0 right-0 pointer-events-none"
+                                    style={{
+                                      height: '3.2em',
+                                      background:
+                                        'linear-gradient(to top, rgb(30, 58, 138), rgba(30, 58, 138, 0.8), transparent)',
+                                    }}
+                                  />
+                                )}
+                            </div>
+
+                            {!expandedMessages[event.id] &&
+                              event.content.length > 1000 && (
+                                <button
+                                  onClick={() =>
+                                    setExpandedMessages(prev => ({
+                                      ...prev,
+                                      [event.id]: true,
+                                    }))
+                                  }
+                                  className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+                                >
+                                  Afficher plus
+                                </button>
+                              )}
+
+                            {expandedMessages[event.id] &&
+                              event.content.length > 1000 && (
+                                <button
+                                  onClick={() =>
+                                    setExpandedMessages(prev => ({
+                                      ...prev,
+                                      [event.id]: false,
+                                    }))
+                                  }
+                                  className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+                                >
+                                  Replier
+                                </button>
+                              )}
+
+                            {/* Bouton Copier (USER) */}
+                            <div className="mt-2 text-[11px] text-gray-400">
                               <button
                                 onClick={() =>
-                                  setExpandedMessages(prev => ({ ...prev, [event.id]: false }))
+                                  handleCopyMessage(event.content)
                                 }
-                                className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+                                className="hover:text-blue-200 underline underline-offset-2"
                               >
-                                Replier
+                                Copier
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -651,8 +716,15 @@ try {
                             <ReactMarkdown
                               rehypePlugins={[rehypeHighlight]}
                               components={{
-                                code: ({ node, inline, className, children, ...props }: any) => {
-                                  const isInline = !className?.includes('language-')
+                                code: ({
+                                  node,
+                                  inline,
+                                  className,
+                                  children,
+                                  ...props
+                                }: any) => {
+                                  const isInline =
+                                    !className?.includes('language-')
                                   return !isInline ? (
                                     <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-bandhu-primary/20">
                                       <code className={className} {...props}>
@@ -680,7 +752,10 @@ try {
                                   </a>
                                 ),
                                 p: ({ children, ...props }: any) => (
-                                  <p className="my-2 leading-7 text-gray-200" {...props}>
+                                  <p
+                                    className="my-2 leading-7 text-gray-200"
+                                    {...props}
+                                  >
                                     {children}
                                   </p>
                                 ),
@@ -689,11 +764,22 @@ try {
                               {event.content}
                             </ReactMarkdown>
                           </div>
+
+                          {/* Bouton Copier (AI) */}
+                          <div className="mt-2 text-[11px] text-gray-400">
+                            <button
+                              onClick={() => handleCopyMessage(event.content)}
+                              className="hover:text-bandhu-primary underline underline-offset-2"
+                            >
+                              Copier
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
+
 
               {/* Typing indicator */}
               {isSending && (
