@@ -100,50 +100,61 @@ console.log('🔍 Message:', message)
     }
 
     // Charger contexte selon threadId
-    let contextMessages: any[] = []
-    
-    if (threadId) {
-      // Charger TOUT le thread (cross-dates)
-      const allDayTapes = await prisma.dayTape.findMany({
-        where: { userId: user.id },
-        include: {
-          events: {
-            orderBy: { createdAt: 'asc' }
-          }
-        }
-      })
+let contextMessages: any[] = []
 
-      // Filtrer events du thread
-      const threadEvents: any[] = []
-      allDayTapes.forEach(dt => {
-        dt.events.forEach(event => {
-          const metadata = event.metadata as any
-          if (metadata?.threadId === threadId && 
-              (event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')) {
-            threadEvents.push(event)
-          }
-        })
-      })
+if (threadId) {
+  // ========== LIMITE CONTEXTE À 33 MESSAGES ==========
+  const MAX_CONTEXT = 33
+  
+  // Charger TOUT le thread (cross-dates)
+  const allDayTapes = await prisma.dayTape.findMany({
+    where: { userId: user.id },
+    include: {
+      events: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
 
-      contextMessages = threadEvents.map(e => ({
-        role: e.role as "user" | "assistant",
-        content: e.content
-      }))
-    } else {
-      // Pas de thread : contexte = derniers messages du jour
-      const todayEvents = await prisma.event.findMany({
-        where: { dayTapeId: dayTape.id },
-        orderBy: { createdAt: 'asc' }
-      })
+  // Filtrer events du thread
+  const threadEvents: any[] = []
+  allDayTapes.forEach(dt => {
+    dt.events.forEach(event => {
+      const metadata = event.metadata as any
+      if (
+        metadata?.threadId === threadId &&
+        (event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')
+      ) {
+        threadEvents.push(event)
+      }
+    })
+  })
 
-      contextMessages = todayEvents
-        .filter(e => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
-        .slice(-20)
-        .map(e => ({
-          role: e.role as "user" | "assistant",
-          content: e.content
-        }))
-    }
+  // Ne garder que les 33 derniers messages du thread pour l'IA
+  const recentThreadEvents = threadEvents.slice(-MAX_CONTEXT)
+
+  contextMessages = recentThreadEvents.map(e => ({
+    role: e.role as 'user' | 'assistant',
+    content: e.content,
+  }))
+} else {
+  // Pas de thread : contexte = derniers messages du jour
+  const todayEvents = await prisma.event.findMany({
+    where: { dayTapeId: dayTape.id },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  contextMessages = todayEvents
+    .filter(
+      e => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE',
+    )
+    .slice(-20)
+    .map(e => ({
+      role: e.role as 'user' | 'assistant',
+      content: e.content,
+    }))
+}
+
 
     // Appeler OpenAI
     const response = await openai.chat.completions.create({
