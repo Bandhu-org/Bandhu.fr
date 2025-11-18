@@ -537,10 +537,44 @@ try {
       sortByLastActivity(recentThreads)
       sortByLastActivity(archiveThreads)
 
+      const formatDurationShort = (from: Date, to: Date) => {
+  const diffMs = to.getTime() - from.getTime()
+  if (diffMs <= 0) return '0 min'
+
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 60) return `${diffMin} min`
+
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `${diffH} h`
+
+  const diffD = Math.floor(diffH / 24)
+  return `${diffD} j`
+}
+
+const getThreadCreationDate = (thread: Thread) => {
+  // On prend le premier jour actif comme "création"
+  if (thread.activeDates && thread.activeDates.length > 0) {
+    return new Date(thread.activeDates[0] + 'T00:00:00')
+  }
+  // Fallback : on utilise lastActivity
+  return new Date(thread.lastActivity)
+}
+
+
       const renderThreadCard = (thread: Thread) => {
-  const lastDate = thread.lastActivity.split('T')[0]
   const isActive = activeThreadId === thread.id
   const isMenuOpen = openThreadMenuId === thread.id
+
+  const now = new Date()
+  const creationDate = getThreadCreationDate(thread)
+  const lastActivityDate = new Date(thread.lastActivity)
+
+  // Durées formatées
+  const ageLabel = formatDurationShort(creationDate, now)               // création → maintenant
+  const sinceLastUpdateLabel = formatDurationShort(lastActivityDate, now) // dernière maj → maintenant
+
+  // Barre de progression : 1 msg = 1%, max 100
+  const progress = Math.min(thread.messageCount, 100)
 
   return (
     <div
@@ -559,6 +593,7 @@ try {
         }}
         className="cursor-pointer pr-8" // petit padding à droite pour éloigner du bouton ⋮
       >
+        {/* Titre */}
         <div
           className={`text-sm font-medium mb-1 flex items-center gap-2 ${
             isActive ? 'text-green-400' : 'text-gray-300'
@@ -567,14 +602,28 @@ try {
           <span className="flex-1 truncate">{thread.label}</span>
         </div>
 
-        <div className="text-[11px] text-gray-500 flex justify-between">
-          <span>
-            {thread.messageCount} msg
-            {thread.activeDates.length > 1 && (
-              <span className="ml-2">• {thread.activeDates.length} jours</span>
-            )}
-          </span>
-          <span>{formatDate(lastDate)}</span>
+        {/* Méta + barre de progression */}
+        <div className="mt-1 space-y-1">
+          {/* Ligne temps création / temps dernière maj */}
+          <div className="text-[11px] text-gray-500 flex items-center justify-between">
+            <span>Âge : {ageLabel}</span>
+            <span>Dernière maj : {sinceLastUpdateLabel}</span>
+          </div>
+
+          {/* Barre de progression + nombre de messages */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${
+                  isActive ? 'bg-green-500' : 'bg-gray-500'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-400 whitespace-nowrap">
+              {thread.messageCount} msg
+            </span>
+          </div>
         </div>
       </div>
 
@@ -589,7 +638,6 @@ try {
           className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition"
           title="Options du thread"
         >
-          {/* trois points verticaux */}
           <span className="text-lg leading-none">⋮</span>
         </button>
 
@@ -631,6 +679,7 @@ try {
     </div>
   )
 }
+
 
 
       return (
