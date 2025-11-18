@@ -263,13 +263,24 @@ useEffect(() => {
     }
   }
 
-  const handleCopyMessage = (content: string) => {
+   const handleCopyMessage = (content: string) => {
     copyToClipboard(content)
     // plus tard on pourra ajouter un petit toast "Copié"
   }
 
+  // ========== COLLAPSE MESSAGE + RECALAGE STANDARD ==========
+  const handleCollapseMessage = (messageId: string) => {
+    // On replie dans le state
+    setExpandedMessages(prev => ({ ...prev, [messageId]: false }))
 
-  // ========== SCROLL TO BOTTOM (sur clic bouton uniquement) ==========
+    // On laisse React rerender puis on scrolle proprement vers ce message
+    requestAnimationFrame(() => {
+      scrollMessageToStandardPosition(messageId)
+    })
+  }
+
+
+    // ========== SCROLL TO BOTTOM (sur clic bouton uniquement) ==========
   const scrollToBottom = () => {
     const container = scrollContainerRef.current
     if (!container) return
@@ -303,6 +314,32 @@ useEffect(() => {
       behavior: 'smooth',
     })
   }
+
+  // ========== SCROLLER UN MESSAGE À LA POSITION STANDARD ==========
+  const scrollMessageToStandardPosition = (messageId: string) => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const messageEl = container.querySelector(
+      `[data-message-id="${messageId}"]`
+    ) as HTMLElement | null
+
+    if (!messageEl) return
+
+    const messageTop = messageEl.offsetTop
+    const messageHeight = messageEl.offsetHeight
+    const messageBottom = messageTop + messageHeight
+    const containerHeight = container.clientHeight
+
+    // Même logique que scrollToBottom : bas du message vers le milieu de l'écran
+    const targetScroll = messageBottom - containerHeight * 0.5
+
+    container.scrollTo({
+      top: Math.max(0, targetScroll),
+      behavior: 'auto', // pas besoin d'anim ici
+    })
+  }
+
 
   // ========== SEND MESSAGE (SANS auto-scroll) ==========
   const sendMessage = async () => {
@@ -578,7 +615,11 @@ try {
                   <div key={event.id} className="mb-5 flex justify-center">
                     <div className="w-full max-w-4xl">
                       {event.role === 'user' ? (
-                        <div className="max-w-md relative" data-message-type="user">
+                        <div
+                           className="max-w-md relative"
+                            data-message-type="user"
+                            data-message-id={event.id}
+                            >
                           <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
                             Vous
                           </div>
@@ -681,14 +722,11 @@ try {
                             {expandedMessages[event.id] &&
                               event.content.length > 1000 && (
                                 <button
-                                  onClick={() =>
-                                    setExpandedMessages(prev => ({
-                                      ...prev,
-                                      [event.id]: false,
-                                    }))
-                                  }
+                                  onClick={() => handleCollapseMessage(event.id)}
+    
+    
                                   className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
-                                >
+                              >
                                   Replier
                                 </button>
                               )}
