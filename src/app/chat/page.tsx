@@ -60,6 +60,7 @@ export default function ChatPage() {
   const [collapsedArchive, setCollapsedArchive] = useState(true) // fermé par défaut
   const [showRecentWeek, setShowRecentWeek] = useState(true)
   const [showArchive, setShowArchive] = useState(false)
+  const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
 
 
 
@@ -366,7 +367,7 @@ useEffect(() => {
     if (!threadToUse) {
       const newThreadId = `thread-${Date.now()}`
       const today = new Date().toISOString().split('T')[0]
-      const autoLabel = `Conversation ${new Date().toLocaleTimeString('fr-FR', {
+      const autoLabel = `${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR', {
         hour: '2-digit',
         minute: '2-digit',
       })}`
@@ -537,75 +538,100 @@ try {
       sortByLastActivity(archiveThreads)
 
       const renderThreadCard = (thread: Thread) => {
-        const lastDate = thread.lastActivity.split('T')[0]
+  const lastDate = thread.lastActivity.split('T')[0]
+  const isActive = activeThreadId === thread.id
+  const isMenuOpen = openThreadMenuId === thread.id
 
-        return (
-          <div
-            key={thread.id}
-            className={`mb-2 p-3 rounded-lg transition group relative ${
-              activeThreadId === thread.id
-                ? 'bg-green-900/30 border border-green-600'
-                : 'hover:bg-gray-800/50 border border-transparent'
-            }`}
-          >
-            <div
-              onClick={() => loadThread(thread.id)}
-              className="cursor-pointer"
+  return (
+    <div
+      key={thread.id}
+      className={`mb-2 p-3 rounded-lg transition group relative ${
+        isActive
+          ? 'bg-green-900/30 border border-green-600'
+          : 'hover:bg-gray-800/50 border border-transparent'
+      }`}
+    >
+      {/* Zone principale cliquable = charger le thread */}
+      <div
+        onClick={() => {
+          setOpenThreadMenuId(null)
+          loadThread(thread.id)
+        }}
+        className="cursor-pointer pr-8" // petit padding à droite pour éloigner du bouton ⋮
+      >
+        <div
+          className={`text-sm font-medium mb-1 flex items-center gap-2 ${
+            isActive ? 'text-green-400' : 'text-gray-300'
+          }`}
+        >
+          <span className="flex-1 truncate">{thread.label}</span>
+        </div>
+
+        <div className="text-[11px] text-gray-500 flex justify-between">
+          <span>
+            {thread.messageCount} msg
+            {thread.activeDates.length > 1 && (
+              <span className="ml-2">• {thread.activeDates.length} jours</span>
+            )}
+          </span>
+          <span>{formatDate(lastDate)}</span>
+        </div>
+      </div>
+
+      {/* Bouton ⋮ + menu déroulant */}
+      <div className="absolute top-2 right-2">
+        {/* Bouton ⋮ */}
+        <button
+          onClick={e => {
+            e.stopPropagation()
+            setOpenThreadMenuId(prev => (prev === thread.id ? null : thread.id))
+          }}
+          className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition"
+          title="Options du thread"
+        >
+          {/* trois points verticaux */}
+          <span className="text-lg leading-none">⋮</span>
+        </button>
+
+        {/* Menu déroulant */}
+        {isMenuOpen && (
+          <div className="absolute right-0 mt-1 w-40 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-10 py-1">
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                const newLabel = prompt('Nouveau nom :', thread.label)
+                if (newLabel && newLabel !== thread.label) {
+                  renameThread(thread.id, newLabel)
+                }
+                setOpenThreadMenuId(null)
+              }}
+              className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
             >
-              <div
-                className={`text-sm font-medium mb-1 flex items-center gap-2 ${
-                  activeThreadId === thread.id
-                    ? 'text-green-400'
-                    : 'text-gray-300'
-                }`}
-              >
-                <span>🧵</span>
-                <span className="flex-1 truncate">{thread.label}</span>
-              </div>
-              <div className="text-[11px] text-gray-500 flex justify-between">
-                <span>
-                  {thread.messageCount} msg
-                  {thread.activeDates.length > 1 && (
-                    <span className="ml-2">
-                      • {thread.activeDates.length} jours
-                    </span>
-                  )}
-                </span>
-                <span>{formatDate(lastDate)}</span>
-              </div>
-            </div>
+              <span>✏️</span>
+              <span>Renommer</span>
+            </button>
 
-            {/* Boutons actions */}
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  const newLabel = prompt('Nouveau nom :', thread.label)
-                  if (newLabel && newLabel !== thread.label) {
-                    renameThread(thread.id, newLabel)
-                  }
-                }}
-                className="p-1.5 hover:bg-gray-700 rounded text-xs"
-                title="Renommer"
-              >
-                ✏️
-              </button>
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  if (confirm('Supprimer ce thread ?')) {
-                    deleteThread(thread.id)
-                  }
-                }}
-                className="p-1.5 hover:bg-red-900 rounded text-xs"
-                title="Supprimer"
-              >
-                🗑️
-              </button>
-            </div>
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                const ok = confirm('Supprimer ce thread ?')
+                if (ok) {
+                  deleteThread(thread.id)
+                }
+                setOpenThreadMenuId(null)
+              }}
+              className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2"
+            >
+              <span>🗑️</span>
+              <span>Supprimer</span>
+            </button>
           </div>
-        )
-      }
+        )}
+      </div>
+    </div>
+  )
+}
+
 
       return (
         <div className="space-y-6">
@@ -683,7 +709,7 @@ try {
         <div className="p-5 border-b border-gray-800 bg-gray-900/30">
           <h3 className="text-bandhu-primary font-medium">
             {activeThreadId
-              ? `🧵 ${threads.find(t => t.id === activeThreadId)?.label || 'Thread'}`
+              ? `${threads.find(t => t.id === activeThreadId)?.label || 'Thread'}`
               : '💬 Nouvelle conversation'}
           </h3>
         </div>
