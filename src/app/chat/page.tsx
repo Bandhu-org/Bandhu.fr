@@ -56,6 +56,12 @@ export default function ChatPage() {
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({})
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [collapsedLast7, setCollapsedLast7] = useState(false)   // ouvert par défaut
+  const [collapsedArchive, setCollapsedArchive] = useState(true) // fermé par défaut
+  const [showRecentWeek, setShowRecentWeek] = useState(true)
+  const [showArchive, setShowArchive] = useState(false)
+
+
 
 
   // ========== REFS ==========
@@ -479,110 +485,197 @@ try {
 
         </div>
 
-        {/* THREADS GROUPÉS PAR JOUR */}
-        <div className="flex-1 overflow-y-auto scrollbar-bandhu">
-          {isLoading ? (
-            <div className="text-center text-gray-500 p-5 text-sm">
-              Chargement...
+        {/* THREADS GROUPÉS PAR PÉRIODES (Aujourd'hui / 7 jours / Archives) */}
+<div className="flex-1 overflow-y-auto scrollbar-bandhu">
+  {isLoading ? (
+    <div className="text-center text-gray-500 p-5 text-sm">
+      Chargement...
+    </div>
+  ) : threads.length === 0 ? (
+    <div className="text-center text-gray-500 p-5 text-sm">
+      Commencez une conversation !
+    </div>
+  ) : (
+    (() => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const getDayDiff = (dateStr: string) => {
+        const d = new Date(dateStr)
+        const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+        const diffMs = today.getTime() - dClean.getTime()
+        return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      }
+
+      const todayThreads: Thread[] = []
+      const recentThreads: Thread[] = []
+      const archiveThreads: Thread[] = []
+
+      threads.forEach(thread => {
+        const last = new Date(thread.lastActivity)
+        const lastDateStr = last.toISOString().split('T')[0]
+        const diff = getDayDiff(lastDateStr)
+
+        if (diff === 0) {
+          todayThreads.push(thread)
+        } else if (diff > 0 && diff <= 7) {
+          recentThreads.push(thread)
+        } else if (diff > 7) {
+          archiveThreads.push(thread)
+        }
+      })
+
+      const sortByLastActivity = (arr: Thread[]) =>
+        arr.sort(
+          (a, b) =>
+            new Date(b.lastActivity).getTime() -
+            new Date(a.lastActivity).getTime(),
+        )
+
+      sortByLastActivity(todayThreads)
+      sortByLastActivity(recentThreads)
+      sortByLastActivity(archiveThreads)
+
+      const renderThreadCard = (thread: Thread) => {
+        const lastDate = thread.lastActivity.split('T')[0]
+
+        return (
+          <div
+            key={thread.id}
+            className={`mb-2 p-3 rounded-lg transition group relative ${
+              activeThreadId === thread.id
+                ? 'bg-green-900/30 border border-green-600'
+                : 'hover:bg-gray-800/50 border border-transparent'
+            }`}
+          >
+            <div
+              onClick={() => loadThread(thread.id)}
+              className="cursor-pointer"
+            >
+              <div
+                className={`text-sm font-medium mb-1 flex items-center gap-2 ${
+                  activeThreadId === thread.id
+                    ? 'text-green-400'
+                    : 'text-gray-300'
+                }`}
+              >
+                <span>🧵</span>
+                <span className="flex-1 truncate">{thread.label}</span>
+              </div>
+              <div className="text-[11px] text-gray-500 flex justify-between">
+                <span>
+                  {thread.messageCount} msg
+                  {thread.activeDates.length > 1 && (
+                    <span className="ml-2">
+                      • {thread.activeDates.length} jours
+                    </span>
+                  )}
+                </span>
+                <span>{formatDate(lastDate)}</span>
+              </div>
             </div>
-          ) : threads.length === 0 ? (
-            <div className="text-center text-gray-500 p-5 text-sm">
-              Commencez une conversation !
+
+            {/* Boutons actions */}
+            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  const newLabel = prompt('Nouveau nom :', thread.label)
+                  if (newLabel && newLabel !== thread.label) {
+                    renameThread(thread.id, newLabel)
+                  }
+                }}
+                className="p-1.5 hover:bg-gray-700 rounded text-xs"
+                title="Renommer"
+              >
+                ✏️
+              </button>
+              <button
+                onClick={e => {
+                  e.stopPropagation()
+                  if (confirm('Supprimer ce thread ?')) {
+                    deleteThread(thread.id)
+                  }
+                }}
+                className="p-1.5 hover:bg-red-900 rounded text-xs"
+                title="Supprimer"
+              >
+                🗑️
+              </button>
             </div>
-          ) : (
-            (() => {
-              const threadsByDate = new Map<string, Thread[]>()
+          </div>
+        )
+      }
 
-              threads.forEach(thread => {
-                thread.activeDates.forEach(date => {
-                  if (!threadsByDate.has(date)) {
-                    threadsByDate.set(date, [])
-                  }
-                  if (!threadsByDate.get(date)!.find(t => t.id === thread.id)) {
-                    threadsByDate.get(date)!.push(thread)
-                  }
-                })
-              })
+      return (
+        <div className="space-y-6">
+          {/* AUJOURD'HUI (non repliable) */}
+          {todayThreads.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
+                <span className="text-sm">📆</span>
+                <span>Aujourd&apos;hui</span>
+              </div>
+              {todayThreads.map(renderThreadCard)}
+            </div>
+          )}
 
-              const sortedDates = Array.from(threadsByDate.keys()).sort(
-                (a, b) => new Date(b).getTime() - new Date(a).getTime(),
-              )
+          {/* 7 DERNIERS JOURS (repliable) */}
+          {recentThreads.length > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowRecentWeek(prev => !prev)}
+                className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-sm">🗓️</span>
+                  <span>7 derniers jours</span>
+                </span>
+                <span className="text-gray-400 text-sm">
+                  {showRecentWeek ? '▾' : '▸'}
+                </span>
+              </button>
 
-              return sortedDates.map(date => (
-                <div key={date} className="mb-5">
-                  <div className="text-xs font-medium text-gray-500 mb-2 pb-2 border-b border-gray-800">
-                    📅 {formatDate(date)}
-                  </div>
-
-                  {threadsByDate.get(date)!.map(thread => (
-                    <div
-                      key={thread.id}
-                      className={`mb-2 p-3 rounded-lg transition group relative ${
-                        activeThreadId === thread.id
-                          ? 'bg-green-900/30 border border-green-600'
-                          : 'hover:bg-gray-800/50 border border-transparent'
-                      }`}
-                    >
-                      <div
-                        onClick={() => loadThread(thread.id)}
-                        className="cursor-pointer"
-                      >
-                        <div
-                          className={`text-sm font-medium mb-1 flex items-center gap-2 ${
-                            activeThreadId === thread.id
-                              ? 'text-green-400'
-                              : 'text-gray-300'
-                          }`}
-                        >
-                          <span>🧵</span>
-                          <span className="flex-1 truncate">{thread.label}</span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {thread.messageCount} msg
-                          {thread.activeDates.length > 1 && (
-                            <span className="ml-2">
-                              • {thread.activeDates.length} jours
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Boutons actions */}
-                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            const newLabel = prompt('Nouveau nom :', thread.label)
-                            if (newLabel && newLabel !== thread.label) {
-                              renameThread(thread.id, newLabel)
-                            }
-                          }}
-                          className="p-1.5 hover:bg-gray-700 rounded text-xs"
-                          title="Renommer"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            if (confirm('Supprimer ce thread ?')) {
-                              deleteThread(thread.id)
-                            }
-                          }}
-                          className="p-1.5 hover:bg-red-900 rounded text-xs"
-                          title="Supprimer"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {showRecentWeek && (
+                <div className="mt-1">
+                  {recentThreads.map(renderThreadCard)}
                 </div>
-              ))
-            })()
+              )}
+            </div>
+          )}
+
+          {/* ARCHIVES (repliable) */}
+          {archiveThreads.length > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowArchive(prev => !prev)}
+                className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-sm">📚</span>
+                  <span>Archives</span>
+                </span>
+                <span className="text-gray-400 text-sm">
+                  {showArchive ? '▾' : '▸'}
+                </span>
+              </button>
+
+              {showArchive && (
+                <div className="mt-1">
+                  {archiveThreads.map(renderThreadCard)}
+                </div>
+              )}
+            </div>
           )}
         </div>
-      </div>
+      )
+    })()
+  )}
+</div>
+</div>
+
 
       {/* ========== CHAT AREA ========== */}
       <div className="flex-1 flex flex-col relative">
