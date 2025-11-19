@@ -58,9 +58,13 @@ export default function ChatPage() {
   const [hasInitialized, setHasInitialized] = useState(false)
   const [collapsedLast7, setCollapsedLast7] = useState(false)   // ouvert par défaut
   const [collapsedArchive, setCollapsedArchive] = useState(true) // fermé par défaut
-  const [showRecentWeek, setShowRecentWeek] = useState(true)
+  const [showRecentWeek, setShowRecentWeek] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
+  const displayName = session?.user?.name || "Mon compte"
+  const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
+
+
 
 
 
@@ -89,7 +93,7 @@ export default function ChatPage() {
     el.style.height = `${newHeight}px`
   }, [input])
 
-  // ========== DÉTECTER SI ON EST EN BAS + SAUVER LA POSITION DE SCROLL ==========
+ // ========== DÉTECTER SI ON EST EN BAS + SAUVER LA POSITION DE SCROLL ==========
 useEffect(() => {
   const container = scrollContainerRef.current
   if (!container) return
@@ -99,7 +103,6 @@ useEffect(() => {
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
     setShowScrollButton(!isNearBottom)
 
-    // Sauvegarder la position de scroll par user + thread
     const baseKey = getActiveThreadKey(session?.user?.email)
     if (!baseKey || !activeThreadId) return
 
@@ -110,10 +113,13 @@ useEffect(() => {
   }
 
   container.addEventListener('scroll', handleScroll)
-  handleScroll() // État initial
 
-  return () => container.removeEventListener('scroll', handleScroll)
-}, [events, session?.user?.email, activeThreadId])
+  return () => {
+    container.removeEventListener('scroll', handleScroll)
+  }
+}, [session?.user?.email, activeThreadId])
+
+
 
 
   // Auth + init une seule fois au login
@@ -170,10 +176,13 @@ useEffect(() => {
 
   const loadThread = async (threadId: string) => {
   try {
+    setLoadingThreadId(threadId)
+    setActiveThreadId(threadId)
+    setIsSending(false)
+
     const response = await fetch(`/api/threads/${threadId}`)
 
     if (!response.ok) {
-      // Si le thread n'existe plus, on nettoie la clé de thread actif
       const baseKey = getActiveThreadKey(session?.user?.email)
       if (baseKey && typeof window !== 'undefined') {
         localStorage.removeItem(baseKey)
@@ -183,34 +192,41 @@ useEffect(() => {
 
     const data = await response.json()
     setEvents(data.events || [])
-    setActiveThreadId(threadId)
     setCurrentDate('')
     setIsSending(false)
 
-    // Mémoriser ce thread comme dernier thread actif
     const baseKey = getActiveThreadKey(session?.user?.email)
     if (baseKey && typeof window !== 'undefined') {
+      // On mémorise juste le dernier thread actif
       localStorage.setItem(baseKey, threadId)
 
-      // Essayer de restaurer la position de scroll
       const scrollKey = `${baseKey}_scroll_${threadId}`
       const savedScroll = localStorage.getItem(scrollKey)
 
-      if (savedScroll) {
-        const scrollValue = parseInt(savedScroll, 10)
-        if (!Number.isNaN(scrollValue)) {
-          setTimeout(() => {
-            const container = scrollContainerRef.current
-            if (!container) return
+      setTimeout(() => {
+        const container = scrollContainerRef.current
+        if (!container) return
+
+        if (savedScroll !== null) {
+          const scrollValue = parseInt(savedScroll, 10)
+          if (!Number.isNaN(scrollValue)) {
             container.scrollTop = scrollValue
-          }, 50)
+            return
+          }
         }
-      }
+
+        // Fallback : si aucun scroll enregistré pour ce thread,
+        // on va au dernier message user (comportement actuel)
+        scrollToBottom()
+      }, 50)
     }
   } catch (error) {
     console.error('Erreur chargement thread:', error)
+  } finally {
+    setLoadingThreadId(null)
   }
 }
+
 
 
   const renameThread = async (threadId: string, newLabel: string) => {
@@ -465,11 +481,6 @@ try {
     <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
       {/* ========== SIDEBAR ========== */}
       <div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
-        {/* INFO USER */}
-        <div className="mb-5 border-b border-gray-800 pb-4">
-          <p className="text-xs text-gray-500 mb-1">Connecté en tant que</p>
-          <p className="font-bold text-sm">{session?.user?.email}</p>
-        </div>
 
         {/* HEADER */}
         <div className="mb-5">
@@ -563,6 +574,7 @@ const getThreadCreationDate = (thread: Thread) => {
 
       const renderThreadCard = (thread: Thread) => {
   const isActive = activeThreadId === thread.id
+  const isLoadingThis = loadingThreadId === thread.id
   const isMenuOpen = openThreadMenuId === thread.id
 
   const now = new Date()
@@ -606,9 +618,20 @@ const getThreadCreationDate = (thread: Thread) => {
         <div className="mt-1 space-y-1">
           {/* Ligne temps création / temps dernière maj */}
           <div className="text-[11px] text-gray-500 flex items-center justify-between">
-            <span>Âge : {ageLabel}</span>
-            <span>Dernière maj : {sinceLastUpdateLabel}</span>
-          </div>
+  <span>Âge : {ageLabel}</span>
+
+  <span className="flex items-center gap-2">
+    <span>Dernière maj : {sinceLastUpdateLabel}</span>
+
+    {isLoadingThis && (
+      <span className="inline-flex items-center gap-1 text-[10px] text-green-300">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-ping" />
+        <span>...</span>
+      </span>
+    )}
+  </span>
+</div>
+
 
           {/* Barre de progression + nombre de messages */}
           <div className="flex items-center gap-2">
@@ -748,6 +771,18 @@ const getThreadCreationDate = (thread: Thread) => {
       )
     })()
   )}
+</div>
+
+
+{/* FOOTER USER / MON COMPTE */}
+<div className="mt-4 pt-4 border-t border-gray-800">
+  <button
+    onClick={() => router.push('/account')}
+    className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
+  >
+    <span className="text-gray-400">👤</span>
+    <span>{displayName}</span>
+  </button>
 </div>
 </div>
 
