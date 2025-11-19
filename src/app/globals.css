@@ -42,6 +42,9 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
   width: 4px !important;
 }
 
+/* === SUPPRIME TOUTE CETTE SECTION === */
+/* .sidebar-scroll-area { ... } */
+
 /* Désactiver totalement la scrollbar pour la sidebar */
 .sidebar-no-scroll {
   scrollbar-width: none !important;     /* Firefox */
@@ -50,4 +53,34 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
 
 .sidebar-no-scroll::-webkit-scrollbar {
   display: none !important;             /* Chrome / Safari */
+}
+
+/* Effets de fade avec gestion du scroll */
+.threads-scroll-container {
+  position: relative;
+}
+
+.threads-scroll-container::before,
+.threads-scroll-container::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 25px;  /* ← Augmenté à 25px */
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.threads-scroll-container.scroll-top::before {
+  top: 0;
+  background: linear-gradient(to bottom, rgb(17, 24, 39) 0%, transparent 100%);
+  opacity: 1;
+}
+
+.threads-scroll-container.scroll-bottom::after {
+  bottom: 0;
+  background: linear-gradient(to top, rgb(17, 24, 39) 0%, transparent 100%);
+  opacity: 1;
 }

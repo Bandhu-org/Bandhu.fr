@@ -67,8 +67,6 @@ export default function ChatPage() {
 
 
 
-
-
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -463,116 +461,33 @@ try {
     })
   }
 
-  // ========== ÉTATS TRANSITOIRES ==========
-  if (status === 'loading') {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
-        Chargement...
-      </div>
-    )
-  }
-
-  if (status === 'unauthenticated') {
-    return null
-  }
-
-  // ========== RENDER ==========
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
-      {/* ========== SIDEBAR ========== */}
-      <div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
-
-        {/* HEADER */}
-        <div className="mb-5">
-          <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
-            Chat avec Ombrelien
-          </h2>
-
-          <button
-  onClick={handleNewConversation}
-  className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
->
-  ➕ Nouvelle conversation
-</button>
-
-        </div>
-
-        {/* THREADS GROUPÉS PAR PÉRIODES (Aujourd'hui / 7 jours / Archives) */}
-<div className="flex-1 overflow-y-auto sidebar-no-scroll">
-  {isLoading ? (
-    <div className="text-center text-gray-500 p-5 text-sm">
-      Chargement...
-    </div>
-  ) : threads.length === 0 ? (
-    <div className="text-center text-gray-500 p-5 text-sm">
-      Commencez une conversation !
-    </div>
-  ) : (
-    (() => {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
-      const getDayDiff = (dateStr: string) => {
-        const d = new Date(dateStr)
-        const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-        const diffMs = today.getTime() - dClean.getTime()
-        return Math.floor(diffMs / (1000 * 60 * 60 * 24))
-      }
-
-      const todayThreads: Thread[] = []
-      const recentThreads: Thread[] = []
-      const archiveThreads: Thread[] = []
-
-      threads.forEach(thread => {
-        const last = new Date(thread.lastActivity)
-        const lastDateStr = last.toISOString().split('T')[0]
-        const diff = getDayDiff(lastDateStr)
-
-        if (diff === 0) {
-          todayThreads.push(thread)
-        } else if (diff > 0 && diff <= 7) {
-          recentThreads.push(thread)
-        } else if (diff > 7) {
-          archiveThreads.push(thread)
-        }
-      })
-
-      const sortByLastActivity = (arr: Thread[]) =>
-        arr.sort(
-          (a, b) =>
-            new Date(b.lastActivity).getTime() -
-            new Date(a.lastActivity).getTime(),
-        )
-
-      sortByLastActivity(todayThreads)
-      sortByLastActivity(recentThreads)
-      sortByLastActivity(archiveThreads)
-
-      const formatDurationShort = (from: Date, to: Date) => {
-  const diffMs = to.getTime() - from.getTime()
-  if (diffMs <= 0) return '0 min'
-
-  const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 60) return `${diffMin} min`
-
-  const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH} h`
-
-  const diffD = Math.floor(diffH / 24)
-  return `${diffD} j`
-}
-
-const getThreadCreationDate = (thread: Thread) => {
-  // On prend le premier jour actif comme "création"
+  // ========== HELPERS POUR THREAD CARD ==========
+const getThreadCreationDate = (thread: Thread): Date => {
+  // On prend la date la plus ancienne dans activeDates
   if (thread.activeDates && thread.activeDates.length > 0) {
-    return new Date(thread.activeDates[0] + 'T00:00:00')
+    const sorted = [...thread.activeDates].sort()
+    return new Date(sorted[0])
   }
-  // Fallback : on utilise lastActivity
+  // Fallback sur lastActivity si pas de dates
   return new Date(thread.lastActivity)
 }
 
+const formatDurationShort = (start: Date, end: Date): string => {
+  const diffMs = end.getTime() - start.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
 
-      const renderThreadCard = (thread: Thread) => {
+  if (diffMins < 60) return `${diffMins}m`
+  if (diffHours < 24) return `${diffHours}h`
+  if (diffDays < 7) return `${diffDays}j`
+  const diffWeeks = Math.floor(diffDays / 7)
+  return `${diffWeeks}sem`
+}
+
+{/* ⬇️⬇️⬇️ AJOUTE renderThreadCard ICI ⬇️⬇️⬇️ */}
+{/* ========== FONCTION RENDER THREAD CARD ========== */}
+const renderThreadCard = (thread: Thread) => {
   const isActive = activeThreadId === thread.id
   const isLoadingThis = loadingThreadId === thread.id
   const isMenuOpen = openThreadMenuId === thread.id
@@ -582,8 +497,8 @@ const getThreadCreationDate = (thread: Thread) => {
   const lastActivityDate = new Date(thread.lastActivity)
 
   // Durées formatées
-  const ageLabel = formatDurationShort(creationDate, now)               // création → maintenant
-  const sinceLastUpdateLabel = formatDurationShort(lastActivityDate, now) // dernière maj → maintenant
+  const ageLabel = formatDurationShort(creationDate, now)
+  const sinceLastUpdateLabel = formatDurationShort(lastActivityDate, now)
 
   // Barre de progression : 1 msg = 1%, max 100
   const progress = Math.min(thread.messageCount, 100)
@@ -603,7 +518,7 @@ const getThreadCreationDate = (thread: Thread) => {
           setOpenThreadMenuId(null)
           loadThread(thread.id)
         }}
-        className="cursor-pointer pr-8" // petit padding à droite pour éloigner du bouton ⋮
+        className="cursor-pointer pr-8"
       >
         {/* Titre */}
         <div
@@ -618,20 +533,17 @@ const getThreadCreationDate = (thread: Thread) => {
         <div className="mt-1 space-y-1">
           {/* Ligne temps création / temps dernière maj */}
           <div className="text-[11px] text-gray-500 flex items-center justify-between">
-  <span>Âge : {ageLabel}</span>
-
-  <span className="flex items-center gap-2">
-    <span>Dernière maj : {sinceLastUpdateLabel}</span>
-
-    {isLoadingThis && (
-      <span className="inline-flex items-center gap-1 text-[10px] text-green-300">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-ping" />
-        <span>...</span>
-      </span>
-    )}
-  </span>
-</div>
-
+            <span>Âge : {ageLabel}</span>
+            <span className="flex items-center gap-2">
+              <span>Dernière maj : {sinceLastUpdateLabel}</span>
+              {isLoadingThis && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-green-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-ping" />
+                  <span>...</span>
+                </span>
+              )}
+            </span>
+          </div>
 
           {/* Barre de progression + nombre de messages */}
           <div className="flex items-center gap-2">
@@ -702,88 +614,211 @@ const getThreadCreationDate = (thread: Thread) => {
     </div>
   )
 }
+{/* ⬆️⬆️⬆️ FIN DE renderThreadCard ⬆️⬆️⬆️ */}
 
+  // ========== ÉTATS TRANSITOIRES ==========
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
+        Chargement...
+      </div>
+    )
+  }
 
+  if (status === 'unauthenticated') {
+    return null
+  }
 
-      return (
-        <div className="space-y-6">
-          {/* AUJOURD'HUI (non repliable) */}
-          {todayThreads.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
-                <span className="text-sm">📆</span>
-                <span>Aujourd&apos;hui</span>
-              </div>
-              {todayThreads.map(renderThreadCard)}
-            </div>
-          )}
+  // ========== RENDER ==========
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
+      {/* ========== SIDEBAR ========== */}
+<div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col h-screen">
+  
+  {/* ========== 1. HEADER FIXE ========== */}
+  <div className="flex-shrink-0 mb-5">
+    <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
+      Chat avec Ombrelien
+    </h2>
+  </div>
 
-          {/* 7 DERNIERS JOURS (repliable) */}
-          {recentThreads.length > 0 && (
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowRecentWeek(prev => !prev)}
-                className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-sm">🗓️</span>
-                  <span>7 derniers jours</span>
-                </span>
-                <span className="text-gray-400 text-sm">
-                  {showRecentWeek ? '▾' : '▸'}
-                </span>
-              </button>
+  {/* ========== 2. CONTAINER INTERMÉDIAIRE GRAND ET TRANSPARENT ========== */}
+  <div className="flex-1 min-h-0 flex flex-col justify-center items-center mb-4 p-6 bg-gray-800/10 rounded-lg border border-gray-700/20">
+    <div className="text-center">
+      <div className="text-4xl mb-4">🌌</div>
+      <div className="text-sm text-gray-400 mb-2">
+        Espace de connexion
+      </div>
+      <div className="text-xs text-gray-500 max-w-xs">
+        Cette zone accueillera bientôt vos statistiques, raccourcis et outils de conversation.
+      </div>
+    </div>
+  </div>
 
-              {showRecentWeek && (
-                <div className="mt-1">
-                  {recentThreads.map(renderThreadCard)}
-                </div>
-              )}
-            </div>
-          )}
+  {/* ========== 3. BOUTON NOUVELLE CONVERSATION ========== */}
+  <div className="flex-shrink-0 mb-5">
+    <button
+      onClick={handleNewConversation}
+      className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
+    >
+      ➕ Nouvelle conversation
+    </button>
+  </div>
 
-          {/* ARCHIVES (repliable) */}
-          {archiveThreads.length > 0 && (
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowArchive(prev => !prev)}
-                className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-sm">📚</span>
-                  <span>Archives</span>
-                </span>
-                <span className="text-gray-400 text-sm">
-                  {showArchive ? '▾' : '▸'}
-                </span>
-              </button>
-
-              {showArchive && (
-                <div className="mt-1">
-                  {archiveThreads.map(renderThreadCard)}
-                </div>
-              )}
-            </div>
-          )}
+  {/* ========== 4. THREADS SCROLLABLES ========== */}
+  <div className="flex-1 min-h-0 flex flex-col threads-scroll-container">
+    <div 
+      className="flex-1 overflow-y-auto sidebar-no-scroll"
+      onScroll={(e) => {
+        const target = e.currentTarget
+        const isAtTop = target.scrollTop === 0
+        const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 1
+        
+        target.parentElement?.classList.toggle('scroll-top', !isAtTop)
+        target.parentElement?.classList.toggle('scroll-bottom', !isAtBottom)
+      }}
+    >
+      {isLoading ? (
+        <div className="text-center text-gray-500 p-5 text-sm">
+          Chargement...
         </div>
-      )
-    })()
-  )}
-</div>
+      ) : threads.length === 0 ? (
+        <div className="space-y-6">
+          {/* SECTION "AUJOURD'HUI" TOUJOURS VISIBLE */}
+          <div>
+            <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
+              <span className="text-sm">📆</span>
+              <span>Aujourd'hui</span>
+            </div>
+            <div className="text-center text-gray-500 text-sm py-4 italic">
+              Aucune conversation aujourd'hui
+            </div>
+          </div>
+        </div>
+      ) : (
+        (() => {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
 
+          const getDayDiff = (dateStr: string) => {
+            const d = new Date(dateStr)
+            const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+            const diffMs = today.getTime() - dClean.getTime()
+            return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+          }
 
-{/* FOOTER USER / MON COMPTE */}
-<div className="mt-4 pt-4 border-t border-gray-800">
-  <button
-    onClick={() => router.push('/account')}
-    className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
-  >
-    <span className="text-gray-400">👤</span>
-    <span>{displayName}</span>
-  </button>
-</div>
+          const todayThreads: Thread[] = []
+          const recentThreads: Thread[] = []
+          const archiveThreads: Thread[] = []
+
+          threads.forEach(thread => {
+            const last = new Date(thread.lastActivity)
+            const lastDateStr = last.toISOString().split('T')[0]
+            const diff = getDayDiff(lastDateStr)
+
+            if (diff === 0) {
+              todayThreads.push(thread)
+            } else if (diff > 0 && diff <= 7) {
+              recentThreads.push(thread)
+            } else if (diff > 7) {
+              archiveThreads.push(thread)
+            }
+          })
+
+          const sortByLastActivity = (arr: Thread[]) =>
+            arr.sort(
+              (a, b) =>
+                new Date(b.lastActivity).getTime() -
+                new Date(a.lastActivity).getTime(),
+            )
+
+          sortByLastActivity(todayThreads)
+          sortByLastActivity(recentThreads)
+          sortByLastActivity(archiveThreads)
+
+          return (
+            <div className="space-y-6 p-1">
+              {/* SECTION AUJOURD'HUI - TOUJOURS VISIBLE */}
+              <div>
+                <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
+                  <span className="text-sm">📆</span>
+                  <span>Aujourd'hui</span>
+                </div>
+                {todayThreads.length > 0 ? (
+                  todayThreads.map(renderThreadCard)
+                ) : (
+                  <div className="text-center text-gray-500 text-sm py-4 italic">
+                    Aucune conversation aujourd'hui
+                  </div>
+                )}
+              </div>
+
+              {/* 7 DERNIERS JOURS */}
+              {recentThreads.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRecentWeek(prev => !prev)}
+                    className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm">🗓️</span>
+                      <span>7 derniers jours</span>
+                    </span>
+                    <span className="text-gray-400 text-sm">
+                      {showRecentWeek ? '▾' : '▸'}
+                    </span>
+                  </button>
+
+                  {showRecentWeek && (
+                    <div className="mt-1">
+                      {recentThreads.map(renderThreadCard)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ARCHIVES */}
+              {archiveThreads.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowArchive(prev => !prev)}
+                    className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm">📚</span>
+                      <span>Archives</span>
+                    </span>
+                    <span className="text-gray-400 text-sm">
+                      {showArchive ? '▾' : '▸'}
+                    </span>
+                  </button>
+
+                  {showArchive && (
+                    <div className="mt-1">
+                      {archiveThreads.map(renderThreadCard)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })()
+      )}
+    </div>
+  </div>
+
+  {/* ========== 5. FOOTER FIXE ========== */}
+  <div className="flex-shrink-0 mt-4 pt-4 border-t border-gray-800">
+    <button
+      onClick={() => router.push('/account')}
+      className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
+    >
+      <span className="text-gray-400">👤</span>
+      <span>{displayName}</span>
+    </button>
+  </div>
 </div>
 
 
