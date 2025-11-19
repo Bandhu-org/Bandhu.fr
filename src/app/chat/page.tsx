@@ -70,6 +70,8 @@ export default function ChatPage() {
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
+  const [editingThreadName, setEditingThreadName] = useState('')
 
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
@@ -247,20 +249,34 @@ useEffect(() => {
 
 
   const renameThread = async (threadId: string, newLabel: string) => {
-    try {
-      const response = await fetch('/api/threads/rename', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, newLabel }),
-      })
+  // MAJ OPTIMISTE IMMÉDIATE
+  setThreads(prev => prev.map(thread => 
+    thread.id === threadId ? { ...thread, label: newLabel } : thread
+  ))
 
-      if (response.ok) {
-        await loadThreads()
-      }
-    } catch (error) {
-      console.error('Erreur renommage thread:', error)
+  try {
+    const response = await fetch('/api/threads/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, newLabel }),
+    })
+
+    if (!response.ok) {
+      // Rollback si erreur
+      setThreads(prev => prev.map(thread => 
+        thread.id === threadId ? { ...thread, label: thread.label } : thread
+      ))
     }
+    // Recharger quand même pour synchroniser
+    await loadThreads()
+  } catch (error) {
+    console.error('Erreur renommage thread:', error)
+    // Rollback en cas d'erreur
+    setThreads(prev => prev.map(thread => 
+      thread.id === threadId ? { ...thread, label: thread.label } : thread
+    ))
   }
+}
 
   const deleteThread = async (threadId: string) => {
     try {
@@ -504,7 +520,6 @@ const formatDurationShort = (start: Date, end: Date): string => {
   return `${diffWeeks}sem`
 }
 
-{/* ⬇️⬇️⬇️ AJOUTE renderThreadCard ICI ⬇️⬇️⬇️ */}
 {/* ========== FONCTION RENDER THREAD CARD ========== */}
 const renderThreadCard = (thread: Thread) => {
   const isActive = activeThreadId === thread.id
@@ -633,8 +648,6 @@ const renderThreadCard = (thread: Thread) => {
 </div>
   )
 }
-
-{/* ⬆️⬆️⬆️ FIN DE renderThreadCard ⬆️⬆️⬆️ */}
 
   // ========== ÉTATS TRANSITOIRES ==========
   if (status === 'loading') {
@@ -845,14 +858,61 @@ const renderThreadCard = (thread: Thread) => {
       {/* ========== CHAT AREA ========== */}
       <div className="flex-1 flex flex-col relative">
         {/* Header */}
-        <div className="p-5 border-b border-gray-800 bg-gray-900/30">
-          <h3 className="text-bandhu-primary font-medium">
-            {activeThreadId
-              ? `${threads.find(t => t.id === activeThreadId)?.label || 'Thread'}`
-              : '💬 Nouvelle conversation'}
+<div className="p-5 border-b border-gray-800 bg-gray-900/30">
+  {activeThreadId ? (
+    editingThreadId === activeThreadId ? (
+      // Mode édition - LARGEUR FIXE
+      <div className="inline-flex"> {/* inline-flex pour mieux contrôler */}
+        <div className="px-3 py-2 rounded-lg bg-gray-800/40 w-[180px] text-center"> {/* Largeur fixe */}
+          <input
+            type="text"
+            value={editingThreadName}
+            onChange={(e) => setEditingThreadName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') {
+                if (e.key === 'Enter' && editingThreadName.trim()) {
+                  renameThread(activeThreadId, editingThreadName.trim())
+                }
+                setEditingThreadId(null)
+              }
+            }}
+            onBlur={() => {
+              if (editingThreadName.trim()) {
+                renameThread(activeThreadId, editingThreadName.trim())
+              }
+              setEditingThreadId(null)
+            }}
+            className="w-full bg-transparent text-bandhu-primary font-medium focus:outline-none text-center"
+            autoFocus
+          />
+        </div>
+      </div>
+    ) : (
+      // Mode affichage - MÊME LARGEUR FIXE
+      <div className="inline-flex"> {/* inline-flex identique */}
+        <div className="px-3 py-2 rounded-lg transition-all duration-200 hover:bg-gray-800/40 w-[180px] text-center"> {/* Même largeur fixe */}
+          <h3 
+            className="text-bandhu-primary font-medium cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis"
+            onClick={() => {
+              const thread = threads.find(t => t.id === activeThreadId)
+              if (thread) {
+                setEditingThreadId(activeThreadId)
+                setEditingThreadName(thread.label)
+              }
+            }}
+            title="Cliquer pour renommer"
+          >
+            {threads.find(t => t.id === activeThreadId)?.label || 'Thread'}
           </h3>
         </div>
-
+      </div>
+    )
+  ) : (
+    <h3 className="text-bandhu-primary font-medium">
+      💬 Nouvelle conversation
+    </h3>
+  )}
+</div>
         {/* Messages */}
         <div
           ref={scrollContainerRef}

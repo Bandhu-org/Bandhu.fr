@@ -84,3 +84,33 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
   background: linear-gradient(to top, rgb(17, 24, 39) 0%, transparent 100%);
   opacity: 1;
 }
+
+/* Animation pulse subtile pour l'édition */
+@keyframes pulse-gentle {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 3s ease-in-out infinite;
+}
+
+/* Version plus discrète */
+@keyframes pulse-soft {
+  0%, 100% { 
+    opacity: 1;
+  }
+  50% { 
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 4s ease-in-out infinite;
+}
