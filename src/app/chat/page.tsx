@@ -498,7 +498,7 @@ try {
         </div>
 
         {/* THREADS GROUPÉS PAR PÉRIODES (Aujourd'hui / 7 jours / Archives) */}
-<div className="flex-1 overflow-y-auto scrollbar-bandhu">
+<div className="flex-1 overflow-y-auto sidebar-no-scroll">
   {isLoading ? (
     <div className="text-center text-gray-500 p-5 text-sm">
       Chargement...

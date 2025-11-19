@@ -39,5 +39,15 @@
 }
 
 textarea.scrollbar-bandhu::-webkit-scrollbar {
-  width: 6px !important;
+  width: 4px !important;
+}
+
+/* Désactiver totalement la scrollbar pour la sidebar */
+.sidebar-no-scroll {
+  scrollbar-width: none !important;     /* Firefox */
+  -ms-overflow-style: none !important;  /* IE */
+}
+
+.sidebar-no-scroll::-webkit-scrollbar {
+  display: none !important;             /* Chrome / Safari */
 }
