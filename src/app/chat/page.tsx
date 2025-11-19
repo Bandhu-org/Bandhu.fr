@@ -63,6 +63,7 @@ export default function ChatPage() {
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
   const displayName = session?.user?.name || "Mon compte"
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
 
 
@@ -664,39 +665,45 @@ const renderThreadCard = (thread: Thread) => {
 
   // ========== RENDER ==========
   return (
-    <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white">
-      {/* ========== SIDEBAR ========== */}
-<div className="w-80 bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col h-screen">
-  
-  {/* ========== 1. HEADER FIXE ========== */}
-  <div className="flex-shrink-0 mb-5">
-    <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
-      Chat avec Ombrelien
-    </h2>
-  </div>
+  <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white overflow-hidden">
+    
+    {/* ========== SIDEBAR ========== */}
+<div className={`
+  flex-shrink-0 transition-all duration-300 ease-in-out
+  ${isSidebarCollapsed ? 'w-0' : 'w-80'}
+  overflow-hidden /* ← CRUCIAL */
+`}>
+  <div className="w-80 h-full bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
+    
+    {/* HEADER */}
+    <div className="flex-shrink-0 mb-5">
+      <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
+        Chat avec Ombrelien
+      </h2>
+    </div>
 
-  {/* ========== 2. CONTAINER INTERMÉDIAIRE GRAND ET TRANSPARENT ========== */}
-  <div className="flex-1 min-h-0 flex flex-col justify-center items-center mb-4 p-6 bg-gray-800/10 rounded-lg border border-gray-700/20">
-    <div className="text-center">
-      <div className="text-4xl mb-4">🌌</div>
-      <div className="text-sm text-gray-400 mb-2">
-        Espace de connexion
-      </div>
-      <div className="text-xs text-gray-500 max-w-xs">
-        Cette zone accueillera bientôt vos statistiques, raccourcis et outils de conversation.
+    {/* CONTAINER INTERMÉDIAIRE */}
+    <div className="flex-1 min-h-0 flex flex-col justify-center items-center mb-4 p-6 bg-gray-800/10 rounded-lg border border-gray-700/20">
+      <div className="text-center">
+        <div className="text-4xl mb-4">🌌</div>
+        <div className="text-sm text-gray-400 mb-2">
+          Espace de connexion
+        </div>
+        <div className="text-xs text-gray-500 max-w-xs">
+          Cette zone accueillera bientôt vos statistiques, raccourcis et outils de conversation.
+        </div>
       </div>
     </div>
-  </div>
 
-  {/* ========== 3. BOUTON NOUVELLE CONVERSATION ========== */}
-  <div className="flex-shrink-0 mb-5">
-    <button
-      onClick={handleNewConversation}
-      className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
-    >
-      ➕ Nouvelle conversation
-    </button>
-  </div>
+    {/* BOUTON NOUVELLE CONVERSATION */}
+    <div className="flex-shrink-0 mb-5">
+      <button
+        onClick={handleNewConversation}
+        className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
+      >
+        ➕ Nouvelle conversation
+      </button>
+    </div>
 
   {/* ========== 4. THREADS SCROLLABLES ========== */}
   <div className="flex-1 min-h-0 flex flex-col threads-scroll-container">
@@ -843,16 +850,31 @@ const renderThreadCard = (thread: Thread) => {
   </div>
 
   {/* ========== 5. FOOTER FIXE ========== */}
-  <div className="flex-shrink-0 mt-4 pt-4 border-t border-gray-800">
-    <button
-      onClick={() => router.push('/account')}
-      className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
-    >
-      <span className="text-gray-400">👤</span>
-      <span>{displayName}</span>
-    </button>
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-gray-800">
+      <button
+        onClick={() => router.push('/account')}
+        className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
+      >
+        <span className="text-gray-400">👤</span>
+        <span>{displayName}</span>
+      </button>
+    </div>
+
   </div>
 </div>
+
+{/* ========== BOUTON TOGGLE ========== */}
+<button
+  onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+  className="absolute top-4 z-50 p-2 rounded-full bg-gray-800/80 backdrop-blur-sm border border-gray-700 text-gray-300 hover:text-white hover:bg-gray-700/80 transition-all duration-300 hover:scale-110"
+  style={{ 
+    left: isSidebarCollapsed ? '1rem' : '17rem' 
+  }}
+  title={isSidebarCollapsed ? "Ouvrir la sidebar" : "Réduire la sidebar"}
+>
+  {isSidebarCollapsed ? '→' : '←'}
+</button>
+
 
 
       {/* ========== CHAT AREA ========== */}
