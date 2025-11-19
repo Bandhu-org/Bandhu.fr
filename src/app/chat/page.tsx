@@ -145,7 +145,26 @@ useEffect(() => {
 }, [status, session?.user, hasInitialized, router])
 
 
+// ========== HOOK POUR FERMER LE MENU AU CLICK EXTERNE ==========
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    // Si un menu est ouvert et qu'on clique ailleurs que sur le bouton ⋮ ou le menu
+    if (openThreadMenuId) {
+      const target = event.target as Element
+      const isMenuButton = target.closest('.thread-menu-button')
+      const isMenu = target.closest('.thread-context-menu')
+      
+      if (!isMenuButton && !isMenu) {
+        setOpenThreadMenuId(null)
+      }
+    }
+  }
 
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside)
+  }
+}, [openThreadMenuId])
 
   // ========== FONCTIONS API ==========
   const loadDayTapes = async () => {
@@ -563,57 +582,58 @@ const renderThreadCard = (thread: Thread) => {
       </div>
 
       {/* Bouton ⋮ + menu déroulant */}
-      <div className="absolute top-2 right-2">
-        {/* Bouton ⋮ */}
-        <button
-          onClick={e => {
-            e.stopPropagation()
-            setOpenThreadMenuId(prev => (prev === thread.id ? null : thread.id))
-          }}
-          className="p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition"
-          title="Options du thread"
-        >
-          <span className="text-lg leading-none">⋮</span>
-        </button>
+<div className="absolute top-2 right-2">
+  {/* Bouton ⋮ - AJOUTE LA CLASSE thread-menu-button */}
+  <button
+    onClick={e => {
+      e.stopPropagation()
+      setOpenThreadMenuId(prev => (prev === thread.id ? null : thread.id))
+    }}
+    className="thread-menu-button p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition"
+    title="Options du thread"
+  >
+    <span className="text-lg leading-none">⋮</span>
+  </button>
 
-        {/* Menu déroulant */}
-        {isMenuOpen && (
-          <div className="absolute right-0 mt-1 w-40 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-10 py-1">
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                const newLabel = prompt('Nouveau nom :', thread.label)
-                if (newLabel && newLabel !== thread.label) {
-                  renameThread(thread.id, newLabel)
-                }
-                setOpenThreadMenuId(null)
-              }}
-              className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
-            >
-              <span>✏️</span>
-              <span>Renommer</span>
-            </button>
+  {/* Menu déroulant - AJOUTE LA CLASSE thread-context-menu */}
+  {isMenuOpen && (
+    <div className="thread-context-menu absolute right-0 mt-1 w-40 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-10 py-1">
+      <button
+        onClick={e => {
+          e.stopPropagation()
+          const newLabel = prompt('Nouveau nom :', thread.label)
+          if (newLabel && newLabel !== thread.label) {
+            renameThread(thread.id, newLabel)
+          }
+          setOpenThreadMenuId(null)
+        }}
+        className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
+      >
+        <span>✏️</span>
+        <span>Renommer</span>
+      </button>
 
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                const ok = confirm('Supprimer ce thread ?')
-                if (ok) {
-                  deleteThread(thread.id)
-                }
-                setOpenThreadMenuId(null)
-              }}
-              className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2"
-            >
-              <span>🗑️</span>
-              <span>Supprimer</span>
-            </button>
-          </div>
-        )}
-      </div>
+      <button
+        onClick={e => {
+          e.stopPropagation()
+          const ok = confirm('Supprimer ce thread ?')
+          if (ok) {
+            deleteThread(thread.id)
+          }
+          setOpenThreadMenuId(null)
+        }}
+        className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2"
+      >
+        <span>🗑️</span>
+        <span>Supprimer</span>
+      </button>
     </div>
+  )}
+</div>
+</div>
   )
 }
+
 {/* ⬆️⬆️⬆️ FIN DE renderThreadCard ⬆️⬆️⬆️ */}
 
   // ========== ÉTATS TRANSITOIRES ==========
