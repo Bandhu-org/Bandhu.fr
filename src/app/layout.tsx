@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
-import LogoutButton from './components/LogoutButton'
+import ClientLayout from './ClientLayout'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,12 +18,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body>
-  <Providers>
-    <LogoutButton />
-    {children}
-  </Providers>
-</body>
+      <body className={`${inter.className} bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark`}>
+        <Providers>
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+        </Providers>
+      </body>
     </html>
   )
 }
