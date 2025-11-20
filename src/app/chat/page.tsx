@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -55,6 +55,7 @@ export default function ChatPage() {
   const [showRecentWeek, setShowRecentWeek] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const displayName = session?.user?.name || "Mon compte"
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -138,14 +139,25 @@ useEffect(() => {
 // ========== HOOK POUR FERMER LE MENU AU CLICK EXTERNE ==========
 useEffect(() => {
   const handleClickOutside = (event: MouseEvent) => {
-    // Si un menu est ouvert et qu'on clique ailleurs que sur le bouton ⋮ ou le menu
+    const target = event.target as Element
+    
+    // Fermer menu thread
     if (openThreadMenuId) {
-      const target = event.target as Element
       const isMenuButton = target.closest('.thread-menu-button')
       const isMenu = target.closest('.thread-context-menu')
       
       if (!isMenuButton && !isMenu) {
         setOpenThreadMenuId(null)
+      }
+    }
+    
+    // Fermer menu user
+    if (isUserMenuOpen) {
+      const isUserButton = target.closest('.user-menu-button')
+      const isUserMenu = target.closest('.user-menu')
+      
+      if (!isUserButton && !isUserMenu) {
+        setIsUserMenuOpen(false)
       }
     }
   }
@@ -154,7 +166,7 @@ useEffect(() => {
   return () => {
     document.removeEventListener('mousedown', handleClickOutside)
   }
-}, [openThreadMenuId])
+}, [openThreadMenuId, isUserMenuOpen])
 
   // ========== FONCTIONS API ==========
 
@@ -896,15 +908,53 @@ const renderThreadCard = (thread: Thread) => {
 </div>
 
   {/* ========== 5. FOOTER FIXE ========== */}
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-gray-800">
+        <div className="flex-shrink-0 mt-4 pt-4 border-t border-gray-800 relative">
+  {/* Bouton user cliquable */}
+  <button
+    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+    className="user-menu-button w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center justify-between group"
+  >
+    <div className="flex items-center gap-2">
+      <span className="text-gray-400">👤</span>
+      <span>{displayName}</span>
+    </div>
+    <span className="text-gray-400 text-xs group-hover:text-gray-200 transition">
+      {isUserMenuOpen ? '▾' : '⋮'}
+    </span>
+  </button>
+
+  {/* Menu déroulant */}
+  {isUserMenuOpen && (
+    <div className="user-menu absolute bottom-full left-0 right-0 mb-2 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50 overflow-hidden">
+      {/* Mon compte */}
       <button
-        onClick={() => router.push('/account')}
-        className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
+        onClick={() => {
+          setIsUserMenuOpen(false)
+          router.push('/account')
+        }}
+        className="w-full px-3 py-2.5 text-left text-sm text-gray-100 hover:bg-gray-800 flex items-center gap-2 transition"
       >
-        <span className="text-gray-400">👤</span>
-        <span>{displayName}</span>
+        <span>⚙️</span>
+        <span>Mon compte</span>
+      </button>
+
+      {/* Séparateur */}
+      <div className="border-t border-gray-700"></div>
+
+      {/* Déconnexion */}
+      <button
+        onClick={async () => {
+          setIsUserMenuOpen(false)
+          await signOut({ callbackUrl: '/' })
+        }}
+        className="w-full px-3 py-2.5 text-left text-sm text-red-300 hover:bg-red-900/60 flex items-center gap-2 transition"
+      >
+        <span>🚪</span>
+        <span>Déconnexion</span>
       </button>
     </div>
+  )}
+</div>
 
   </div>
 </div>
