@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '../../auth/[...nextauth]/route'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const session: any = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     const { threadId, newLabel } = await request.json()
+
+    if (!threadId || !newLabel) {
+      return NextResponse.json({ error: 'ThreadId et newLabel requis' }, { status: 400 })
+    }
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
@@ -22,38 +27,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
     }
 
-    // Trouver le marker FRESH_CHAT du thread
-    const dayTapes = await prisma.dayTape.findMany({
-      where: { userId: user.id },
-      include: { events: true }
+    // Vérifier que le thread existe et appartient à l'utilisateur
+    const thread = await prisma.thread.findFirst({
+      where: {
+        id: threadId,
+        userId: user.id
+      }
     })
 
-    let markerEvent = null
-    for (const dt of dayTapes) {
-      for (const event of dt.events) {
-        const metadata = event.metadata as any
-        if (metadata?.threadId === threadId && event.type === 'FRESH_CHAT') {
-          markerEvent = event
-          break
-        }
-      }
-      if (markerEvent) break
-    }
-
-    if (!markerEvent) {
+    if (!thread) {
       return NextResponse.json({ error: 'Thread non trouvé' }, { status: 404 })
     }
 
     // Mettre à jour le label
-    const metadata = markerEvent.metadata as any
-    await prisma.event.update({
-      where: { id: markerEvent.id },
-      data: {
-        metadata: {
-          ...metadata,
-          threadLabel: newLabel
-        }
-      }
+    await prisma.thread.update({
+      where: { id: threadId },
+      data: { label: newLabel }
     })
 
     return NextResponse.json({ success: true })

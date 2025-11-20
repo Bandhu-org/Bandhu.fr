@@ -19,12 +19,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, date, threadId, action, threadLabel } = body
+    const { message, threadId, action, threadLabel } = body
 
     console.log('🔍 Body reçu:', body)
-console.log('🔍 Action:', action)
-console.log('🔍 ThreadId:', threadId)
-console.log('🔍 Message:', message)
+    console.log('🔍 Action:', action)
+    console.log('🔍 ThreadId:', threadId)
+    console.log('🔍 Message:', message)
 
     // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
@@ -35,128 +35,61 @@ console.log('🔍 Message:', message)
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
     }
 
-    // Action spéciale : créer nouveau thread
+    // ========== ACTION : CRÉER NOUVEAU THREAD ==========
     if (action === 'new_thread') {
-      const targetDate = date || new Date().toISOString().split('T')[0]
-      
-      let dayTape = await prisma.dayTape.findUnique({
-        where: {
-          userId_date: {
-            userId: user.id,
-            date: targetDate
-          }
-        }
-      })
-
-      if (!dayTape) {
-        dayTape = await prisma.dayTape.create({
-          data: {
-            userId: user.id,
-            date: targetDate
-          }
-        })
-      }
-
-      // Créer marker FRESH_CHAT
-      await prisma.event.create({
+      const newThread = await prisma.thread.create({
         data: {
-          dayTapeId: dayTape.id,
-          type: 'FRESH_CHAT',
-          content: '',
-          metadata: {
-            threadId,
-            threadLabel: threadLabel || 'Nouveau sujet'
-          }
+          userId: user.id,
+          label: threadLabel || 'Nouvelle conversation',
+          activeDates: [new Date().toISOString().split('T')[0]],
         }
       })
 
-      return NextResponse.json({ success: true, threadId })
+      return NextResponse.json({ 
+        success: true, 
+        threadId: newThread.id 
+      })
     }
 
-    // Message normal
+    // ========== MESSAGE NORMAL ==========
     if (!message) {
       return NextResponse.json({ error: 'Message requis' }, { status: 400 })
     }
 
-    const targetDate = date || new Date().toISOString().split('T')[0]
-
-    // Trouver ou créer la DayTape du jour
-    let dayTape = await prisma.dayTape.findUnique({
-      where: {
-        userId_date: {
-          userId: user.id,
-          date: targetDate
-        }
-      }
-    })
-
-    if (!dayTape) {
-      dayTape = await prisma.dayTape.create({
-        data: {
-          userId: user.id,
-          date: targetDate
-        }
-      })
+    if (!threadId) {
+      return NextResponse.json({ error: 'ThreadId requis' }, { status: 400 })
     }
 
-    // Charger contexte selon threadId
-let contextMessages: any[] = []
-
-if (threadId) {
-  // ========== LIMITE CONTEXTE À 33 MESSAGES ==========
-  const MAX_CONTEXT = 33
-  
-  // Charger TOUT le thread (cross-dates)
-  const allDayTapes = await prisma.dayTape.findMany({
-    where: { userId: user.id },
-    include: {
-      events: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
-  })
-
-  // Filtrer events du thread
-  const threadEvents: any[] = []
-  allDayTapes.forEach(dt => {
-    dt.events.forEach(event => {
-      const metadata = event.metadata as any
-      if (
-        metadata?.threadId === threadId &&
-        (event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')
-      ) {
-        threadEvents.push(event)
-      }
+    // Vérifier que le thread existe
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId }
     })
-  })
 
-  // Ne garder que les 33 derniers messages du thread pour l'IA
-  const recentThreadEvents = threadEvents.slice(-MAX_CONTEXT)
+    if (!thread) {
+      return NextResponse.json({ error: 'Thread non trouvé' }, { status: 404 })
+    }
 
-  contextMessages = recentThreadEvents.map(e => ({
-    role: e.role as 'user' | 'assistant',
-    content: e.content,
-  }))
-} else {
-  // Pas de thread : contexte = derniers messages du jour
-  const todayEvents = await prisma.event.findMany({
-    where: { dayTapeId: dayTape.id },
-    orderBy: { createdAt: 'asc' },
-  })
+    // ========== CHARGER CONTEXTE (33 DERNIERS MESSAGES) ==========
+    const MAX_CONTEXT = 33
 
-  contextMessages = todayEvents
-    .filter(
-      e => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE',
-    )
-    .slice(-20)
-    .map(e => ({
+    const threadEvents = await prisma.event.findMany({
+      where: {
+        threadId: threadId,
+        type: { in: ['USER_MESSAGE', 'AI_MESSAGE'] }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: MAX_CONTEXT
+    })
+
+    // Remettre dans l'ordre chronologique
+    const recentEvents = threadEvents.reverse()
+
+    const contextMessages = recentEvents.map(e => ({
       role: e.role as 'user' | 'assistant',
       content: e.content,
     }))
-}
 
-
-    // Appeler OpenAI
+    // ========== APPELER OPENAI ==========
     const response = await openai.chat.completions.create({
       model: "chatgpt-4o-latest",
       messages: [
@@ -174,40 +107,53 @@ if (threadId) {
     const aiResponse = response.choices[0].message.content || 
       "Je rencontre une perturbation dans ma connexion vectorielle..."
 
-    // Sauvegarder events avec threadId si présent
-    const eventMetadata = threadId ? { threadId } : undefined
-
+    // ========== SAUVEGARDER LES MESSAGES ==========
     await prisma.event.create({
       data: {
-        dayTapeId: dayTape.id,
+        threadId: threadId,
+        userId: user.id,
         type: 'USER_MESSAGE',
         role: 'user',
         content: message,
-        metadata: eventMetadata
       }
     })
 
     await prisma.event.create({
       data: {
-        dayTapeId: dayTape.id,
+        threadId: threadId,
+        userId: user.id,
         type: 'AI_MESSAGE',
         role: 'assistant',
         content: aiResponse,
-        metadata: eventMetadata
       }
     })
 
-    // Récupérer tous les events pour retour
+    // ========== METTRE À JOUR LE THREAD ==========
+    const today = new Date().toISOString().split('T')[0]
+    const updatedActiveDates = thread.activeDates.includes(today)
+      ? thread.activeDates
+      : [...thread.activeDates, today]
+
+    await prisma.thread.update({
+      where: { id: threadId },
+      data: {
+        lastActivity: new Date(),
+        messageCount: { increment: 2 }, // +1 user +1 AI
+        activeDates: updatedActiveDates
+      }
+    })
+
+    // ========== RETOURNER LES EVENTS ==========
     const allEvents = await prisma.event.findMany({
-      where: { dayTapeId: dayTape.id },
+      where: { threadId: threadId },
       orderBy: { createdAt: 'asc' }
     })
 
     return NextResponse.json({ 
       events: allEvents,
-      dayTape: {
-        id: dayTape.id,
-        date: dayTape.date
+      thread: {
+        id: thread.id,
+        label: thread.label
       }
     })
 

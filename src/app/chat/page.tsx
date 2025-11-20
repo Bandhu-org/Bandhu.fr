@@ -15,21 +15,6 @@ interface Event {
   createdAt: string
 }
 
-interface DayTape {
-  id: string
-  date: string
-  eventCount?: number
-  createdAt: string
-}
-
-interface Thread {
-  id: string
-  label: string
-  messageCount: number
-  lastActivity: string
-  activeDates: string[]
-}
-
 interface Thread {
   id: string
   label: string
@@ -37,6 +22,7 @@ interface Thread {
   lastActivity: string
   activeDates: string[]
   isPinned?: boolean // ⬅️ OPTIONNEL - si tu veux le stocker en DB
+  createdAt?: string
 }
 
 // Générer une base de clé locale par utilisateur
@@ -54,7 +40,6 @@ export default function ChatPage() {
   const { data: session, status } = useSession()
 
   // ========== ÉTATS ==========
-  const [dayTapes, setDayTapes] = useState<DayTape[]>([])
   const [threads, setThreads] = useState<Thread[]>([])
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const [currentDate, setCurrentDate] = useState<string>('')
@@ -73,7 +58,7 @@ export default function ChatPage() {
   const displayName = session?.user?.name || "Mon compte"
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [pinnedThreadIds, setPinnedThreadIds] = useState<string[]>([])
+  const pinnedThreadIds = threads.filter(t => t.isPinned).map(t => t.id)
 
 
 
@@ -135,20 +120,26 @@ useEffect(() => {
 
   // Auth + init une seule fois au login
 useEffect(() => {
-  // 1) Si pas connecté → on renvoie vers /
   if (status === 'unauthenticated') {
     router.push('/')
     return
   }
 
-  // 2) Si pas encore authentifié ou pas de user → on attend
   if (status !== 'authenticated' || !session?.user) return
 
-  // 3) On recharge les données (threads + daytapes)
-  loadDayTapes()
+  // ========== NETTOYER LES ANCIENS THREAD IDS ==========
+  const baseKey = getActiveThreadKey(session.user.email)
+  if (baseKey && typeof window !== 'undefined') {
+    const savedThreadId = localStorage.getItem(baseKey)
+    // Si l'ID commence par "thread-", c'est l'ancien format → supprime
+    if (savedThreadId?.startsWith('thread-')) {
+      localStorage.removeItem(baseKey)
+      console.log('🧹 Ancien thread ID nettoyé')
+    }
+  }
+
   loadThreads()
 
-  // 4) On ne fait "nouvelle conversation" qu'une seule fois
   if (!hasInitialized) {
     setHasInitialized(true)
     setActiveThreadId(null)
@@ -156,29 +147,6 @@ useEffect(() => {
     setCurrentDate('')
   }
 }, [status, session?.user, hasInitialized, router])
-
-// ========== SAUVEGARDE AUTO DANS LOCALSTORAGE ==========
-useEffect(() => {
-  if (session?.user?.email && pinnedThreadIds.length >= 0) {
-    const key = `bandhu_pinned_${session.user.email}`
-    localStorage.setItem(key, JSON.stringify(pinnedThreadIds))
-  }
-}, [pinnedThreadIds, session?.user?.email])
-
-// ========== CHARGEMENT AU DEMARRAGE ==========
-useEffect(() => {
-  if (status === 'authenticated' && session?.user?.email) {
-    const key = `bandhu_pinned_${session.user.email}`
-    const saved = localStorage.getItem(key)
-    if (saved) {
-      try {
-        setPinnedThreadIds(JSON.parse(saved))
-      } catch (error) {
-        console.error('Erreur chargement épinglés:', error)
-      }
-    }
-  }
-}, [status, session?.user?.email])
 
 // ========== HOOK POUR FERMER LE MENU AU CLICK EXTERNE ==========
 useEffect(() => {
@@ -202,17 +170,6 @@ useEffect(() => {
 }, [openThreadMenuId])
 
   // ========== FONCTIONS API ==========
-  const loadDayTapes = async () => {
-    try {
-      const response = await fetch('/api/daytapes')
-      if (response.ok) {
-        const data = await response.json()
-        setDayTapes(data.dayTapes || [])
-      }
-    } catch (error) {
-      console.error('Erreur chargement DayTapes:', error)
-    }
-  }
 
   const loadThreads = async () => {
     try {
@@ -325,7 +282,6 @@ useEffect(() => {
           setEvents([])
         }
         await loadThreads()
-        await loadDayTapes()
       }
     } catch (error) {
       console.error('Erreur suppression thread:', error)
@@ -446,29 +402,29 @@ useEffect(() => {
     // Si pas de thread actif, en créer un automatiquement
     let threadToUse = activeThreadId
 
-    if (!threadToUse) {
-      const newThreadId = `thread-${Date.now()}`
-      const today = new Date().toISOString().split('T')[0]
-      const autoLabel = `${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`
+   if (!threadToUse) {
+  const autoLabel = `${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`
 
-      await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'new_thread',
-          threadId: newThreadId,
-          threadLabel: autoLabel,
-          date: today,
-          message: '',
-        }),
-      })
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'new_thread',
+      threadLabel: autoLabel,
+    }),
+  })
 
-      threadToUse = newThreadId
-      setActiveThreadId(newThreadId)
-    }
+  if (!response.ok) {
+    throw new Error('Erreur création thread')
+  }
+
+  const data = await response.json()
+  threadToUse = data.threadId  // ✅ Utiliser l'ID du backend (cuid)
+  setActiveThreadId(threadToUse)
+}
 
     // Optimistic update
 const tempEvent: Event = {
@@ -491,7 +447,6 @@ try {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage,
-          date: new Date().toISOString().split('T')[0],
           threadId: threadToUse,
         }),
       })
@@ -499,7 +454,6 @@ try {
       if (response.ok) {
         await loadThread(threadToUse!)
         await loadThreads()
-        await loadDayTapes()
       } else {
         setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
       }
@@ -531,12 +485,18 @@ try {
 
   // ========== HELPERS POUR THREAD CARD ==========
 const getThreadCreationDate = (thread: Thread): Date => {
-  // On prend la date la plus ancienne dans activeDates
+  // PRIORITÉ 1 : createdAt (le plus fiable)
+  if (thread.createdAt) {
+    return new Date(thread.createdAt)
+  }
+  
+  // PRIORITÉ 2 : Date la plus ancienne dans activeDates
   if (thread.activeDates && thread.activeDates.length > 0) {
     const sorted = [...thread.activeDates].sort()
     return new Date(sorted[0])
   }
-  // Fallback sur lastActivity si pas de dates
+  
+  // PRIORITÉ 3 : Fallback sur lastActivity
   return new Date(thread.lastActivity)
 }
 
@@ -649,19 +609,45 @@ const renderThreadCard = (thread: Thread) => {
     
     {/* OPTION ÉPINGLER/DÉSÉPINGLER */}
     <button
-      onClick={e => {
-        e.stopPropagation()
-        setPinnedThreadIds(prev => 
-          prev.includes(thread.id) 
-            ? prev.filter(id => id !== thread.id)
-            : [...prev, thread.id]
-        )
-        setOpenThreadMenuId(null)
-      }}
+  onClick={async e => {
+    e.stopPropagation()
+    setOpenThreadMenuId(null)
+    
+    const newPinnedState = !thread.isPinned
+    
+    // Update optimiste
+    setThreads(prev => prev.map(t => 
+      t.id === thread.id ? { ...t, isPinned: newPinnedState } : t
+    ))
+    
+    try {
+      const response = await fetch('/api/threads/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          threadId: thread.id, 
+          isPinned: newPinnedState 
+        }),
+      })
+      
+      if (!response.ok) {
+        // Rollback si erreur
+        setThreads(prev => prev.map(t => 
+          t.id === thread.id ? { ...t, isPinned: !newPinnedState } : t
+        ))
+      }
+    } catch (error) {
+      console.error('Erreur épinglage:', error)
+      // Rollback
+      setThreads(prev => prev.map(t => 
+        t.id === thread.id ? { ...t, isPinned: !newPinnedState } : t
+      ))
+    }
+  }}
       className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
     >
-      <span>{pinnedThreadIds.includes(thread.id) ? '📍' : '📌'}</span>
-      <span>{pinnedThreadIds.includes(thread.id) ? 'Désépingler' : 'Épingler'}</span>
+      <span>{thread.isPinned ? '📍' : '📌'}</span>
+<span>{thread.isPinned ? 'Désépingler' : 'Épingler'}</span>
     </button>
 
     {/* Renommer */}
@@ -806,7 +792,7 @@ const renderThreadCard = (thread: Thread) => {
         // TRI DES THREADS (EXCLUT LES ÉPINGLÉS)
         threads.forEach(thread => {
           // EXCLURE LES THREADS ÉPINGLÉS
-          if (pinnedThreadIds.includes(thread.id)) return
+          if (thread.isPinned) return
           
           const last = new Date(thread.lastActivity)
           const lastDateStr = last.toISOString().split('T')[0]
@@ -835,14 +821,14 @@ const renderThreadCard = (thread: Thread) => {
         return (
           <div className="space-y-6 p-1">
             {/* SECTION ÉPINGLÉS */}
-            {pinnedThreadIds.length > 0 && (
+            {threads.some(t => t.isPinned) && (
               <div className="mb-6">
                 <div className="text-xs font-semibold text-yellow-400 mb-2 pb-1 border-b border-yellow-600/30 flex items-center gap-2">
                   <span className="text-sm">📌</span>
                   <span>Épinglés</span>
                 </div>
                 {threads
-                  .filter(thread => pinnedThreadIds.includes(thread.id))
+                  .filter(thread => thread.isPinned)
                   .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
                   .map(renderThreadCard)}
               </div>

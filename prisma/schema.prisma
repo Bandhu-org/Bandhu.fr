@@ -53,8 +53,9 @@ model User {
 
   accounts             Account[]
   sessions             Session[]
-  dayTapes             DayTape[]
+  threads              Thread[]
   posts                Post[]
+  events               Event[]    // RELATION AJOUTÉE
 }
 
 model VerificationToken {
@@ -84,33 +85,41 @@ model Post {
 }
 
 // ============================================
-// BANDHU CORE (DayTape + Event)
+// BANDHU CORE (Thread + Event)
 // ============================================
 
-model DayTape {
-  id        String   @id @default(cuid())
-  userId    String
-  date      String   // Format "YYYY-MM-DD" ex: "2025-01-14"
-  events    Event[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Thread {
+  id           String   @id @default(cuid())
+  label        String
+  messageCount Int      @default(0)
+  lastActivity DateTime @default(now())
+  activeDates  String[]
+  isPinned     Boolean  @default(false)
 
-  @@unique([userId, date])
-  @@index([userId, date])
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  events       Event[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("threads")
 }
 
 model Event {
-  id        String    @id @default(cuid())
-  dayTapeId String
-  type      EventType
-  role      String?   // "user" | "assistant" pour messages
-  content   String    @db.Text
-  metadata  Json?     // Données flexibles (tags auto, etc.)
-  createdAt DateTime  @default(now())
-  dayTape   DayTape   @relation(fields: [dayTapeId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  content   String
+  role      String?
+  type      String
+  createdAt DateTime @default(now())
 
-  @@index([dayTapeId, createdAt])
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("events")
 }
 
 enum EventType {

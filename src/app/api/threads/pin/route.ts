@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    const { threadId } = await request.json()
+    const { threadId, isPinned } = await request.json()
 
-    if (!threadId) {
-      return NextResponse.json({ error: 'ThreadId requis' }, { status: 400 })
+    if (!threadId || typeof isPinned !== 'boolean') {
+      return NextResponse.json({ error: 'ThreadId et isPinned requis' }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
     }
 
-    // Vérifier que le thread appartient à l'utilisateur
+    // Vérifier que le thread existe et appartient à l'utilisateur
     const thread = await prisma.thread.findFirst({
       where: {
         id: threadId,
@@ -39,16 +39,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Thread non trouvé' }, { status: 404 })
     }
 
-    // ========== SUPPRESSION EN CASCADE AUTOMATIQUE ! ==========
-    // Grâce à onDelete: Cascade, tous les Events sont supprimés auto
-    await prisma.thread.delete({
-      where: { id: threadId }
+    // Mettre à jour isPinned
+    await prisma.thread.update({
+      where: { id: threadId },
+      data: { isPinned }
     })
 
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error('Erreur suppression thread:', error)
+    console.error('Erreur épinglage thread:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
