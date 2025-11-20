@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 
 interface Event {
   id: string
@@ -67,7 +67,7 @@ export default function ChatPage() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
-  const [editingThreadName, setEditingThreadName] = useState('')
+  const editingThreadNameRef = useRef<string>('')
 
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
@@ -75,20 +75,7 @@ export default function ChatPage() {
     setEvents([])
     setCurrentDate('')
   }
-
-
-  // ========== AUTO-RESIZE TEXTAREA ==========
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-
-    el.style.height = 'auto'
-    const min = 42
-    const max = 500
-    const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
-    el.style.height = `${newHeight}px`
-  }, [input])
-
+  
  // ========== DÉTECTER SI ON EST EN BAS + SAUVER LA POSITION DE SCROLL ==========
 useEffect(() => {
   const container = scrollContainerRef.current
@@ -388,16 +375,19 @@ useEffect(() => {
 
   // ========== SEND MESSAGE (SANS auto-scroll) ==========
   const sendMessage = async () => {
-    if (!input.trim() || isSending) return
+  if (!textareaRef.current?.value.trim() || isSending) return
 
-    setIsSending(true)
-    const userMessage = input.trim()
-    setInput('')
+  setIsSending(true)
+  const userMessage = textareaRef.current.value.trim()
+  
+  // Vider le textarea DIRECTEMENT
+  textareaRef.current.value = ''
+  setInput('')  // Sync le state aussi
 
-    // Replier la barre visuellement
-    if (textareaRef.current) {
-      textareaRef.current.style.height = '42px'
-    }
+  // Replier la barre visuellement
+  if (textareaRef.current) {
+    textareaRef.current.style.height = '42px'
+  }
 
     // Si pas de thread actif, en créer un automatiquement
     let threadToUse = activeThreadId
@@ -943,26 +933,34 @@ const renderThreadCard = (thread: Thread) => {
       <div className="inline-flex"> {/* inline-flex pour mieux contrôler */}
         <div className="px-3 py-2 rounded-lg bg-gray-800/40 w-[180px] text-center"> {/* Largeur fixe */}
           <input
-            type="text"
-            value={editingThreadName}
-            onChange={(e) => setEditingThreadName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === 'Escape') {
-                if (e.key === 'Enter' && editingThreadName.trim()) {
-                  renameThread(activeThreadId, editingThreadName.trim())
-                }
-                setEditingThreadId(null)
-              }
-            }}
-            onBlur={() => {
-              if (editingThreadName.trim()) {
-                renameThread(activeThreadId, editingThreadName.trim())
-              }
-              setEditingThreadId(null)
-            }}
-            className="w-full bg-transparent text-bandhu-primary font-medium focus:outline-none text-center"
-            autoFocus
-          />
+  type="text"
+  defaultValue={threads.find(t => t.id === activeThreadId)?.label || ''}
+  onChange={(e) => {
+    editingThreadNameRef.current = e.target.value  // ← Pas de re-render !
+  }}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const newName = editingThreadNameRef.current.trim()
+      if (newName && activeThreadId) {
+        renameThread(activeThreadId, newName)
+      }
+      setEditingThreadId(null)
+    }
+    if (e.key === 'Escape') {
+      setEditingThreadId(null)
+    }
+  }}
+  onBlur={() => {
+    const newName = editingThreadNameRef.current.trim()
+    if (newName && activeThreadId) {
+      renameThread(activeThreadId, newName)
+    }
+    setEditingThreadId(null)
+  }}
+  className="w-full bg-transparent text-bandhu-primary font-medium focus:outline-none text-center"
+  autoFocus
+/>
         </div>
       </div>
     ) : (
@@ -971,13 +969,13 @@ const renderThreadCard = (thread: Thread) => {
         <div className="px-3 py-2 rounded-lg transition-all duration-200 hover:bg-gray-800/40 w-[180px] text-center"> {/* Même largeur fixe */}
           <h3 
             className="text-bandhu-primary font-medium cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis"
-            onClick={() => {
-              const thread = threads.find(t => t.id === activeThreadId)
-              if (thread) {
-                setEditingThreadId(activeThreadId)
-                setEditingThreadName(thread.label)
-              }
-            }}
+              onClick={() => {
+  const thread = threads.find(t => t.id === activeThreadId)
+  if (thread) {
+    setEditingThreadId(activeThreadId)
+    editingThreadNameRef.current = thread.label  // ← Direct dans ref
+  }
+}}
             title="Cliquer pour renommer"
           >
             {threads.find(t => t.id === activeThreadId)?.label || 'Thread'}
@@ -1268,20 +1266,45 @@ const renderThreadCard = (thread: Thread) => {
           <div className="w-full max-w-3xl px-5 pointer-events-auto">
             <div className="flex gap-3 items-end bg-blue-800/95 backdrop-blur-sm p-3 rounded-2xl shadow-2xl border border-blue-600">
               <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder="Parlez à Ombrelien..."
-                className="scrollbar-bandhu flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500"
-                style={{ minHeight: '42px', maxHeight: '500px' }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    sendMessage()
-                  }
-                }}
-                disabled={isSending}
-              />
+  ref={textareaRef}
+  defaultValue={input}  // ← defaultValue au lieu de value
+  onChange={e => {
+    const el = e.target
+    
+    // Update React state en arrière-plan (pour sendMessage)
+    startTransition(() => {
+      setInput(el.value)
+    })
+    
+    // Resize immédiat
+    if (!el.dataset.resizing) {
+      el.dataset.resizing = 'true'
+      
+      requestAnimationFrame(() => {
+        el.style.height = 'auto'
+        const min = 42
+        const max = 500
+        const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
+        el.style.height = `${newHeight}px`
+        delete el.dataset.resizing
+      })
+    }
+  }}
+  placeholder="Parlez à Ombrelien..."
+  className="scrollbar-bandhu flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500"
+  style={{ 
+    minHeight: '42px', 
+    maxHeight: '500px',
+    transition: 'height 0.05s ease-out'
+  }}
+  onKeyDown={e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }}
+  disabled={isSending}
+/>
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || isSending}
