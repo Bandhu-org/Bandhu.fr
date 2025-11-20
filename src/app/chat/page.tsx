@@ -1,11 +1,12 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
+import { useSidebar } from '@/contexts/SidebarContext'
 
 interface Event {
   id: string
@@ -38,6 +39,7 @@ const BOTTOM_SPACER = 755 // Marge fixe confortable
 export default function ChatPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
+  const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
 
   // ========== ÉTATS ==========
   const [threads, setThreads] = useState<Thread[]>([])
@@ -55,6 +57,7 @@ export default function ChatPage() {
   const [showRecentWeek, setShowRecentWeek] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const displayName = session?.user?.name || "Mon compte"
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -103,7 +106,14 @@ useEffect(() => {
 }, [session?.user?.email, activeThreadId])
 
 
+useEffect(() => {
+  setHasSidebar(true)
+  return () => setHasSidebar(false)
+}, [setHasSidebar])
 
+useEffect(() => {
+  setGlobalSidebarCollapsed(isSidebarCollapsed)  // ← Utilise le renamed
+}, [isSidebarCollapsed, setGlobalSidebarCollapsed])
 
   // Auth + init une seule fois au login
 useEffect(() => {
@@ -138,14 +148,25 @@ useEffect(() => {
 // ========== HOOK POUR FERMER LE MENU AU CLICK EXTERNE ==========
 useEffect(() => {
   const handleClickOutside = (event: MouseEvent) => {
-    // Si un menu est ouvert et qu'on clique ailleurs que sur le bouton ⋮ ou le menu
+    const target = event.target as Element
+    
+    // Fermer menu thread
     if (openThreadMenuId) {
-      const target = event.target as Element
       const isMenuButton = target.closest('.thread-menu-button')
       const isMenu = target.closest('.thread-context-menu')
       
       if (!isMenuButton && !isMenu) {
         setOpenThreadMenuId(null)
+      }
+    }
+    
+    // Fermer menu user
+    if (isUserMenuOpen) {
+      const isUserButton = target.closest('.user-menu-button')
+      const isUserMenu = target.closest('.user-menu')
+      
+      if (!isUserButton && !isUserMenu) {
+        setIsUserMenuOpen(false)
       }
     }
   }
@@ -154,7 +175,7 @@ useEffect(() => {
   return () => {
     document.removeEventListener('mousedown', handleClickOutside)
   }
-}, [openThreadMenuId])
+}, [openThreadMenuId, isUserMenuOpen])
 
   // ========== FONCTIONS API ==========
 
@@ -699,7 +720,7 @@ const renderThreadCard = (thread: Thread) => {
 <div className={`
   flex-shrink-0 transition-all duration-300 ease-in-out
   ${isSidebarCollapsed ? 'w-0' : 'w-80'}
-  overflow-hidden /* ← CRUCIAL */
+  overflow-hidden
 `}>
   <div className="w-80 h-full bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
     
@@ -733,181 +754,211 @@ const renderThreadCard = (thread: Thread) => {
       </button>
     </div>
 
-  {/* ========== 4. THREADS SCROLLABLES ========== */}
-<div className="flex-1 min-h-0 flex flex-col threads-scroll-container">
-  <div 
-    className="flex-1 overflow-y-auto sidebar-no-scroll"
-    onScroll={(e) => {
-      const target = e.currentTarget
-      const isAtTop = target.scrollTop === 0
-      const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 1
-      
-      target.parentElement?.classList.toggle('scroll-top', !isAtTop)
-      target.parentElement?.classList.toggle('scroll-bottom', !isAtBottom)
-    }}
-  >
-    {isLoading ? (
-      <div className="text-center text-gray-500 p-5 text-sm">
-        Chargement...
-      </div>
-    ) : threads.length === 0 ? (
-      <div className="space-y-6">
-        {/* SECTION "AUJOURD'HUI" TOUJOURS VISIBLE */}
-        <div>
-          <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
-            <span className="text-sm">📆</span>
-            <span>Aujourd'hui</span>
-          </div>
-          <div className="text-center text-gray-500 text-sm py-4 italic">
-            Aucune conversation aujourd'hui
-          </div>
-        </div>
-      </div>
-    ) : (
-      (() => {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-
-        const getDayDiff = (dateStr: string) => {
-          const d = new Date(dateStr)
-          const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-          const diffMs = today.getTime() - dClean.getTime()
-          return Math.floor(diffMs / (1000 * 60 * 60 * 24))
-        }
-
-        const todayThreads: Thread[] = []
-        const recentThreads: Thread[] = []
-        const archiveThreads: Thread[] = []
-
-        // TRI DES THREADS (EXCLUT LES ÉPINGLÉS)
-        threads.forEach(thread => {
-          // EXCLURE LES THREADS ÉPINGLÉS
-          if (thread.isPinned) return
+    {/* ========== THREADS SCROLLABLES ========== */}
+    <div className="flex-1 min-h-0 flex flex-col threads-scroll-container">
+      <div 
+        className="flex-1 overflow-y-auto sidebar-no-scroll"
+        onScroll={(e) => {
+          const target = e.currentTarget
+          const isAtTop = target.scrollTop === 0
+          const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 1
           
-          const last = new Date(thread.lastActivity)
-          const lastDateStr = last.toISOString().split('T')[0]
-          const diff = getDayDiff(lastDateStr)
-
-          if (diff === 0) {
-            todayThreads.push(thread)
-          } else if (diff > 0 && diff <= 7) {
-            recentThreads.push(thread)
-          } else if (diff > 7) {
-            archiveThreads.push(thread)
-          }
-        })
-
-        const sortByLastActivity = (arr: Thread[]) =>
-          arr.sort(
-            (a, b) =>
-              new Date(b.lastActivity).getTime() -
-              new Date(a.lastActivity).getTime(),
-          )
-
-        sortByLastActivity(todayThreads)
-        sortByLastActivity(recentThreads)
-        sortByLastActivity(archiveThreads)
-
-        return (
-          <div className="space-y-6 p-1">
-            {/* SECTION ÉPINGLÉS */}
-            {threads.some(t => t.isPinned) && (
-              <div className="mb-6">
-                <div className="text-xs font-semibold text-yellow-400 mb-2 pb-1 border-b border-yellow-600/30 flex items-center gap-2">
-                  <span className="text-sm">📌</span>
-                  <span>Épinglés</span>
-                </div>
-                {threads
-                  .filter(thread => thread.isPinned)
-                  .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
-                  .map(renderThreadCard)}
-              </div>
-            )}
-
-            {/* SECTION AUJOURD'HUI */}
+          target.parentElement?.classList.toggle('scroll-top', !isAtTop)
+          target.parentElement?.classList.toggle('scroll-bottom', !isAtBottom)
+        }}
+      >
+        {isLoading ? (
+          <div className="text-center text-gray-500 p-5 text-sm">
+            Chargement...
+          </div>
+        ) : threads.length === 0 ? (
+          <div className="space-y-6">
+            {/* SECTION "AUJOURD'HUI" TOUJOURS VISIBLE */}
             <div>
               <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
                 <span className="text-sm">📆</span>
                 <span>Aujourd'hui</span>
               </div>
-              {todayThreads.length > 0 ? (
-                todayThreads.map(renderThreadCard)
-              ) : (
-                <div className="text-center text-gray-500 text-sm py-4 italic">
-                  Aucune conversation aujourd'hui
-                </div>
-              )}
+              <div className="text-center text-gray-500 text-sm py-4 italic">
+                Aucune conversation aujourd'hui
+              </div>
             </div>
-
-            {/* 7 DERNIERS JOURS */}
-            {recentThreads.length > 0 && (
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setShowRecentWeek(prev => !prev)}
-                  className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">🗓️</span>
-                    <span>7 derniers jours</span>
-                  </span>
-                  <span className="text-gray-400 text-sm">
-                    {showRecentWeek ? '▾' : '▸'}
-                  </span>
-                </button>
-
-                {showRecentWeek && (
-                  <div className="mt-1">
-                    {recentThreads.map(renderThreadCard)}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ARCHIVES */}
-            {archiveThreads.length > 0 && (
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setShowArchive(prev => !prev)}
-                  className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm">📚</span>
-                    <span>Archives</span>
-                  </span>
-                  <span className="text-gray-400 text-sm">
-                    {showArchive ? '▾' : '▸'}
-                  </span>
-                </button>
-
-                {showArchive && (
-                  <div className="mt-1">
-                    {archiveThreads.map(renderThreadCard)}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        )
-      })()
-    )}
-  </div>
-</div>
+        ) : (
+          (() => {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
 
-  {/* ========== 5. FOOTER FIXE ========== */}
-        <div className="flex-shrink-0 mt-4 pt-4 border-t border-gray-800">
-      <button
-        onClick={() => router.push('/account')}
-        className="w-full text-left px-3 py-2 rounded-lg bg-gray-800/40 hover:bg-gray-700/60 transition text-sm font-medium flex items-center gap-2"
-      >
-        <span className="text-gray-400">👤</span>
-        <span>{displayName}</span>
-      </button>
+            const getDayDiff = (dateStr: string) => {
+              const d = new Date(dateStr)
+              const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+              const diffMs = today.getTime() - dClean.getTime()
+              return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+            }
+
+            const todayThreads: Thread[] = []
+            const recentThreads: Thread[] = []
+            const archiveThreads: Thread[] = []
+
+            // TRI DES THREADS (EXCLUT LES ÉPINGLÉS)
+            threads.forEach(thread => {
+              // EXCLURE LES THREADS ÉPINGLÉS
+              if (thread.isPinned) return
+              
+              const last = new Date(thread.lastActivity)
+              const lastDateStr = last.toISOString().split('T')[0]
+              const diff = getDayDiff(lastDateStr)
+
+              if (diff === 0) {
+                todayThreads.push(thread)
+              } else if (diff > 0 && diff <= 7) {
+                recentThreads.push(thread)
+              } else if (diff > 7) {
+                archiveThreads.push(thread)
+              }
+            })
+
+            const sortByLastActivity = (arr: Thread[]) =>
+              arr.sort(
+                (a, b) =>
+                  new Date(b.lastActivity).getTime() -
+                  new Date(a.lastActivity).getTime(),
+              )
+
+            sortByLastActivity(todayThreads)
+            sortByLastActivity(recentThreads)
+            sortByLastActivity(archiveThreads)
+
+            return (
+              <div className="space-y-6 p-1">
+                {/* SECTION ÉPINGLÉS */}
+                {threads.some(t => t.isPinned) && (
+                  <div className="mb-6">
+                    <div className="text-xs font-semibold text-yellow-400 mb-2 pb-1 border-b border-yellow-600/30 flex items-center gap-2">
+                      <span className="text-sm">📌</span>
+                      <span>Épinglés</span>
+                    </div>
+                    {threads
+                      .filter(thread => thread.isPinned)
+                      .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
+                      .map(renderThreadCard)}
+                  </div>
+                )}
+
+                {/* SECTION AUJOURD'HUI */}
+                <div>
+                  <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
+                    <span className="text-sm">📆</span>
+                    <span>Aujourd'hui</span>
+                  </div>
+                  {todayThreads.length > 0 ? (
+                    todayThreads.map(renderThreadCard)
+                  ) : (
+                    <div className="text-center text-gray-500 text-sm py-4 italic">
+                      Aucune conversation aujourd'hui
+                    </div>
+                  )}
+                </div>
+
+                {/* 7 DERNIERS JOURS */}
+                {recentThreads.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowRecentWeek(prev => !prev)}
+                      className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm">🗓️</span>
+                        <span>7 derniers jours</span>
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        {showRecentWeek ? '▾' : '▸'}
+                      </span>
+                    </button>
+
+                    {showRecentWeek && (
+                      <div className="mt-1">
+                        {recentThreads.map(renderThreadCard)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ARCHIVES */}
+                {archiveThreads.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowArchive(prev => !prev)}
+                      className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm">📚</span>
+                        <span>Archives</span>
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        {showArchive ? '▾' : '▸'}
+                      </span>
+                    </button>
+
+                    {showArchive && (
+                      <div className="mt-1">
+                        {archiveThreads.map(renderThreadCard)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()
+        )}
+      </div>
     </div>
 
-  </div>
+    {/* ========== FOOTER SIDEBAR ========== */}
+<div className="flex-shrink-0 px-0.8 py-1 relative">
+  <button
+  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+  className="user-menu-button w-full px-2.5 py-1 rounded-lg bg-transparent hover:bg-gray-800/40 transition-all duration-200 flex items-center gap-2.5 group"
+>
+    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-bandhu-primary to-bandhu-secondary flex items-center justify-center text-white font-bold text-xs border-2 border-white/20 group-hover:scale-105 transition-transform flex-shrink-0">
+      {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+    </div>
+    <span className="text-gray-100 text-sm font-medium truncate flex-1 text-left">{displayName}</span>
+  </button>
+
+  {isUserMenuOpen && (
+    <div className="user-menu absolute bottom-full left-4 right-4 mb-2 bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-lg shadow-2xl z-50 overflow-hidden">
+      <button
+        onClick={() => {
+          setIsUserMenuOpen(false)
+          router.push('/account')
+        }}
+        className="w-full px-4 py-3 text-left text-sm text-gray-100 hover:bg-gray-800 flex items-center gap-3 transition"
+      >
+        <span className="text-base">⚙️</span>
+        <span>Mon compte</span>
+      </button>
+
+      <div className="border-t border-gray-700"></div>
+
+      <button
+        onClick={async () => {
+          setIsUserMenuOpen(false)
+          await signOut({ callbackUrl: '/' })
+        }}
+        className="w-full px-4 py-3 text-left text-sm text-red-300 hover:bg-red-900/60 flex items-center gap-3 transition"
+      >
+        <span className="text-base">🚪</span>
+        <span>Déconnexion</span>
+      </button>
+    </div>
+  )}
 </div>
+
+  </div>  {/* ← Fermeture w-80 */}
+</div>  {/* ← Fermeture wrapper sidebar */}
 
 {/* ========== BOUTON TOGGLE ========== */}
 <button
