@@ -7,6 +7,8 @@ import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useSidebar } from '@/contexts/SidebarContext'
+import ExportModal from '../components/export/ExportModal'
+console.log('🔍 ExportModal =', ExportModal)
 
 interface Event {
   id: string
@@ -62,6 +64,7 @@ export default function ChatPage() {
   const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const pinnedThreadIds = threads.filter(t => t.isPinned).map(t => t.id)
+  const [showExportModal, setShowExportModal] = useState(false)
 
 
 
@@ -1316,61 +1319,102 @@ const renderThreadCard = (thread: Thread) => {
         <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none">
           <div className="w-full max-w-3xl px-5 pointer-events-auto">
             <div className="flex gap-3 items-end bg-blue-800/95 backdrop-blur-sm p-3 rounded-2xl shadow-2xl border border-blue-600">
+              
+              {/* Textarea - Prend tout l'espace disponible */}
               <textarea
-  ref={textareaRef}
-  defaultValue={input}  // ← defaultValue au lieu de value
-  onChange={e => {
-    const el = e.target
-    
-    // Update React state en arrière-plan (pour sendMessage)
-    startTransition(() => {
-      setInput(el.value)
-    })
-    
-    // Resize immédiat
-    if (!el.dataset.resizing) {
-      el.dataset.resizing = 'true'
-      
-      requestAnimationFrame(() => {
-        el.style.height = 'auto'
-        const min = 42
-        const max = 500
-        const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
-        el.style.height = `${newHeight}px`
-        delete el.dataset.resizing
-      })
-    }
-  }}
-  placeholder="Parlez à Ombrelien..."
-  className="scrollbar-bandhu flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500"
-  style={{ 
-    minHeight: '42px', 
-    maxHeight: '500px',
-    transition: 'height 0.05s ease-out'
-  }}
-  onKeyDown={e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
-  }}
-  disabled={isSending}
-/>
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || isSending}
-                className={`px-5 py-2.5 rounded-xl text-sm font-medium min-h-[42px] transition-transform ${
-                  input.trim() && !isSending
-                    ? 'bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white hover:scale-105 cursor-pointer shadow-lg'
-                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isSending ? 'Envoi...' : 'Envoyer'}
-              </button>
+                ref={textareaRef}
+                defaultValue={input}
+                onChange={e => {
+                  const el = e.target
+                  
+                  // Update React state en arrière-plan (pour sendMessage)
+                  startTransition(() => {
+                    setInput(el.value)
+                  })
+                  
+                  // Resize immédiat
+                  if (!el.dataset.resizing) {
+                    el.dataset.resizing = 'true'
+                    
+                    requestAnimationFrame(() => {
+                      el.style.height = 'auto'
+                      const min = 42
+                      const max = 500
+                      const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
+                      el.style.height = `${newHeight}px`
+                      delete el.dataset.resizing
+                    })
+                  }
+                }}
+                placeholder="Parlez à Ombrelien..."
+                className="scrollbar-bandhu flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500"
+                style={{ 
+                  minHeight: '42px', 
+                  maxHeight: '500px',
+                  transition: 'height 0.05s ease-out'
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
+                disabled={isSending}
+              />
+
+              {/* Groupe de boutons à droite */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                
+                {/* Bouton Exporter (compact) */}
+                <button 
+                  onClick={() => setShowExportModal(true)}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-1 min-h-[42px] group relative"
+                  title="Exporter les conversations"
+                >
+                  <span className="text-base">📤</span>
+                  <span className="hidden sm:inline text-xs">Export</span>
+                  
+                  {/* Tooltip subtle */}
+                  <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                    Exporter les conversations
+                  </div>
+                </button>
+
+                {/* Bouton Envoyer */}
+                <button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isSending}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium min-h-[42px] transition-all flex items-center gap-2 ${
+                    input.trim() && !isSending
+                      ? 'bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white hover:scale-105 cursor-pointer shadow-lg'
+                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isSending ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Envoi...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🚀</span>
+                      <span>Envoyer</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              
             </div>
           </div>
         </div>
+
+        {/* Modal Export - EN DEHORS du flux */}
+        <ExportModal 
+          isOpen={showExportModal} 
+          onClose={() => setShowExportModal(false)} 
+        />
+
       </div>
-    </div>
+      </div>
   )
 }
