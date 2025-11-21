@@ -24,7 +24,7 @@ You can freely mix:
 
 - [Overview](./Overview.md) — high-level description of Bandhu.fr (📄 existing)
 - [Architecture](./architecture.md) — structural map & system skeleton (📄 existing)
-- [Roadmap](./roadmap.md) — upcoming milestones & priorities (WIP)
+- [Roadmap](./roadmap.md) — upcoming milestones & priorities (📄 existing)
 
 ---
 
@@ -74,6 +74,7 @@ You can freely drop Obsidian-style ideas here, e.g.:
   - Created `docs/docsProject/index.md` — documentation index.  
   - Added `docs/docsProject/Overview.md` — initial project overview.  
   - Added `docs/docsProject/architecture.md` — architecture skeleton created.
+  - Added `docs/docsProject/roadmap.md` — initial roadmap created.
 
 
 _(Every time we add a new doc or folder, we append a bullet here.)_
