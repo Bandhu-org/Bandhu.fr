@@ -15,6 +15,7 @@
     "@types/node": "^24.2.1",
     "@types/react": "latest",
     "bcryptjs": "^3.0.2",
+    "docx": "^9.5.1",
     "lucide-react": "^0.541.0",
     "next": "latest",
     "next-auth": "^4.24.11",
