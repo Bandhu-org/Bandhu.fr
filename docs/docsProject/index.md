@@ -22,7 +22,7 @@ You can freely mix:
 
 ## 🧱 Core Docs
 
-- [Overview](./overview.md) — high-level description of Bandhu.fr (📄 existing)
+- [Overview](./Overview.md) — high-level description of Bandhu.fr (📄 existing)
 - [Architecture](./architecture.md) — technical & conceptual structure (WIP)
 - [Roadmap](./roadmap.md) — upcoming milestones & priorities (WIP)
 
@@ -72,7 +72,7 @@ You can freely drop Obsidian-style ideas here, e.g.:
 
 - **2025-11-21**  
   - Created `docs/docsProject/index.md` — documentation index.  
-  - Added `docs/docsProject/overview.md` — initial project overview.
+  - Added `docs/docsProject/Overview.md` — initial project overview.
 
 _(Every time we add a new doc or folder, we append a bullet here.)_
 
