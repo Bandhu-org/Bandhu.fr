@@ -37,19 +37,12 @@ export async function POST(request: NextRequest) {
         break
 
       case 'pdf':
-        // Pour l'instant, on gère le placeholder
-        if (content.startsWith('PDF_PLACEHOLDER:')) {
-          const markdownContent = atob(content.replace('PDF_PLACEHOLDER:', ''))
-          fileContent = markdownContent
-          contentType = 'text/markdown; charset=utf-8' // Temporaire
-          fileExtension = 'md'
-        } else {
-          // Pour les vrais PDF plus tard
-          fileContent = content
-          contentType = 'application/pdf'
-          fileExtension = 'pdf'
-        }
-        finalFilename = filename || `conversations-${new Date().toISOString().split('T')[0]}.${fileExtension}`
+        // VRAI PDF en base64 - conversion vers ArrayBuffer
+        const pdfBuffer = Buffer.from(content, 'base64')
+        fileContent = pdfBuffer.buffer // ← .buffer donne l'ArrayBuffer
+        contentType = 'application/pdf'
+        fileExtension = 'pdf'
+        finalFilename = filename || `conversations-${new Date().toISOString().split('T')[0]}.pdf`
         break
 
       case 'docx':
@@ -57,10 +50,11 @@ export async function POST(request: NextRequest) {
         if (content.startsWith('DOCX_PLACEHOLDER:')) {
           const markdownContent = atob(content.replace('DOCX_PLACEHOLDER:', ''))
           fileContent = markdownContent
-          contentType = 'text/markdown; charset=utf-8' // Temporaire
+          contentType = 'text/markdown; charset=utf-8'
           fileExtension = 'md'
         } else {
-          fileContent = content
+          const docxBuffer = Buffer.from(content, 'base64')
+          fileContent = docxBuffer.buffer // ← .buffer donne l'ArrayBuffer
           contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
           fileExtension = 'docx'
         }
@@ -80,14 +74,15 @@ export async function POST(request: NextRequest) {
     headers.set('Content-Disposition', `attachment; filename="${finalFilename}"`)
     headers.set('Cache-Control', 'no-cache')
 
-    // Pour markdown, on peut directement retourner la string
+    // Gérer les deux types de contenu
     if (typeof fileContent === 'string') {
       headers.set('Content-Length', Buffer.byteLength(fileContent, 'utf8').toString())
       return new Response(fileContent, { headers, status: 200 })
+    } else {
+      // Pour ArrayBuffer (PDF, DOCX)
+      headers.set('Content-Length', fileContent.byteLength.toString())
+      return new Response(fileContent, { headers, status: 200 })
     }
-
-    // Pour les binaires plus tard (PDF, DOCX)
-    return new Response(fileContent, { headers, status: 200 })
 
   } catch (error) {
     console.error('❌ Erreur téléchargement:', error)

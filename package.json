@@ -19,6 +19,7 @@
     "next": "latest",
     "next-auth": "^4.24.11",
     "openai": "^5.12.2",
+    "pdf-lib": "^1.17.1",
     "react": "latest",
     "react-dom": "latest",
     "react-markdown": "^10.1.0",
