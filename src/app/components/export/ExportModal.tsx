@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import PreviewModal from './PreviewModal'
+import { calculateMetrics } from '@/utils/exportMetrics'
 
 interface Event {
   id: string
@@ -23,11 +25,33 @@ interface ExportModalProps {
   onClose: () => void
 }
 
+// Configuration des limites par format
+const FORMAT_LIMITS = {
+  markdown: 500,
+  pdf: 200,
+  docx: 100  // Limite stricte pour DOCX
+}
+
 export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  
+  // États unifiés pour la prévisualisation
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewData, setPreviewData] = useState<{
+    content: string
+    metrics: any
+  } | null>(null)
+
+  // Calcul dynamique de la limite actuelle
+  const currentLimit = FORMAT_LIMITS[selectedFormat]
+  const allSelectedEvents = threads.flatMap(thread =>
+    thread.events.filter(event => event.selected).map(event => event.id)
+  )
+  const limitedEvents = allSelectedEvents.slice(0, currentLimit)
+  const exceededLimit = allSelectedEvents.length > currentLimit
 
   // Charger les données au montage
   useEffect(() => {
@@ -51,6 +75,23 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
     }
   }
 
+  // Fonction utilitaire partagée pour générer le contenu
+  const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
+    const response = await fetch('/api/export/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        format: selectedFormat,
+        selectedEvents: eventIds,
+        options: { 
+          includeTimestamps: true,
+          preview: isPreview
+        }
+      })
+    })
+    return await response.json()
+  }, [selectedFormat])
+
   // Basculer la sélection d'un event
   const toggleEventSelection = (threadIndex: number, eventIndex: number) => {
     setThreads(prev => {
@@ -71,51 +112,74 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
     )
   }
 
-  // Exporter les données sélectionnées
-  const handleExport = async () => {
-    const allSelectedEvents = threads.flatMap(thread =>
-      thread.events.filter(event => event.selected).map(event => event.id)
-    )
+  // Préparer et afficher la prévisualisation
+  const handlePreview = async () => {
+  console.log('🔄 handlePreview appelé')
+  console.log('📊 showPreview avant:', showPreview)
 
-    // LIMITER à 100 events maximum
-    const selectedEvents = allSelectedEvents.slice(0, 100)
+  const allSelectedEvents = threads.flatMap(thread =>
+    thread.events.filter(event => event.selected).map(event => event.id)
+  )
+  const selectedEvents = allSelectedEvents.slice(0, currentLimit)
+  
+  if (selectedEvents.length === 0) {
+    alert('Sélectionne au moins un message à exporter !')
+    return
+  }
+
+  setIsLoading(true)
+  try {
+    const result = await generateExportContent(selectedEvents, true)
     
-    if (selectedEvents.length === 0) {
-      alert('Sélectionne au moins un message à exporter !')
-      return
+    if (!result.success) {
+      throw new Error(result.error)
     }
 
-    if (allSelectedEvents.length > 100) {
-      alert(`⚠️ Limité à 100 messages pour des raisons de performance (${allSelectedEvents.length} sélectionnés)`)
-    }
+    const metrics = calculateMetrics(result.content, selectedFormat, selectedEvents.length)
+    
+    // 🔥 VERSION BLINDÉE
+    console.log('🚀 SET preview data + showPreview true')
+    setPreviewData({
+      content: result.content,
+      metrics
+    })
+    
+    // Double assurance avec timeout
+    setShowPreview(true)
+    setTimeout(() => {
+      console.log('🛡️  Double check showPreview:', showPreview)
+      setShowPreview(true) // Force une deuxième fois
+    }, 100)
+    
+  } catch (error) {
+    console.error('Erreur génération preview:', error)
+    alert('❌ Erreur lors de la génération de l\'aperçu')
+    setShowPreview(false)
+  } finally {
+    setIsLoading(false)
+  }
+}
 
+  // Exporter les données sélectionnées
+  const handleExportConfirm = async (): Promise<void> => {
     setIsExporting(true)
     try {
-      // 1. Générer le contenu
-      const generateResponse = await fetch('/api/export/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          format: selectedFormat,
-          selectedEvents: selectedEvents,
-          options: { includeTimestamps: true }
-        })
-      })
+      const result = await generateExportContent(limitedEvents, false)
 
-      const generateResult = await generateResponse.json()
-
-      if (!generateResult.success) {
-        throw new Error(generateResult.error)
+      if (!result.success) {
+        throw new Error(result.error)
       }
 
-      // 2. Télécharger le fichier
+      // Télécharger le fichier
       const downloadResponse = await fetch('/api/export/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           format: selectedFormat,
-          content: generateResult.content,
-          filename: `bandhu-export-${new Date().toISOString().split('T')[0]}.${selectedFormat === 'markdown' ? 'md' : selectedFormat}`
+          content: result.content,
+          filename: `bandhu-export-${new Date().toISOString().split('T')[0]}.${
+            selectedFormat === 'markdown' ? 'md' : selectedFormat
+          }`
         })
       })
 
@@ -124,13 +188,18 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `bandhu-export-${new Date().toISOString().split('T')[0]}.${selectedFormat === 'markdown' ? 'md' : selectedFormat}`
+        a.download = `bandhu-export-${new Date().toISOString().split('T')[0]}.${
+          selectedFormat === 'markdown' ? 'md' : selectedFormat
+        }`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         window.URL.revokeObjectURL(url)
 
-        alert(`✅ Export réussi ! ${generateResult.metadata.eventCount} messages exportés.`)
+        alert(`✅ Export réussi ! ${limitedEvents.length} messages exportés.${
+          exceededLimit ? ` (${allSelectedEvents.length - currentLimit} ignorés)` : ''
+        }`)
+        setShowPreview(false)
         onClose()
       }
     } catch (error) {
@@ -151,152 +220,195 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        
-        {/* Header sexy */}
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-white">Exporter mes conversations</h2>
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white text-2xl transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-          <p className="text-white/80 mt-2">
-            Sélectionne les messages à exporter et choisis ton format
-          </p>
-        </div>
-
-        {/* Barre de contrôle sticky */}
-        <div className="bg-gray-700/50 border-b border-gray-600 p-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-white cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={(e) => toggleSelectAll(e.target.checked)}
-                  className="w-4 h-4 rounded bg-gray-600 border-gray-500"
-                />
-                <span className="text-sm font-medium">
-                  {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
-                </span>
-              </label>
-              
-              <span className="text-gray-300 text-sm">
-                {selectedEventsCount} / {totalEvents} messages sélectionnés
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <select
-                value={selectedFormat}
-                onChange={(e) => setSelectedFormat(e.target.value as any)}
-                className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm"
-              >
-                <option value="markdown">Markdown (.md)</option>
-                <option value="pdf">PDF</option>
-                <option value="docx">Word (.docx)</option>
-              </select>
-
+    <>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-600 transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
+          
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Exporter mes conversations</h2>
+                <p className="text-white/80 mt-2">
+                  Sélectionne les messages à exporter et choisis ton format
+                </p>
+              </div>
               <button
-                onClick={handleExport}
-                disabled={isExporting || selectedEventsCount === 0}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
+                onClick={onClose}
+                className="text-white/80 hover:text-white text-2xl transition-colors"
+                aria-label="Fermer"
               >
-                {isExporting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Export...
-                  </>
-                ) : (
-                  <>
-                    <span>📥</span>
-                    Exporter ({selectedEventsCount})
-                  </>
-                )}
+                ✕
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Liste des conversations */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="text-gray-400">Chargement de vos conversations...</div>
-            </div>
-          ) : threads.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              Aucune conversation à exporter pour le moment.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {threads.map((thread, threadIndex) => (
-                <div key={thread.threadId} className="bg-gray-700/30 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <input
-                      type="checkbox"
-                      checked={thread.events.every(event => event.selected)}
-                      onChange={(e) => {
-                        const newSelected = e.target.checked
-                        setThreads(prev => {
-                          const newThreads = [...prev]
-                          newThreads[threadIndex].events = 
-                            newThreads[threadIndex].events.map(event => ({
-                              ...event,
-                              selected: newSelected
-                            }))
-                          return newThreads
-                        })
-                      }}
-                      className="w-4 h-4 rounded bg-gray-600 border-gray-500"
-                    />
-                    <h3 className="font-semibold text-white">{thread.threadLabel}</h3>
-                    <span className="text-gray-400 text-sm">
-                      {thread.events.length} messages
-                    </span>
-                  </div>
+          {/* Barre de contrôle sticky */}
+          <div className="bg-gray-700/50 border-b border-gray-600 p-4 sticky top-0 z-10">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="flex items-center gap-2 text-white cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                    className="w-4 h-4 rounded bg-gray-600 border-gray-500 focus:ring-2 focus:ring-purple-500"
+                  />
+                  <span className="text-sm font-medium">
+                    {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  </span>
+                </label>
+                
+                <span className="text-gray-300 text-sm">
+                  {selectedEventsCount} / {totalEvents} messages sélectionnés
+                </span>
 
-                  <div className="space-y-2 ml-7">
-                    {thread.events.map((event, eventIndex) => (
-                      <label
-                        key={event.id}
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-600/30 cursor-pointer transition-colors group"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={event.selected}
-                          onChange={() => toggleEventSelection(threadIndex, eventIndex)}
-                          className="w-4 h-4 rounded bg-gray-600 border-gray-500 mt-1 flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-sm font-medium ${
-                              event.role === 'user' ? 'text-blue-400' : 'text-purple-400'
-                            }`}>
-                              {event.role === 'user' ? 'Vous' : 'Assistant'}
-                            </span>
-                            <span className="text-gray-500 text-xs">
-                              {new Date(event.createdAt).toLocaleDateString('fr-FR')}
-                            </span>
-                          </div>
-                          <p className="text-gray-300 text-sm line-clamp-2">
-                            {event.content}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+                {/* Indicateur de limite */}
+                {exceededLimit && (
+                  <span className="text-orange-400 text-sm flex items-center gap-1">
+                    ⚠️ Limite {currentLimit} messages ({allSelectedEvents.length - currentLimit} ignorés)
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Indicateur de limite par format */}
+                <div className="text-xs text-gray-400 bg-gray-600/50 px-2 py-1 rounded">
+                  Limite : {currentLimit} messages
                 </div>
-              ))}
+
+                <select
+                  value={selectedFormat}
+                  onChange={(e) => setSelectedFormat(e.target.value as any)}
+                  className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="markdown">Markdown (.md)</option>
+                  <option value="pdf">PDF</option>
+                  <option value="docx">Word (.docx)</option>
+                </select>
+
+                <button
+                  onClick={handlePreview}
+                  disabled={isLoading || limitedEvents.length === 0}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Préparation...
+                    </>
+                  ) : (
+                    <>
+                      <span>👀</span>
+                      Prévisualiser ({limitedEvents.length})
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Liste des conversations */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="flex items-center gap-3 text-gray-400">
+                  <div className="w-5 h-5 border-2 border-gray-500 border-t-purple-500 rounded-full animate-spin" />
+                  Chargement de vos conversations...
+                </div>
+              </div>
+            ) : threads.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <div className="text-4xl mb-4">💬</div>
+                Aucune conversation à exporter pour le moment.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {threads.map((thread, threadIndex) => (
+                  <div key={thread.threadId} className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/50">
+                    <div className="flex items-center gap-3 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={thread.events.every(event => event.selected)}
+                        onChange={(e) => {
+                          const newSelected = e.target.checked
+                          setThreads(prev => {
+                            const newThreads = [...prev]
+                            newThreads[threadIndex].events = 
+                              newThreads[threadIndex].events.map(event => ({
+                                ...event,
+                                selected: newSelected
+                              }))
+                            return newThreads
+                          })
+                        }}
+                        className="w-4 h-4 rounded bg-gray-600 border-gray-500 focus:ring-2 focus:ring-purple-500"
+                      />
+                      <h3 className="font-semibold text-white">{thread.threadLabel}</h3>
+                      <span className="text-gray-400 text-sm">
+                        {thread.events.length} messages
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 ml-7">
+                      {thread.events.map((event, eventIndex) => (
+                        <label
+                          key={event.id}
+                          className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
+                            event.selected 
+                              ? 'bg-purple-500/20 border border-purple-500/30' 
+                              : 'hover:bg-gray-600/30'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={event.selected}
+                            onChange={() => toggleEventSelection(threadIndex, eventIndex)}
+                            className="w-4 h-4 rounded bg-gray-600 border-gray-500 mt-1 flex-shrink-0 focus:ring-2 focus:ring-purple-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-sm font-medium ${
+                                event.role === 'user' ? 'text-blue-400' : 'text-purple-400'
+                              }`}>
+                                {event.role === 'user' ? 'Vous' : 'Assistant'}
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                {new Date(event.createdAt).toLocaleDateString('fr-FR')}
+                              </span>
+                            </div>
+                            <p className="text-gray-300 text-sm line-clamp-2 group-hover:text-white transition-colors">
+                              {event.content}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal de prévisualisation */}
+      {previewData && (
+        <PreviewModal
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          onConfirm={handleExportConfirm}
+          onModify={() => setShowPreview(false)}
+          format={selectedFormat}
+          selectedEventsCount={limitedEvents.length}
+          previewContent={previewData.content}
+          metadata={{
+            pageCount: previewData.metrics.estimatedPages,
+            estimatedSize: previewData.metrics.fileSize,
+            eventCount: previewData.metrics.messageCount
+          }}
+        />
+      )}
+    </>
   )
 }
