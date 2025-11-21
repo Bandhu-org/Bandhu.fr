@@ -24,7 +24,6 @@ You can freely mix:
 
 - [Overview](./Overview.md) — high-level description of Bandhu.fr (📄 existing)
 - [Architecture](./architecture.md) — structural map & system skeleton (📄 existing)
-- [Architecture](./architecture.md) — technical & conceptual structure (WIP)
 - [Roadmap](./roadmap.md) — upcoming milestones & priorities (WIP)
 
 ---
