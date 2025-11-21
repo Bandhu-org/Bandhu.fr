@@ -9,6 +9,8 @@ import { useState, useEffect, useRef, useCallback, startTransition } from 'react
 import { useSidebar } from '@/contexts/SidebarContext'
 import ExportModal from '../components/export/ExportModal'
 console.log('🔍 ExportModal =', ExportModal)
+import RenameModal from '@/app/components/threads/RenameModal'
+import DeleteModal from '@/app/components/threads/DeleteModal'
 
 interface Event {
   id: string
@@ -65,7 +67,9 @@ export default function ChatPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const pinnedThreadIds = threads.filter(t => t.isPinned).map(t => t.id)
   const [showExportModal, setShowExportModal] = useState(false)
-
+  const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showRenameModal, setShowRenameModal] = useState(false)
 
 
 
@@ -665,36 +669,31 @@ const renderThreadCard = (thread: Thread) => {
     </button>
 
     {/* Renommer */}
-    <button
-      onClick={e => {
-        e.stopPropagation()
-        const newLabel = prompt('Nouveau nom :', thread.label)
-        if (newLabel && newLabel !== thread.label) {
-          renameThread(thread.id, newLabel)
-        }
-        setOpenThreadMenuId(null)
-      }}
-      className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
-    >
-      <span>✏️</span>
-      <span>Renommer</span>
-    </button>
+<button
+  onClick={e => {
+    e.stopPropagation()
+    setSelectedThread(thread)
+    setShowRenameModal(true)
+    setOpenThreadMenuId(null)
+  }}
+  className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
+>
+  <span>✏️</span>
+  <span>Rename</span>
+</button>
 
-    {/* Supprimer */}
-    <button
-      onClick={e => {
-        e.stopPropagation()
-        const ok = confirm('Supprimer ce thread ?')
-        if (ok) {
-          deleteThread(thread.id)
-        }
-        setOpenThreadMenuId(null)
-      }}
-      className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2"
-    >
-      <span>🗑️</span>
-      <span>Supprimer</span>
-    </button>
+<button
+  onClick={e => {
+    e.stopPropagation()
+    setSelectedThread(thread)
+    setShowDeleteModal(true)
+    setOpenThreadMenuId(null)
+  }}
+  className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2"
+>
+  <span>🗑️</span>
+  <span>Delete</span>
+</button>
   </div>
 )}
       </div>
@@ -1413,6 +1412,32 @@ const renderThreadCard = (thread: Thread) => {
           isOpen={showExportModal} 
           onClose={() => setShowExportModal(false)} 
         />
+
+{/* Rename Modal */}
+<RenameModal
+  isOpen={showRenameModal}
+  onClose={() => setShowRenameModal(false)}
+  onConfirm={(newName: string) => {
+    if (selectedThread && newName !== selectedThread.label) {
+      renameThread(selectedThread.id, newName)
+    }
+    setShowRenameModal(false) // ← ADD THIS LINE
+  }}
+  currentName={selectedThread?.label || ''}
+/>
+
+{/* Delete Modal */}
+<DeleteModal
+  isOpen={showDeleteModal}
+  onClose={() => setShowDeleteModal(false)}
+  onConfirm={() => {
+    if (selectedThread) {
+      deleteThread(selectedThread.id)
+    }
+    setShowDeleteModal(false) // ← ADD THIS LINE
+  }}
+  threadName={selectedThread?.label || ''}
+/>
 
       </div>
       </div>
