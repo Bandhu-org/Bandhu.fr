@@ -1,7 +1,5 @@
 'use client'
 
-console.log('🔥 ExportModal loaded!')
-
 import { useState, useEffect } from 'react'
 
 interface Event {
@@ -75,13 +73,20 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
 
   // Exporter les données sélectionnées
   const handleExport = async () => {
-    const selectedEvents = threads.flatMap(thread =>
+    const allSelectedEvents = threads.flatMap(thread =>
       thread.events.filter(event => event.selected).map(event => event.id)
     )
 
+    // LIMITER à 100 events maximum
+    const selectedEvents = allSelectedEvents.slice(0, 100)
+    
     if (selectedEvents.length === 0) {
       alert('Sélectionne au moins un message à exporter !')
       return
+    }
+
+    if (allSelectedEvents.length > 100) {
+      alert(`⚠️ Limité à 100 messages pour des raisons de performance (${allSelectedEvents.length} sélectionnés)`)
     }
 
     setIsExporting(true)
@@ -92,7 +97,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           format: selectedFormat,
-          selectedEvents,
+          selectedEvents: selectedEvents,
           options: { includeTimestamps: true }
         })
       })
@@ -138,10 +143,10 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
 
   // Calculer les stats
   const totalEvents = threads.reduce((sum, thread) => sum + thread.events.length, 0)
-  const selectedEvents = threads.reduce((sum, thread) => 
+  const selectedEventsCount = threads.reduce((sum, thread) => 
     sum + thread.events.filter(event => event.selected).length, 0
   )
-  const allSelected = totalEvents > 0 && selectedEvents === totalEvents
+  const allSelected = totalEvents > 0 && selectedEventsCount === totalEvents
 
   if (!isOpen) return null
 
@@ -182,7 +187,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
               </label>
               
               <span className="text-gray-300 text-sm">
-                {selectedEvents} / {totalEvents} messages sélectionnés
+                {selectedEventsCount} / {totalEvents} messages sélectionnés
               </span>
             </div>
 
@@ -199,7 +204,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
 
               <button
                 onClick={handleExport}
-                disabled={isExporting || selectedEvents === 0}
+                disabled={isExporting || selectedEventsCount === 0}
                 className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2"
               >
                 {isExporting ? (
@@ -210,7 +215,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                 ) : (
                   <>
                     <span>📥</span>
-                    Exporter ({selectedEvents})
+                    Exporter ({selectedEventsCount})
                   </>
                 )}
               </button>

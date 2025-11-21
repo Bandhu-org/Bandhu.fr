@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,16 +24,19 @@ export async function POST(request: NextRequest) {
       }), { status: 400 })
     }
 
-    // Récupérer les events sélectionnés avec leurs threads
+    // Récupérer les events sélectionnés avec leurs threads (OPTIMISÉ)
     const events = await prisma.event.findMany({
       where: {
-        id: { in: selectedEvents },
+        id: { in: selectedEvents.slice(0, 100) }, // Limiter ici aussi
         user: { email: session.user.email }
       },
       include: {
-        thread: true
+        thread: {
+          select: { id: true, label: true } // Seulement les champs nécessaires
+        }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      take: 100 // Double sécurité
     })
 
     if (events.length === 0) {
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
 }
 
 // ============================================================================
-// GÉNÉRATEURS
+// GÉNÉRATEURS (le reste du code reste identique)
 // ============================================================================
 
 // 🎯 GÉNÉRATEUR MARKDOWN (le plus simple)
@@ -127,7 +131,7 @@ async function generateMarkdown(events: any[], options: any) {
   }
 }
 
-// 📄 GÉNÉRATEUR PDF (placeholder pour l'instant)
+// 📄 GÉNÉRATEUR PDF
 async function generatePDF(events: any[], options: any) {
   try {
     // Créer un nouveau document PDF
@@ -285,7 +289,7 @@ async function generatePDF(events: any[], options: any) {
     // Fallback vers Markdown en cas d'erreur
     const markdownResult = await generateMarkdown(events, options)
     return {
-      content: Buffer.from(markdownResult.content).toString('base64'), // ← CORRECTION ICI
+      content: Buffer.from(markdownResult.content).toString('base64'),
       pageCount: markdownResult.pageCount,
       estimatedSize: markdownResult.estimatedSize
     }
@@ -323,12 +327,196 @@ function splitTextIntoLines(text: string, font: any, fontSize: number, maxWidth:
   return lines
 }
 
-// 📝 GÉNÉRATEUR DOCX (placeholder pour l'instant)
+// 📝 GÉNÉRATEUR DOCX
 async function generateDOCX(events: any[], options: any) {
-  const markdownResult = await generateMarkdown(events, options)
-  return {
-    content: `DOCX_PLACEHOLDER:${btoa(markdownResult.content)}`,
-    pageCount: markdownResult.pageCount,
-    estimatedSize: markdownResult.estimatedSize
+  try {
+    console.log('🔄 Début génération DOCX...')
+
+    // Préparer les sections du document
+    const sections = [
+      {
+        properties: {},
+        children: [
+          // Titre principal
+          new Paragraph({
+            text: "Export de conversations Bandhu",
+            heading: HeadingLevel.TITLE,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 }
+          }),
+
+          // Date de génération
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Généré le ${new Date().toLocaleDateString('fr-FR')}`,
+                color: "666666",
+                size: 20
+              })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 600 }
+          }),
+
+          // Ligne séparatrice
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "―".repeat(50),
+                color: "CCCCCC",
+                size: 16
+              })
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400 }
+          })
+        ]
+      }
+    ]
+
+    let currentThreadId: string | null = null
+
+    // Parcourir les events
+    for (const event of events) {
+      // Nouvelle section pour chaque thread
+      if (event.threadId !== currentThreadId) {
+        if (currentThreadId !== null) {
+          // Espace entre les threads
+          sections[0].children.push(
+            new Paragraph({
+              text: "",
+              spacing: { after: 200 }
+            })
+          )
+        }
+
+        // Titre du thread
+        sections[0].children.push(
+          new Paragraph({
+            text: event.thread.label,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { after: 200 }
+          })
+        )
+
+        currentThreadId = event.threadId
+      }
+
+      // Message utilisateur/assistant
+      const role = event.role === 'user' ? 'Vous' : 'Assistant'
+      const roleColor = event.role === 'user' ? '2E5C8A' : '8A4B2E'
+
+      sections[0].children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${role}: `,
+              bold: true,
+              color: roleColor,
+              size: 22
+            }),
+            new TextRun({
+              text: event.content,
+              size: 20
+            })
+          ],
+          spacing: { after: 150 }
+        })
+      )
+
+      // Timestamp optionnel
+      if (options.includeTimestamps) {
+        const timestamp = new Date(event.createdAt).toLocaleString('fr-FR')
+        sections[0].children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: timestamp,
+                color: "888888",
+                italics: true,
+                size: 16
+              })
+            ],
+            indent: { left: 400 },
+            spacing: { after: 200 }
+          })
+        )
+      }
+    }
+
+    // Pied de page
+    sections[0].children.push(
+      new Paragraph({
+        text: "",
+        spacing: { after: 400 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "―".repeat(50),
+            color: "CCCCCC",
+            size: 16
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Bandhu - ${events.length} messages exportés`,
+            color: "666666",
+            size: 16
+          })
+        ],
+        alignment: AlignmentType.CENTER
+      })
+    )
+
+    // Créer le document
+    const doc = new Document({
+      sections: sections,
+      styles: {
+        paragraphStyles: [
+          {
+            id: "Normal",
+            name: "Normal",
+            basedOn: "Normal",
+            next: "Normal",
+            run: {
+              size: 20,
+              font: "Calibri"
+            },
+            paragraph: {
+              spacing: { line: 276 }
+            }
+          }
+        ]
+      }
+    })
+
+    // Générer le fichier DOCX
+    const buffer = await Packer.toBuffer(doc)
+
+    console.log('✅ DOCX généré avec succès:', {
+      bytes: buffer.length,
+      events: events.length
+    })
+
+    return {
+      content: buffer.toString('base64'),
+      pageCount: Math.ceil(events.length / 10), // Estimation
+      estimatedSize: `${Math.round(buffer.length / 1024)}KB`
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur génération DOCX:', error)
+    // Fallback vers Markdown
+    const markdownResult = await generateMarkdown(events, options)
+    return {
+      content: `DOCX_PLACEHOLDER:${Buffer.from(markdownResult.content).toString('base64')}`,
+      pageCount: markdownResult.pageCount,
+      estimatedSize: markdownResult.estimatedSize
+    }
   }
 }
