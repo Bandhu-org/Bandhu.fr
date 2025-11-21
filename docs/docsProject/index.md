@@ -71,7 +71,8 @@ You can freely drop Obsidian-style ideas here, e.g.:
 ## 📓 Change Log (Bullet Journal Style)
 
 - **2025-11-21**  
-  - Created `docs/overview.md` — project overview.  
-  - Created `docs/index.md` — this documentation index.
+  - Created `docs/docsProject/index.md` — documentation index.  
+  - Added `docs/docsProject/overview.md` — initial project overview.
 
 _(Every time we add a new doc or folder, we append a bullet here.)_
+
