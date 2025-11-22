@@ -70,8 +70,7 @@ export default function ChatPage() {
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showRenameModal, setShowRenameModal] = useState(false)
-
-
+  const [messageHeights, setMessageHeights] = useState<Record<string, number>>({})
 
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -183,6 +182,23 @@ useEffect(() => {
     document.removeEventListener('mousedown', handleClickOutside)
   }
 }, [openThreadMenuId, isUserMenuOpen])
+
+// Height measurement hook
+
+const useMessageHeight = (messageId: string, content: string) => {
+  const [height, setHeight] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (ref.current) {
+      const measuredHeight = ref.current.scrollHeight
+      setHeight(measuredHeight)
+      setMessageHeights(prev => ({ ...prev, [messageId]: measuredHeight }))
+    }
+  }, [content, messageId])
+
+  return { ref, height }
+}
 
   // ========== FONCTIONS API ==========
 
@@ -1060,134 +1076,121 @@ const renderThreadCard = (thread: Thread) => {
                 )
                 .map(event => (
                   <div key={event.id} className="mb-5 flex justify-center">
-                    <div className="w-full max-w-4xl">
+                    <div className="w-full max-w-[780px]">
                       {event.role === 'user' ? (
-                        <div
-                           className="max-w-md relative"
-                            data-message-type="user"
-                            data-message-id={event.id}
-                            >
-                          <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
-                            Vous
-                          </div>
+  <div className="max-w-[800px] relative" data-message-type="user" data-message-id={event.id}>
+    <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
+      Vous
+    </div>
 
-                          <div className="relative">
-                            <div
-                              className="px-5 py-3 rounded-xl bg-gradient-to-br from-blue-900/90 to-blue-700/90 border border-bandhu-primary/30 text-gray-100 shadow-lg overflow-hidden relative"
-                              style={{
-                                maxHeight: expandedMessages[event.id]
-                                  ? 'none'
-                                  : event.content.length > 1000
-                                  ? '14.4em'
-                                  : 'none',
-                              }}
-                            >
-                              <div
-                                className="text-base leading-relaxed"
-                                style={{ lineHeight: '1.6em' }}
-                              >
-                                <ReactMarkdown
-                                  rehypePlugins={[rehypeHighlight]}
-                                  components={{
-                                    code: ({
-                                      node,
-                                      inline,
-                                      className,
-                                      children,
-                                      ...props
-                                    }: any) => {
-                                      const isInline =
-                                        !className?.includes('language-')
-                                      return !isInline ? (
-                                        <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-blue-400/20">
-                                          <code className={className} {...props}>
-                                            {children}
-                                          </code>
-                                        </pre>
-                                      ) : (
-                                        <code
-                                          className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200"
-                                          {...props}
-                                        >
-                                          {children}
-                                        </code>
-                                      )
-                                    },
-                                    a: ({ children, href, ...props }: any) => (
-                                      <a
-                                        href={href}
-                                        className="text-blue-200 hover:text-blue-100 underline transition"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        {...props}
-                                      >
-                                        {children}
-                                      </a>
-                                    ),
-                                    p: ({ children, ...props }: any) => (
-                                      <p
-                                        className="my-2 leading-relaxed text-gray-100"
-                                        {...props}
-                                      >
-                                        {children}
-                                      </p>
-                                    ),
-                                  }}
-                                >
-                                  {event.content}
-                                </ReactMarkdown>
-                              </div>
+    <div className="relative">
+      <div
+        className="px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 text-gray-100 shadow-lg overflow-hidden relative"
+        style={{
+          maxHeight: expandedMessages[event.id] ? 'none' : '180px', // Compact 180px height
+        }}
+      >
+        <div className="text-base leading-relaxed" style={{ lineHeight: '1.6em' }}>
+          <ReactMarkdown
+            components={{
+              p: ({ children, ...props }: any) => (
+                <p
+                  className="my-2 leading-relaxed text-gray-100 break-words whitespace-pre-wrap"
+                  {...props}
+                >
+                  {children}
+                </p>
+              ),
+              code: ({
+                node,
+                inline,
+                className,
+                children,
+                ...props
+              }: any) => {
+                const isInline = !className?.includes('language-')
+                return !isInline ? (
+                  <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-blue-400/20 break-words whitespace-pre-wrap">
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                ) : (
+                  <code
+                    className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200 break-words whitespace-pre-wrap"
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                )
+              },
+              a: ({ children, href, ...props }: any) => (
+                <a
+                  href={href}
+                  className="text-blue-200 hover:text-blue-100 underline transition"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  {...props}
+                >
+                  {children}
+                </a>
+              ),
+              br: ({ ...props }: any) => <br {...props} />,
+            }}
+          >
+            {event.content}
+          </ReactMarkdown>
+        </div>
 
-                              {!expandedMessages[event.id] &&
-                                event.content.length > 1000 && (
-                                  <div
-                                    className="absolute bottom-0 left-0 right-0 pointer-events-none"
-                                    style={{
-                                      height: '3.2em',
-                                      background:
-                                        'linear-gradient(to top, rgb(30, 58, 138), rgba(30, 58, 138, 0.8), transparent)',
-                                    }}
-                                  />
-                                )}
-                            </div>
+        {/* FADE NOIR ÉLÉGANT - seulement sur messages longs ET repliés */}
+{!expandedMessages[event.id] && event.content.length > 200 && (
+  <div
+    className="absolute bottom-0 left-0 right-0 pointer-events-none"
+    style={{
+      height: '5em', // Plus haut pour une transition ultra douce
+      background: `
+        linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0.95) 0%,
+          rgba(0, 0, 0, 0.85) 25%,
+          rgba(0, 0, 0, 0.65) 50%,
+          rgba(0, 0, 0, 0.35) 75%,
+          rgba(0, 0, 0, 0.1) 90%,
+          transparent 100%
+        )
+      `,
+    }}
+  />
+)}
+      </div>
 
-                            {!expandedMessages[event.id] &&
-                              event.content.length > 1000 && (
-                                <button
-                                  onClick={() =>
-                                    setExpandedMessages(prev => ({
-                                      ...prev,
-                                      [event.id]: true,
-                                    }))
-                                  }
-                                  className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
-                                >
-                                  Afficher plus
-                                </button>
-                              )}
+      {/* SIMPLE BUTTONS - only show for long messages */}
+      {!expandedMessages[event.id] && event.content.length > 200 && (
+        <button
+          onClick={() => setExpandedMessages(prev => ({ ...prev, [event.id]: true }))}
+          className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+        >
+          Afficher plus
+        </button>
+      )}
 
-                            {expandedMessages[event.id] &&
-                              event.content.length > 1000 && (
-                                <button
-                                  onClick={() => handleCollapseMessage(event.id)}
-    
-    
-                                  className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
-                              >
-                                  Replier
-                                </button>
-                              )}
+      {expandedMessages[event.id] && event.content.length > 200 && (
+        <button
+          onClick={() => handleCollapseMessage(event.id)}
+          className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
+        >
+          Replier
+        </button>
+      )}
 
-                            {/* Bouton Copier (USER) */}
-                            <div className="mt-2 text-[11px] text-gray-400">
-                              <button
-                                onClick={() =>
-                                  handleCopyMessage(event.content)
-                                }
-                                className="hover:text-blue-200 underline underline-offset-2"
-                              >
-                                Copier
-                              </button>
+      {/* Copy button */}
+      <div className="mt-2 text-[11px] text-gray-400">
+        <button
+          onClick={() => handleCopyMessage(event.content)}
+          className="hover:text-blue-200 underline underline-offset-2"
+        >
+          Copier
+        </button>
                             </div>
                           </div>
                         </div>
@@ -1197,57 +1200,115 @@ const renderThreadCard = (thread: Thread) => {
                             <span className="text-lg">🌑</span> Ombrelien
                           </div>
 
-                          <div className="px-6 py-5 bg-transparent text-gray-100">
+                          <div className="px-4 py-5 bg-transparent text-gray-100">
                             <ReactMarkdown
-                              rehypePlugins={[rehypeHighlight]}
-                              components={{
-                                code: ({
-                                  node,
-                                  inline,
-                                  className,
-                                  children,
-                                  ...props
-                                }: any) => {
-                                  const isInline =
-                                    !className?.includes('language-')
-                                  return !isInline ? (
-                                    <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-bandhu-primary/20">
-                                      <code className={className} {...props}>
-                                        {children}
-                                      </code>
-                                    </pre>
-                                  ) : (
-                                    <code
-                                      className="bg-bandhu-primary/20 px-2 py-0.5 rounded text-sm text-bandhu-primary"
-                                      {...props}
-                                    >
-                                      {children}
-                                    </code>
-                                  )
-                                },
-                                a: ({ children, href, ...props }: any) => (
-                                  <a
-                                    href={href}
-                                    className="text-bandhu-primary hover:text-bandhu-secondary underline transition"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    {...props}
-                                  >
-                                    {children}
-                                  </a>
-                                ),
-                                p: ({ children, ...props }: any) => (
-                                  <p
-                                    className="my-2 leading-7 text-gray-200"
-                                    {...props}
-                                  >
-                                    {children}
-                                  </p>
-                                ),
-                              }}
-                            >
-                              {event.content}
-                            </ReactMarkdown>
+  rehypePlugins={[rehypeHighlight]}
+  components={{
+    // Base text - larger, better spacing
+    p: ({ children, ...props }: any) => (
+      <p
+        className="my-5 leading-9 text-gray-200 text-[16px] font-normal"  // Larger text, more space
+        {...props}
+      >
+        {children}
+      </p>
+    ),
+    
+    // Code blocks with better spacing
+    code: ({ node, inline, className, children, ...props }: any) => {
+      const isInline = !className?.includes('language-')
+      return !isInline ? (
+        <pre className="bg-black/70 p-5 rounded-xl overflow-auto my-6 border border-bandhu-primary/30 font-mono text-[14px] leading-6">
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      ) : (
+        <code
+          className="bg-bandhu-primary/30 px-2.5 py-1 rounded-md text-[15px] text-bandhu-primary font-mono border border-bandhu-primary/20"
+          {...props}
+        >
+          {children}
+        </code>
+      )
+    },
+    
+    // Headers with clear hierarchy
+    h1: ({ children, ...props }: any) => (
+      <h1 className="text-2xl font-bold mt-8 mb-5 text-bandhu-primary border-b border-bandhu-primary/30 pb-2" {...props}>
+        {children}
+      </h1>
+    ),
+    h2: ({ children, ...props }: any) => (
+      <h2 className="text-xl font-semibold mt-7 mb-4 text-bandhu-primary" {...props}>
+        {children}
+      </h2>
+    ),
+    h3: ({ children, ...props }: any) => (
+      <h3 className="text-lg font-medium mt-6 mb-3 text-bandhu-primary" {...props}>
+        {children}
+      </h3>
+    ),
+    
+    // Lists with PROPER INDENTATION - FIXED!
+    ul: ({ children, ...props }: any) => (
+      <ul className="my-6 ml-10 list-disc space-y-3.5 text-gray-200" {...props}>  {/* Increased to ml-10 */}
+        {children}
+      </ul>
+    ),
+    ol: ({ children, ...props }: any) => (
+      <ol className="my-6 ml-10 list-decimal space-y-3.5 text-gray-200" {...props}>  {/* Increased to ml-10 */}
+        {children}
+      </ol>
+    ),
+    li: ({ children, ...props }: any) => (
+      <li className="leading-8 text-[16px] pl-2" {...props}>  {/* Added inner padding */}
+        {children}
+      </li>
+    ),
+    
+    // Blockquotes with better styling
+    blockquote: ({ children, ...props }: any) => (
+      <blockquote className="border-l-4 border-bandhu-primary/50 pl-5 my-6 italic text-gray-300 bg-bandhu-primary/10 py-3 rounded-r text-[15px] leading-8" {...props}>
+        {children}
+      </blockquote>
+    ),
+    
+    // Horizontal rules with spacing
+    hr: ({ ...props }: any) => (
+      <hr className="my-8 border-bandhu-primary/20" {...props} />
+    ),
+    
+    // Links
+    a: ({ children, href, ...props }: any) => (
+      <a
+        href={href}
+        className="text-bandhu-primary hover:text-bandhu-secondary underline transition underline-offset-4 font-medium"
+        target="_blank"
+        rel="noopener noreferrer"
+        {...props}
+      >
+        {children}
+      </a>
+    ),
+    
+    // Strong/bold with better weight
+    strong: ({ children, ...props }: any) => (
+      <strong className="font-semibold text-gray-100" {...props}>
+        {children}
+      </strong>
+    ),
+    
+    // Emphasis/italic
+    em: ({ children, ...props }: any) => (
+      <em className="italic text-gray-300" {...props}>
+        {children}
+      </em>
+    ),
+  }}
+>
+  {event.content}
+</ReactMarkdown>
                           </div>
 
                           {/* Bouton Copier (AI) */}
@@ -1269,7 +1330,7 @@ const renderThreadCard = (thread: Thread) => {
               {/* Typing indicator */}
               {isSending && (
                 <div className="mb-5 flex justify-center animate-fadeIn">
-                  <div className="w-full max-w-4xl">
+                  <div className="w-full max-w-[780px]">
                     <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
                       <span className="text-lg">🌑</span> Ombrelien
                     </div>
