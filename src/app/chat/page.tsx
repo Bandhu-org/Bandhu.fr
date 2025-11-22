@@ -1197,7 +1197,7 @@ const renderThreadCard = (thread: Thread) => {
                             <span className="text-lg">🌑</span> Ombrelien
                           </div>
 
-                          <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl text-gray-100 shadow-lg">
+                          <div className="px-6 py-5 bg-transparent text-gray-100">
                             <ReactMarkdown
                               rehypePlugins={[rehypeHighlight]}
                               components={{
@@ -1273,7 +1273,7 @@ const renderThreadCard = (thread: Thread) => {
                     <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
                       <span className="text-lg">🌑</span> Ombrelien
                     </div>
-                    <div className="px-6 py-5 bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-bandhu-primary/30 rounded-2xl">
+                    <div className="px-6 py-5 bg-transparent">
                       <div className="flex items-center gap-2 text-gray-400">
                         <div className="flex gap-1">
                           <span
