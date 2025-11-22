@@ -427,6 +427,13 @@ const useMessageHeight = (messageId: string, content: string) => {
 
   setIsSending(true)
   const userMessage = textareaRef.current.value.trim()
+
+  // Header pour l'API (contexte temporel pour l'IA)
+  const userName = session?.user?.name || 'Utilisateur'
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('fr-FR')
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const messageForAPI = `[${userName} • ${dateStr} à ${timeStr}]\n${userMessage}`
   
   // Vider le textarea DIRECTEMENT
   textareaRef.current.value = ''
@@ -484,17 +491,33 @@ try {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage,
+          message: messageForAPI,
           threadId: threadToUse,
         }),
       })
 
       if (response.ok) {
-        await loadThread(threadToUse!)
-        await loadThreads()
-      } else {
-        setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+  const data = await response.json()
+  
+  if (data.events) {
+    // Mémoriser la position de scroll AVANT
+    const container = scrollContainerRef.current
+    const scrollTopBefore = container?.scrollTop || 0
+    
+    setEvents(data.events)
+    
+    // Restaurer la MÊME position (pas de mouvement)
+    requestAnimationFrame(() => {
+      if (container) {
+        container.scrollTop = scrollTopBefore
       }
+    })
+  }
+  
+  await loadThreads()
+} else {
+  setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+}
     } catch (error) {
       console.error('Erreur envoi message:', error)
       setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
@@ -502,6 +525,25 @@ try {
       setIsSending(false)
     }
   }
+
+// ========== FORMAT DATE DISCORD STYLE ==========
+const formatDiscordDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today.getTime() - 86400000)
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  
+  if (messageDate.getTime() === today.getTime()) {
+    return `Aujourd'hui à ${timeStr}`
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return `Hier à ${timeStr}`
+  } else {
+    return `${date.toLocaleDateString('fr-FR')} à ${timeStr}`
+  }
+}
 
   // ========== FORMAT DATE ==========
   const formatDate = (dateString: string) => {
@@ -1083,6 +1125,11 @@ const renderThreadCard = (thread: Thread) => {
             <div className="w-full max-w-[780px]">
               {event.role === 'user' ? (
                 <div className="max-w-[800px] relative" data-message-type="user" data-message-id={event.id}>
+                  <div className="flex items-center gap-2 mb-1.5">
+      <span className="text-sm">👤</span>
+      <span className="font-semibold text-blue-300">{session?.user?.name || 'Vous'}</span>
+      <span className="text-xs text-gray-500">{formatDiscordDate(event.createdAt)}</span>
+    </div>
                   <div className="relative">
                     <div
                       className="px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 text-gray-100 shadow-lg overflow-hidden relative"
@@ -1118,7 +1165,7 @@ const renderThreadCard = (thread: Thread) => {
                             br: ({ ...props }: any) => <br {...props} />,
                           }}
                         >
-                          {event.content}
+                          {event.content.replace(/^\[.+? • .+?\]\n/, '')}
                         </ReactMarkdown>
                       </div>
 
@@ -1206,8 +1253,7 @@ const renderThreadCard = (thread: Thread) => {
               ) : (
                 <div className="max-w-[800px] relative mb-8">
                   {/* SECTION AI AVEC CONTAINER ESPACEMENT */}
-                  
-                  {/* Container transparent pour espacement */}
+        
                   <div className="bg-transparent rounded-2xl">
                     
                     {/* Message AI */}
