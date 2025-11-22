@@ -70,8 +70,10 @@ export default function ChatPage() {
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showRenameModal, setShowRenameModal] = useState(false)
-
-
+  const [messageHeights, setMessageHeights] = useState<Record<string, number>>({})
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const BOTTOM_SPACER = 300 
+  const COLLAPSE_HEIGHT = '16em'
 
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -183,6 +185,23 @@ useEffect(() => {
     document.removeEventListener('mousedown', handleClickOutside)
   }
 }, [openThreadMenuId, isUserMenuOpen])
+
+// Height measurement hook
+
+const useMessageHeight = (messageId: string, content: string) => {
+  const [height, setHeight] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (ref.current) {
+      const measuredHeight = ref.current.scrollHeight
+      setHeight(measuredHeight)
+      setMessageHeights(prev => ({ ...prev, [messageId]: measuredHeight }))
+    }
+  }, [content, messageId])
+
+  return { ref, height }
+}
 
   // ========== FONCTIONS API ==========
 
@@ -323,10 +342,11 @@ useEffect(() => {
     }
   }
 
-   const handleCopyMessage = (content: string) => {
-    copyToClipboard(content)
-    // plus tard on pourra ajouter un petit toast "Copié"
-  }
+   const handleCopyMessage = async (content: string, messageId: string) => {
+  await copyToClipboard(content)
+  setCopiedMessageId(messageId)
+  setTimeout(() => setCopiedMessageId(null), 2000) // Reset après 2 secondes
+}
 
   // ========== COLLAPSE MESSAGE + RECALAGE STANDARD ==========
   const handleCollapseMessage = (messageId: string) => {
@@ -407,6 +427,13 @@ useEffect(() => {
 
   setIsSending(true)
   const userMessage = textareaRef.current.value.trim()
+
+  // Header pour l'API (contexte temporel pour l'IA)
+  const userName = session?.user?.name || 'Utilisateur'
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('fr-FR')
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const messageForAPI = `[${userName} • ${dateStr} à ${timeStr}]\n${userMessage}`
   
   // Vider le textarea DIRECTEMENT
   textareaRef.current.value = ''
@@ -464,17 +491,33 @@ try {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage,
+          message: messageForAPI,
           threadId: threadToUse,
         }),
       })
 
       if (response.ok) {
-        await loadThread(threadToUse!)
-        await loadThreads()
-      } else {
-        setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+  const data = await response.json()
+  
+  if (data.events) {
+    // Mémoriser la position de scroll AVANT
+    const container = scrollContainerRef.current
+    const scrollTopBefore = container?.scrollTop || 0
+    
+    setEvents(data.events)
+    
+    // Restaurer la MÊME position (pas de mouvement)
+    requestAnimationFrame(() => {
+      if (container) {
+        container.scrollTop = scrollTopBefore
       }
+    })
+  }
+  
+  await loadThreads()
+} else {
+  setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+}
     } catch (error) {
       console.error('Erreur envoi message:', error)
       setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
@@ -482,6 +525,25 @@ try {
       setIsSending(false)
     }
   }
+
+// ========== FORMAT DATE DISCORD STYLE ==========
+const formatDiscordDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today.getTime() - 86400000)
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  
+  if (messageDate.getTime() === today.getTime()) {
+    return `Aujourd'hui à ${timeStr}`
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return `Hier à ${timeStr}`
+  } else {
+    return `${date.toLocaleDateString('fr-FR')} à ${timeStr}`
+  }
+}
 
   // ========== FORMAT DATE ==========
   const formatDate = (dateString: string) => {
@@ -1043,233 +1105,270 @@ const renderThreadCard = (thread: Thread) => {
   )}
 </div>
         {/* Messages */}
-        <div
-          ref={scrollContainerRef}
-          className="flex-1 p-5 overflow-y-auto bg-bandhu-dark scrollbar-bandhu"
-        >
-          {events.length === 0 && !isSending ? (
-            <div className="flex items-center justify-center h-full text-gray-500 text-base">
-              Commencez votre journée avec Ombrelien...
-            </div>
-          ) : (
-            <>
-                            {events
-                .filter(
-                  event =>
-                    event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE',
-                )
-                .map(event => (
-                  <div key={event.id} className="mb-5 flex justify-center">
-                    <div className="w-full max-w-4xl">
-                      {event.role === 'user' ? (
+<div
+  ref={scrollContainerRef}
+  className="flex-1 p-5 overflow-y-auto bg-bandhu-dark scrollbar-bandhu"
+>
+  {events.length === 0 && !isSending ? (
+    <div className="flex items-center justify-center h-full text-gray-500 text-base">
+      Commencez votre journée avec Ombrelien...
+    </div>
+  ) : (
+    <>
+      {events
+        .filter(
+          event =>
+            event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE',
+        )
+        .map(event => (
+          <div key={event.id} className="mb-5 flex justify-center">
+            <div className="w-full max-w-[780px]">
+              {event.role === 'user' ? (
+                <div className="max-w-[800px] relative" data-message-type="user" data-message-id={event.id}>
+                  <div className="flex items-center gap-2 mb-1.5">
+      <span className="text-sm">👤</span>
+      <span className="font-semibold text-blue-300">{session?.user?.name || 'Vous'}</span>
+      <span className="text-xs text-gray-500">{formatDiscordDate(event.createdAt)}</span>
+    </div>
+                  <div className="relative">
+                    <div
+                      className="px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 text-gray-100 shadow-lg overflow-hidden relative"
+                      style={{
+                        maxHeight: expandedMessages[event.id] ? 'none' : COLLAPSE_HEIGHT,
+                      }}
+                    >
+                      <div className="text-base leading-relaxed" style={{ lineHeight: '1.6em' }}>
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children, ...props }: any) => (
+                              <p className="my-2 leading-relaxed text-gray-100 break-words whitespace-pre-wrap" {...props}>
+                                {children}
+                              </p>
+                            ),
+                            code: ({ node, inline, className, children, ...props }: any) => {
+                              const isInline = !className?.includes('language-')
+                              return !isInline ? (
+                                <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-blue-400/20 break-words whitespace-pre-wrap">
+                                  <code className={className} {...props}>{children}</code>
+                                </pre>
+                              ) : (
+                                <code className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200 break-words whitespace-pre-wrap" {...props}>
+                                  {children}
+                                </code>
+                              )
+                            },
+                            a: ({ children, href, ...props }: any) => (
+                              <a href={href} className="text-blue-200 hover:text-blue-100 underline transition" target="_blank" rel="noopener noreferrer" {...props}>
+                                {children}
+                              </a>
+                            ),
+                            br: ({ ...props }: any) => <br {...props} />,
+                          }}
+                        >
+                          {event.content.replace(/^\[.+? • .+?\]\n/, '')}
+                        </ReactMarkdown>
+                      </div>
+
+                      {/* Fade */}
+                      {!expandedMessages[event.id] && (
                         <div
-                           className="max-w-md relative"
-                            data-message-type="user"
-                            data-message-id={event.id}
-                            >
-                          <div className="text-xs text-bandhu-primary mb-1.5 font-medium">
-                            Vous
-                          </div>
-
-                          <div className="relative">
-                            <div
-                              className="px-5 py-3 rounded-xl bg-gradient-to-br from-blue-900/90 to-blue-700/90 border border-bandhu-primary/30 text-gray-100 shadow-lg overflow-hidden relative"
-                              style={{
-                                maxHeight: expandedMessages[event.id]
-                                  ? 'none'
-                                  : event.content.length > 1000
-                                  ? '14.4em'
-                                  : 'none',
-                              }}
-                            >
-                              <div
-                                className="text-base leading-relaxed"
-                                style={{ lineHeight: '1.6em' }}
-                              >
-                                <ReactMarkdown
-                                  rehypePlugins={[rehypeHighlight]}
-                                  components={{
-                                    code: ({
-                                      node,
-                                      inline,
-                                      className,
-                                      children,
-                                      ...props
-                                    }: any) => {
-                                      const isInline =
-                                        !className?.includes('language-')
-                                      return !isInline ? (
-                                        <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-blue-400/20">
-                                          <code className={className} {...props}>
-                                            {children}
-                                          </code>
-                                        </pre>
-                                      ) : (
-                                        <code
-                                          className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200"
-                                          {...props}
-                                        >
-                                          {children}
-                                        </code>
-                                      )
-                                    },
-                                    a: ({ children, href, ...props }: any) => (
-                                      <a
-                                        href={href}
-                                        className="text-blue-200 hover:text-blue-100 underline transition"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        {...props}
-                                      >
-                                        {children}
-                                      </a>
-                                    ),
-                                    p: ({ children, ...props }: any) => (
-                                      <p
-                                        className="my-2 leading-relaxed text-gray-100"
-                                        {...props}
-                                      >
-                                        {children}
-                                      </p>
-                                    ),
-                                  }}
-                                >
-                                  {event.content}
-                                </ReactMarkdown>
-                              </div>
-
-                              {!expandedMessages[event.id] &&
-                                event.content.length > 1000 && (
-                                  <div
-                                    className="absolute bottom-0 left-0 right-0 pointer-events-none"
-                                    style={{
-                                      height: '3.2em',
-                                      background:
-                                        'linear-gradient(to top, rgb(30, 58, 138), rgba(30, 58, 138, 0.8), transparent)',
-                                    }}
-                                  />
-                                )}
-                            </div>
-
-                            {!expandedMessages[event.id] &&
-                              event.content.length > 1000 && (
-                                <button
-                                  onClick={() =>
-                                    setExpandedMessages(prev => ({
-                                      ...prev,
-                                      [event.id]: true,
-                                    }))
-                                  }
-                                  className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
-                                >
-                                  Afficher plus
-                                </button>
-                              )}
-
-                            {expandedMessages[event.id] &&
-                              event.content.length > 1000 && (
-                                <button
-                                  onClick={() => handleCollapseMessage(event.id)}
-    
-    
-                                  className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition"
-                              >
-                                  Replier
-                                </button>
-                              )}
-
-                            {/* Bouton Copier (USER) */}
-                            <div className="mt-2 text-[11px] text-gray-400">
-                              <button
-                                onClick={() =>
-                                  handleCopyMessage(event.content)
-                                }
-                                className="hover:text-blue-200 underline underline-offset-2"
-                              >
-                                Copier
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
-                            <span className="text-lg">🌑</span> Ombrelien
-                          </div>
-
-                          <div className="px-6 py-5 bg-transparent text-gray-100">
-                            <ReactMarkdown
-                              rehypePlugins={[rehypeHighlight]}
-                              components={{
-                                code: ({
-                                  node,
-                                  inline,
-                                  className,
-                                  children,
-                                  ...props
-                                }: any) => {
-                                  const isInline =
-                                    !className?.includes('language-')
-                                  return !isInline ? (
-                                    <pre className="bg-black/50 p-4 rounded-lg overflow-auto my-4 border border-bandhu-primary/20">
-                                      <code className={className} {...props}>
-                                        {children}
-                                      </code>
-                                    </pre>
-                                  ) : (
-                                    <code
-                                      className="bg-bandhu-primary/20 px-2 py-0.5 rounded text-sm text-bandhu-primary"
-                                      {...props}
-                                    >
-                                      {children}
-                                    </code>
-                                  )
-                                },
-                                a: ({ children, href, ...props }: any) => (
-                                  <a
-                                    href={href}
-                                    className="text-bandhu-primary hover:text-bandhu-secondary underline transition"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    {...props}
-                                  >
-                                    {children}
-                                  </a>
-                                ),
-                                p: ({ children, ...props }: any) => (
-                                  <p
-                                    className="my-2 leading-7 text-gray-200"
-                                    {...props}
-                                  >
-                                    {children}
-                                  </p>
-                                ),
-                              }}
-                            >
-                              {event.content}
-                            </ReactMarkdown>
-                          </div>
-
-                          {/* Bouton Copier (AI) */}
-                          <div className="mt-2 text-[11px] text-gray-400">
-                            <button
-                              onClick={() => handleCopyMessage(event.content)}
-                              className="hover:text-bandhu-primary underline underline-offset-2"
-                            >
-                              Copier
-                            </button>
-                          </div>
-                        </div>
+                          ref={(el) => {
+                            if (el) {
+                              const container = el.parentElement
+                              if (container) {
+                                const shouldShow = container.scrollHeight > container.clientHeight
+                                el.style.display = shouldShow ? 'block' : 'none'
+                              }
+                            }
+                          }}
+                          className="absolute bottom-0 left-0 right-0 pointer-events-none"
+                          style={{
+                            height: '3.2em',
+                            background: 'linear-gradient(to top, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.6), transparent)',
+                          }}
+                        />
                       )}
                     </div>
+
+                    {/* Boutons expand/collapse */}
+                    {!expandedMessages[event.id] && (
+                      <div
+                        ref={(el) => {
+                          if (el) {
+                            const container = el.closest('[data-message-type="user"]')
+                            const contentDiv = container?.querySelector('.overflow-hidden')
+                            if (contentDiv) {
+                              const shouldShow = contentDiv.scrollHeight > contentDiv.clientHeight
+                              el.style.display = shouldShow ? 'block' : 'none'
+                            }
+                          }
+                        }}
+                      >
+                        <button onClick={() => setExpandedMessages(prev => ({ ...prev, [event.id]: true }))} className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition">
+                          Afficher plus
+                        </button>
+                      </div>
+                    )}
+
+                    {expandedMessages[event.id] && (
+                      <div
+                        ref={(el) => {
+                          if (el) {
+                            const container = el.closest('[data-message-type="user"]')
+                            const contentDiv = container?.querySelector('.overflow-hidden')
+                            if (contentDiv) {
+                              const wasCollapsible = contentDiv.scrollHeight > parseInt(COLLAPSE_HEIGHT)
+                              el.style.display = wasCollapsible ? 'block' : 'none'
+                            }
+                          }
+                        }}
+                      >
+                        <button onClick={() => handleCollapseMessage(event.id)} className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition">
+                          Replier
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Bouton Copier USER */}
+                    <div className="mt-2 flex justify-end">
+                      <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-blue-300/60 hover:text-blue-200 transition-all p-2 rounded hover:bg-blue-800/40 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 border border-transparent hover:border-blue-400/30" title="Copier le message">
+                        {copiedMessageId === event.id ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="group-hover:drop-shadow-[0_0_6px_rgba(59,130,246,0.4)]">
+                            <rect x="9" y="9" width="13" height="13" rx="1" ry="1"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        )}
+                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl">
+                          {copiedMessageId === event.id ? 'Copié !' : 'Copier'}
+                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                ))}
+                </div>
+              ) : (
+                <div className="max-w-[800px] relative mb-8">
+                  {/* SECTION AI AVEC CONTAINER ESPACEMENT */}
+        
+                  <div className="bg-transparent rounded-2xl">
+                    
+                    {/* Message AI */}
+                    <div className="px-4 py-5 bg-transparent text-gray-100">
+                      <ReactMarkdown
+                        rehypePlugins={[rehypeHighlight]}
+                        components={{
+                          p: ({ children, ...props }: any) => (
+                            <p className="my-5 leading-9 text-gray-200 text-[16px] font-normal" {...props}>
+                              {children}
+                            </p>
+                          ),
+                          code: ({ node, inline, className, children, ...props }: any) => {
+                            const isInline = !className?.includes('language-')
+                            return !isInline ? (
+                              <pre className="bg-black/70 p-5 rounded-xl overflow-auto my-6 border border-bandhu-primary/30 font-mono text-[14px] leading-6">
+                                <code className={className} {...props}>{children}</code>
+                              </pre>
+                            ) : (
+                              <code className="bg-bandhu-primary/30 px-2.5 py-1 rounded-md text-[15px] text-bandhu-primary font-mono border border-bandhu-primary/20" {...props}>
+                                {children}
+                              </code>
+                            )
+                          },
+                          h1: ({ children, ...props }: any) => (
+                            <h1 className="text-2xl font-bold mt-8 mb-5 text-bandhu-primary border-b border-bandhu-primary/30 pb-2" {...props}>
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children, ...props }: any) => (
+                            <h2 className="text-xl font-semibold mt-7 mb-4 text-bandhu-primary" {...props}>
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children, ...props }: any) => (
+                            <h3 className="text-lg font-medium mt-6 mb-3 text-bandhu-primary" {...props}>
+                              {children}
+                            </h3>
+                          ),
+                          ul: ({ children, ...props }: any) => (
+                            <ul className="my-6 ml-10 list-disc space-y-3.5 text-gray-200" {...props}>
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children, ...props }: any) => (
+                            <ol className="my-6 ml-10 list-decimal space-y-3.5 text-gray-200" {...props}>
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children, ...props }: any) => (
+                            <li className="leading-8 text-[16px] pl-2" {...props}>
+                              {children}
+                            </li>
+                          ),
+                          blockquote: ({ children, ...props }: any) => (
+                            <blockquote className="border-l-4 border-bandhu-primary/50 pl-5 my-6 italic text-gray-300 bg-bandhu-primary/10 py-3 rounded-r text-[15px] leading-8" {...props}>
+                              {children}
+                            </blockquote>
+                          ),
+                          hr: ({ ...props }: any) => (
+                            <hr className="my-8 border-bandhu-primary/20" {...props} />
+                          ),
+                          a: ({ children, href, ...props }: any) => (
+                            <a href={href} className="text-bandhu-primary hover:text-bandhu-secondary underline transition underline-offset-4 font-medium" target="_blank" rel="noopener noreferrer" {...props}>
+                              {children}
+                            </a>
+                          ),
+                          strong: ({ children, ...props }: any) => (
+                            <strong className="font-semibold text-gray-100" {...props}>
+                              {children}
+                            </strong>
+                          ),
+                          em: ({ children, ...props }: any) => (
+                            <em className="italic text-gray-300" {...props}>
+                              {children}
+                            </em>
+                          ),
+                        }}
+                      >
+                        {event.content}
+                      </ReactMarkdown>
+                    </div>
+
+                    {/* Bouton Copier AI */}
+                    <div className="mt-1 flex justify-end">
+                      <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-gray-500 hover:text-bandhu-primary transition-all p-2 rounded hover:bg-bandhu-primary/15 hover:scale-110 hover:shadow-lg hover:shadow-bandhu-primary/20 border border-transparent hover:border-bandhu-primary/30" title="Copier le message">
+                        {copiedMessageId === event.id ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="group-hover:drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]">
+                            <rect x="9" y="9" width="13" height="13" rx="1" ry="1"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        )}
+                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl">
+                          {copiedMessageId === event.id ? 'Copié !' : 'Copier'}
+                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+                        </div>
+                      </button>
+                    </div>
+                    
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
 
 
               {/* Typing indicator */}
               {isSending && (
                 <div className="mb-5 flex justify-center animate-fadeIn">
-                  <div className="w-full max-w-4xl">
+                  <div className="w-full max-w-[780px]">
                     <div className="text-xs text-bandhu-secondary mb-2 font-medium flex items-center gap-2">
                       <span className="text-lg">🌑</span> Ombrelien
                     </div>
