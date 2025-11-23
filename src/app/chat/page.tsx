@@ -1207,7 +1207,7 @@ const renderThreadCard = (thread: Thread) => {
                         </ReactMarkdown>
                       </div>
 
-                      {/* Fade */}
+                      {/* Dégradé + Barre d'action (collapsed state) */}
                       {!expandedMessages[event.id] && (
                         <div
                           ref={(el) => {
@@ -1219,34 +1219,28 @@ const renderThreadCard = (thread: Thread) => {
                               }
                             }
                           }}
-                          className="absolute bottom-0 left-0 right-0 pointer-events-none"
-                          style={{
-                            height: '3.2em',
-                            background: 'linear-gradient(to top, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.6), transparent)',
-                          }}
-                        />
+                        >
+                          {/* Dégradé au-dessus de la barre */}
+                          <div 
+                            className="absolute bottom-12 left-0 right-0 h-16 pointer-events-none"
+                            style={{
+                              background: 'linear-gradient(to top, rgb(17, 24, 39), rgba(17, 24, 39, 0.8), transparent)',
+                            }}
+                          />
+                          
+                          {/* Barre noire avec bouton */}
+                          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gray-900 flex items-center justify-center">
+                            <button 
+                              onClick={() => setExpandedMessages(prev => ({ ...prev, [event.id]: true }))}
+                              className="text-xs text-blue-300 hover:text-blue-100 transition flex items-center gap-1 px-3 py-1.5 rounded hover:bg-gray-800/50"
+                            >
+                              <span>Afficher plus</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
-
-                    {/* Boutons expand/collapse */}
-                    {!expandedMessages[event.id] && (
-                      <div
-                        ref={(el) => {
-                          if (el) {
-                            const container = el.closest('[data-message-type="user"]')
-                            const contentDiv = container?.querySelector('.overflow-hidden')
-                            if (contentDiv) {
-                              const shouldShow = contentDiv.scrollHeight > contentDiv.clientHeight
-                              el.style.display = shouldShow ? 'block' : 'none'
-                            }
-                          }
-                        }}
-                      >
-                        <button onClick={() => setExpandedMessages(prev => ({ ...prev, [event.id]: true }))} className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition">
-                          Afficher plus
-                        </button>
-                      </div>
-                    )}
 
                     {expandedMessages[event.id] && (
                       <div
@@ -1260,9 +1254,14 @@ const renderThreadCard = (thread: Thread) => {
                             }
                           }
                         }}
+                        className="mt-3 flex justify-center"
                       >
-                        <button onClick={() => handleCollapseMessage(event.id)} className="mt-2 text-xs text-blue-300 hover:text-blue-100 underline transition">
-                          Replier
+                        <button 
+                          onClick={() => handleCollapseMessage(event.id)} 
+                          className="text-xs text-blue-300 hover:text-blue-100 transition flex items-center gap-1 px-3 py-1.5 rounded hover:bg-gray-800/50 border border-gray-700/50"
+                        >
+                          <span>↑</span>
+                          <span>Replier</span>
                         </button>
                       </div>
                     )}
