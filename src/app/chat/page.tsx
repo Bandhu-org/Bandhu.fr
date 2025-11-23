@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
@@ -1120,8 +1121,45 @@ const renderThreadCard = (thread: Thread) => {
           event =>
             event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE',
         )
-        .map(event => (
-          <div key={event.id} className="mb-5 flex justify-center">
+        .map((event, index, filteredEvents) => {
+          // Détecter si c'est un nouveau jour
+    const showDateSeparator = index === 0 || (() => {
+      const currentDate = new Date(event.createdAt).toISOString().split('T')[0]
+      const previousDate = new Date(filteredEvents[index - 1].createdAt).toISOString().split('T')[0]
+      return currentDate !== previousDate
+    })()
+
+    // Label de la date
+    const getDateLabel = (dateString: string) => {
+      const date = new Date(dateString)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const yesterday = new Date(today.getTime() - 86400000)
+      const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      
+      if (messageDate.getTime() === today.getTime()) return "Aujourd'hui"
+      if (messageDate.getTime() === yesterday.getTime()) return "Hier"
+      
+      return date.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+    }
+
+    return (
+      <React.Fragment key={event.id}>
+        {/* Séparateur de date */}
+        {showDateSeparator && (
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-bandhu-primary/30"></div>
+            <span className="text-sm font-medium text-bandhu-primary px-3">
+              {getDateLabel(event.createdAt)}
+            </span>
+            <div className="flex-1 h-px bg-bandhu-primary/30"></div>
+          </div>
+        )}
+          <div className="mb-5 flex justify-center">
             <div className="w-full max-w-[780px]">
               {event.role === 'user' ? (
                 <div className="max-w-[800px] relative" data-message-type="user" data-message-id={event.id}>
@@ -1362,7 +1400,9 @@ const renderThreadCard = (thread: Thread) => {
               )}
             </div>
           </div>
-        ))}
+        </React.Fragment>
+      )
+    })}
 
 
               {/* Typing indicator */}
