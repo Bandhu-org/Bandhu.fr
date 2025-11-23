@@ -1294,7 +1294,7 @@ const renderThreadCard = (thread: Thread) => {
                   <div className="bg-transparent rounded-2xl">
                     
                     {/* Message AI */}
-                    <div className="px-4 py-5 bg-transparent text-gray-100">
+                    <div className="px-4 py-5 bg-transparent text-gray-100 relative">
                       <ReactMarkdown
                         rehypePlugins={[rehypeHighlight]}
                         components={{
@@ -1375,7 +1375,7 @@ const renderThreadCard = (thread: Thread) => {
                     </div>
 
                     {/* Bouton Copier AI */}
-                    <div className="mt-1 flex justify-end">
+                    <div className="absolute bottom-4 right-4">
                       <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-gray-500 hover:text-bandhu-primary transition-all p-2 rounded hover:bg-bandhu-primary/15 hover:scale-110 hover:shadow-lg hover:shadow-bandhu-primary/20 border border-transparent hover:border-bandhu-primary/30" title="Copier le message">
                         {copiedMessageId === event.id ? (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
