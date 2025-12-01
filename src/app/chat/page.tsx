@@ -13,6 +13,20 @@ console.log('🔍 ExportModal =', ExportModal)
 import RenameModal from '@/app/components/threads/RenameModal'
 import DeleteModal from '@/app/components/threads/DeleteModal'
 
+// Icônes pour les threads sidebar
+import { PinIcon } from '@/app/components/icons/PinIcon'
+import { RenameIcon } from '@/app/components/icons/RenameIcon'
+import { DeleteIcon } from '@/app/components/icons/DeleteIcon'
+
+// Icônes pour les sections sidebar
+import { TodayIcon } from '@/app/components/icons/TodayIcon'
+import { CalendarIcon } from '@/app/components/icons/CalendarIcon'
+import { ArchiveIcon } from '@/app/components/icons/ArchiveIcon'
+
+// Icônes pour le menu utilisateur
+import { SettingsIcon } from '@/app/components/icons/SettingsIcon'
+import { LogoutIcon } from '@/app/components/icons/LogoutIcon'
+
 interface Event {
   id: string
   content: string
@@ -723,11 +737,15 @@ const renderThreadCard = (thread: Thread) => {
       ))
     }
   }}
-      className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
-    >
-      <span>{thread.isPinned ? '📍' : '📌'}</span>
-<span>{thread.isPinned ? 'Désépingler' : 'Épingler'}</span>
-    </button>
+  className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
+>
+  <PinIcon 
+    size={14} 
+    pinned={thread.isPinned}
+    className="group-hover:scale-110 transition-transform"
+  />
+  <span>{thread.isPinned ? 'Désépingler' : 'Épingler'}</span>
+</button>
 
     {/* Renommer */}
 <button
@@ -737,9 +755,12 @@ const renderThreadCard = (thread: Thread) => {
     setShowRenameModal(true)
     setOpenThreadMenuId(null)
   }}
-  className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2"
+  className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
 >
-  <span>✏️</span>
+  <RenameIcon 
+    size={14} 
+    className="text-gray-400 group-hover:text-gray-200 transition-colors"
+  />
   <span>Rename</span>
 </button>
 
@@ -750,9 +771,12 @@ const renderThreadCard = (thread: Thread) => {
     setShowDeleteModal(true)
     setOpenThreadMenuId(null)
   }}
-  className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2"
+  className="w-full px-3 py-2 text-left text-xs text-red-300 hover:bg-red-900/60 flex items-center gap-2 group"
 >
-  <span>🗑️</span>
+  <DeleteIcon 
+    size={14} 
+    className="text-red-300 group-hover:text-red-200 transition-colors"
+  />
   <span>Delete</span>
 </button>
   </div>
@@ -840,7 +864,7 @@ const renderThreadCard = (thread: Thread) => {
         {/* SECTION "AUJOURD'HUI" TOUJOURS VISIBLE */}
         <div>
           <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
-            <span className="text-sm">📆</span>
+            <TodayIcon size={14} className="text-bandhu-primary" />
             <span>Aujourd'hui</span>
           </div>
           <div className="text-center text-gray-500 text-sm py-4 italic">
@@ -899,7 +923,12 @@ const renderThreadCard = (thread: Thread) => {
             {threads.some(t => t.isPinned) && (
               <div className="mb-6">
                 <div className="text-xs font-semibold text-bandhu-secondary mb-2 pb-1 border-b border-bandhu-secondary/60 flex items-center gap-2">
-                  <span className="text-sm">📌</span>
+                  <PinIcon 
+  pinned={true} 
+  size={14} 
+  color="#60a5fa"  // Le bleu clair bandhu
+  className="opacity-90"
+/>
                   <span>Épinglés</span>
                 </div>
                 {threads
@@ -912,7 +941,7 @@ const renderThreadCard = (thread: Thread) => {
             {/* SECTION AUJOURD'HUI */}
             <div>
               <div className="text-xs font-semibold text-bandhu-secondary/80 mb-2 pb-1 border-b border-bandhu-secondary/60 flex items-center gap-2">
-                <span className="text-sm">📆</span>
+                <TodayIcon size={14} className="text-bandhu-primary" />
                 <span>Aujourd'hui</span>
               </div>
               {todayThreads.length > 0 ? (
@@ -933,7 +962,7 @@ const renderThreadCard = (thread: Thread) => {
                   className="w-full text-left text-xs font-semibold text-bandhu-secondary/80 mb-1 border-b border-bandhu-secondary/60 flex items-center justify-between"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-sm">🗓️</span>
+                    <CalendarIcon size={14} className="text-gray-300" />
                     <span>7 derniers jours</span>
                   </span>
                   <span className="text-bandhu-secondary/60 text-sm">
@@ -958,7 +987,7 @@ const renderThreadCard = (thread: Thread) => {
                   className="w-full text-left text-xs font-semibold text-bandhu-secondary/80 mb-1 border-b border-bandhu-secondary/60 flex items-center justify-between"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-sm">📚</span>
+                    <ArchiveIcon size={14} className="text-gray-300" />
                     <span>Archives</span>
                   </span>
                   <span className="text-bandhu-secondary/60 text-sm">
@@ -1002,7 +1031,7 @@ const renderThreadCard = (thread: Thread) => {
         }}
         className="w-full px-4 py-3 text-left text-sm text-gray-100 hover:bg-gray-800 flex items-center gap-3 transition"
       >
-        <span className="text-base">⚙️</span>
+        <SettingsIcon size={16} className="text-gray-100" />
         <span>Mon compte</span>
       </button>
 
@@ -1015,7 +1044,7 @@ const renderThreadCard = (thread: Thread) => {
         }}
         className="w-full px-4 py-3 text-left text-sm text-red-300 hover:bg-red-900/60 flex items-center gap-3 transition"
       >
-        <span className="text-base">🚪</span>
+        <LogoutIcon size={16} className="text-red-300" />
         <span>Déconnexion</span>
       </button>
     </div>
@@ -1103,7 +1132,7 @@ const renderThreadCard = (thread: Thread) => {
     )
   ) : (
     <h3 className="text-bandhu-primary font-medium">
-      💬 Nouvelle conversation
+      Nouvelle conversation
     </h3>
   )}
 </div>
