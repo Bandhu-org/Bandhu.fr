@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import PreviewModal from './PreviewModal'
 import { calculateMetrics } from '@/utils/exportMetrics'
+import { threadId } from 'worker_threads'
 
 interface Event {
   id: string
@@ -52,6 +53,7 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
   )
   const limitedEvents = allSelectedEvents.slice(0, currentLimit)
   const exceededLimit = allSelectedEvents.length > currentLimit
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
 
   // Charger les données au montage
   useEffect(() => {
@@ -93,14 +95,22 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
   }, [selectedFormat])
 
   // Basculer la sélection d'un event
-  const toggleEventSelection = (threadIndex: number, eventIndex: number) => {
-    setThreads(prev => {
-      const newThreads = [...prev]
-      newThreads[threadIndex].events[eventIndex].selected = 
-        !newThreads[threadIndex].events[eventIndex].selected
-      return newThreads
-    })
-  }
+  const toggleEventSelection = (threadId: string, eventId: string) => {
+  setThreads(prev => 
+    prev.map(thread => 
+      thread.threadId === threadId
+        ? {
+            ...thread,
+            events: thread.events.map(event =>
+              event.id === eventId
+                ? { ...event, selected: !event.selected }
+                : event
+            )
+          }
+        : thread
+    )
+  )
+}
 
   // Sélectionner/désélectionner tout
   const toggleSelectAll = (selected: boolean) => {
@@ -111,6 +121,30 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
       }))
     )
   }
+
+  // Expand/collapse une conversation
+const toggleThreadExpansion = (threadId: string) => {
+  setExpandedThreads(prev => {
+    const newSet = new Set(prev)
+    if (newSet.has(threadId)) {
+      newSet.delete(threadId)
+    } else {
+      newSet.add(threadId)
+    }
+    return newSet
+  })
+}
+
+// Expand/collapse toutes les conversations
+const toggleExpandAll = () => {
+  if (expandedThreads.size === threads.length) {
+    // Tout est expand → tout collapse
+    setExpandedThreads(new Set())
+  } else {
+    // Tout expand
+    setExpandedThreads(new Set(threads.map(t => t.threadId)))
+  }
+}
 
   // Préparer et afficher la prévisualisation
   const handlePreview = async () => {
@@ -258,6 +292,13 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                     {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
                   </span>
                 </label>
+
+                <button
+  onClick={toggleExpandAll}
+  className="text-sm font-medium text-gray-300 hover:text-white transition-colors flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-600/50"
+>
+  {expandedThreads.size === threads.length ? '↥ Tout replier' : '↧ Tout déplier'}
+</button>
                 
                 <span className="text-gray-300 text-sm">
                   {selectedEventsCount} / {totalEvents} messages sélectionnés
@@ -325,72 +366,102 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
             ) : (
               <div className="space-y-6">
                 {threads.map((thread, threadIndex) => (
-                  <div key={thread.threadId} className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/50">
-                    <div className="flex items-center gap-3 mb-3">
-                      <input
-                        type="checkbox"
-                        checked={thread.events.every(event => event.selected)}
-                        onChange={(e) => {
-                          const newSelected = e.target.checked
-                          setThreads(prev => {
-                            const newThreads = [...prev]
-                            newThreads[threadIndex].events = 
-                              newThreads[threadIndex].events.map(event => ({
-                                ...event,
-                                selected: newSelected
-                              }))
-                            return newThreads
-                          })
-                        }}
-                        className="w-4 h-4 rounded bg-gray-600 border-gray-500 focus:ring-2 focus:ring-purple-500"
-                      />
-                      <h3 className="font-semibold text-white">{thread.threadLabel}</h3>
-                      <span className="text-gray-400 text-sm">
-                        {thread.events.length} messages
-                      </span>
-                    </div>
+                  <div key={thread.threadId} className="bg-gray-700/30 rounded-lg border border-gray-600/50 overflow-hidden">
+  {/* En-tête de conversation (toujours visible) */}
+  <div 
+    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-600/30 transition-colors"
+    onClick={() => toggleThreadExpansion(thread.threadId)}
+  >
+    <button
+      className="text-gray-400 hover:text-white transition-transform"
+      onClick={(e) => {
+        e.stopPropagation()
+        toggleThreadExpansion(thread.threadId)
+      }}
+    >
+      {expandedThreads.has(thread.threadId) ? '▾' : '▸'}
+    </button>
+    
+    <input
+      type="checkbox"
+      checked={thread.events.every(event => event.selected)}
+      onChange={(e) => {
+        e.stopPropagation()
+        const newSelected = e.target.checked
+        setThreads(prev => {
+          const newThreads = [...prev]
+          newThreads[threadIndex].events = 
+            newThreads[threadIndex].events.map(event => ({
+              ...event,
+              selected: newSelected
+            }))
+          return newThreads
+        })
+      }}
+      className="w-4 h-4 rounded bg-gray-600 border-gray-500 focus:ring-2 focus:ring-purple-500"
+      onClick={(e) => e.stopPropagation()}
+    />
+    
+    <div className="flex-1">
+      <h3 className="font-semibold text-white">{thread.threadLabel}</h3>
+      <div className="flex items-center gap-3 mt-1">
+        <span className="text-gray-400 text-sm">
+          {thread.events.length} messages
+        </span>
+        <span className="text-gray-500 text-xs">
+          {thread.events.filter(e => e.selected).length} sélectionnés
+        </span>
+      </div>
+    </div>
+  </div>
 
-                    <div className="space-y-2 ml-7">
-                      {thread.events.map((event, eventIndex) => (
-                        <label
-                          key={event.id}
-                          className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
-                            event.selected 
-                              ? 'bg-purple-500/20 border border-purple-500/30' 
-                              : 'hover:bg-gray-600/30'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={event.selected}
-                            onChange={() => toggleEventSelection(threadIndex, eventIndex)}
-                            className="w-4 h-4 rounded bg-gray-600 border-gray-500 mt-1 flex-shrink-0 focus:ring-2 focus:ring-purple-500"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-sm font-medium ${
-                                event.role === 'user' ? 'text-blue-400' : 'text-purple-400'
-                              }`}>
-                                {event.role === 'user' ? 'Vous' : 'Assistant'}
-                              </span>
-                              <span className="text-gray-500 text-xs">
-                                {new Date(event.createdAt).toLocaleDateString('fr-FR')}
-                              </span>
-                            </div>
-                            <p className="text-gray-300 text-sm line-clamp-2 group-hover:text-white transition-colors">
-                              {event.content}
-                            </p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+  {/* Messages (seulement si expandé) */}
+  {expandedThreads.has(thread.threadId) && (
+    <div className="border-t border-gray-600/50 p-4 bg-gray-800/20">
+      <div className="space-y-2">
+        {thread.events.map((event, eventIndex) => (
+          <label
+            key={event.id}
+            className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
+              event.selected 
+                ? 'bg-purple-500/20 border border-purple-500/30' 
+                : 'hover:bg-gray-600/30'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={event.selected}
+              onChange={() => toggleEventSelection(thread.threadId, event.id)}
+              className="w-4 h-4 rounded bg-gray-600 border-gray-500 mt-1 flex-shrink-0 focus:ring-2 focus:ring-purple-500"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-sm font-medium ${
+                  event.role === 'user' ? 'text-blue-400' : 'text-purple-400'
+                }`}>
+                  {event.role === 'user' ? 'Vous' : 'Assistant'}
+                </span>
+                <span className="text-gray-500 text-xs">
+                  {new Date(event.createdAt).toLocaleDateString('fr-FR')}
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm line-clamp-2 group-hover:text-white transition-colors">
+                {event.content}
+              </p>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
                 ))}
               </div>
             )}
           </div>
         </div>
       </div>
+
 
       {/* Modal de prévisualisation */}
       {previewData && (
