@@ -62,3 +62,44 @@
 When giving instructions:
 
 **Recommended format:**
+
+File: path/to/file.js
+Action: REPLACE | ADD | DELETE
+Location: Line X or "after function Y"
+
+Before:
+[existing code]
+
+After:
+[new code]
+
+**Concrete example:**
+
+File: src/components/Modal.js
+Action: REPLACE
+Location: Lines 45-50
+
+Before:
+const handleClose = () => {
+setIsOpen(false);
+}
+
+After:
+const handleClose = () => {
+setIsOpen(false);
+onClose?.();
+}
+
+---
+
+## 🎯 Typical Commands I Expect
+
+**For commit:**
+```bash
+git commit -m "feat: add smooth close animation to modal"
+
+For cleanup:
+
+git checkout main
+git pull origin main
+git branch -d feature/branch-name
