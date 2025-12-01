@@ -1040,7 +1040,9 @@ const renderThreadCard = (thread: Thread) => {
       {/* ========== CHAT AREA ========== */}
       <div className="flex-1 flex flex-col relative">
         {/* Header */}
-<div className="p-5 border-b border-gray-800 bg-gray-900/30">
+<div className={`py-1 px-5 border-b border-gray-800 bg-gray-900/30 transition-all duration-300 ${
+  isSidebarCollapsed ? 'ml-16' : ''
+}`}>
   {activeThreadId ? (
     editingThreadId === activeThreadId ? (
       // Mode édition - LARGEUR FIXE
