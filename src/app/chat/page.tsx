@@ -620,7 +620,7 @@ const renderThreadCard = (thread: Thread) => {
     }}
     className={`mb-2 p-3 rounded-lg transition group relative cursor-pointer ${
       isActive
-        ? 'bg-green-900/30 border border-green-600'
+        ? 'bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30'
         : 'hover:bg-gray-800/50 border border-transparent'
     }`}
   >
@@ -629,7 +629,7 @@ const renderThreadCard = (thread: Thread) => {
       {/* Titre */}
       <div
         className={`text-sm font-medium mb-1 flex items-center gap-2 ${
-          isActive ? 'text-green-400' : 'text-gray-300'
+          isActive ? 'text-bandhu-primary' : 'text-gray-300'
         }`}
       >
         <span className="flex-1 truncate">{thread.label}</span>
@@ -643,8 +643,8 @@ const renderThreadCard = (thread: Thread) => {
           <span className="flex items-center gap-2">
             <span>Dernière maj : {sinceLastUpdateLabel}</span>
             {isLoadingThis && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-green-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-ping" />
+              <span className="inline-flex items-center gap-1 text-[10px] text-bandhu-primary">
+  <span className="w-1.5 h-1.5 rounded-full bg-bandhu-secondary animate-ping" />
                 <span>...</span>
               </span>
             )}
@@ -656,7 +656,7 @@ const renderThreadCard = (thread: Thread) => {
           <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
             <div
               className={`h-full ${
-                isActive ? 'bg-green-500' : 'bg-gray-500'
+                isActive ? 'bg-bandhu-primary' : 'bg-gray-500'
               }`}
               style={{ width: `${progress}%` }}
             />
@@ -811,7 +811,7 @@ const renderThreadCard = (thread: Thread) => {
     <div className="flex-shrink-0 mb-5">
       <button
         onClick={handleNewConversation}
-        className="w-full px-4 py-2.5 bg-gradient-to-br from-green-900/90 to-green-700/90 hover:scale-105 text-white rounded-lg text-sm font-medium transition-transform"
+        className="w-full px-4 py-2.5 bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 hover:scale-105 text-bandhu-primary rounded-lg text-sm font-medium transition-transform"
       >
         ➕ Nouvelle conversation
       </button>
@@ -830,7 +830,7 @@ const renderThreadCard = (thread: Thread) => {
     target.parentElement?.classList.toggle('scroll-bottom', !isAtBottom)
   }}
 >
-  <div className="[direction:ltr] pl-1"> {/* ← AJOUT de pl-1 pour compenser */}
+  <div className="[direction:ltr] pl-1">
     {isLoading ? (
       <div className="text-center text-gray-500 p-5 text-sm">
         Chargement...
@@ -849,7 +849,6 @@ const renderThreadCard = (thread: Thread) => {
         </div>
       </div>
     ) : (
-      // ... TOUT le reste du contenu des threads inchangé ...
       (() => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -899,7 +898,7 @@ const renderThreadCard = (thread: Thread) => {
             {/* SECTION ÉPINGLÉS */}
             {threads.some(t => t.isPinned) && (
               <div className="mb-6">
-                <div className="text-xs font-semibold text-yellow-400 mb-2 pb-1 border-b border-yellow-600/30 flex items-center gap-2">
+                <div className="text-xs font-semibold text-bandhu-secondary mb-2 pb-1 border-b border-bandhu-secondary/60 flex items-center gap-2">
                   <span className="text-sm">📌</span>
                   <span>Épinglés</span>
                 </div>
@@ -912,7 +911,7 @@ const renderThreadCard = (thread: Thread) => {
 
             {/* SECTION AUJOURD'HUI */}
             <div>
-              <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
+              <div className="text-xs font-semibold text-bandhu-secondary/80 mb-2 pb-1 border-b border-bandhu-secondary/60 flex items-center gap-2">
                 <span className="text-sm">📆</span>
                 <span>Aujourd'hui</span>
               </div>
@@ -931,13 +930,13 @@ const renderThreadCard = (thread: Thread) => {
                 <button
                   type="button"
                   onClick={() => setShowRecentWeek(prev => !prev)}
-                  className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                  className="w-full text-left text-xs font-semibold text-bandhu-secondary/80 mb-1 border-b border-bandhu-secondary/60 flex items-center justify-between"
                 >
                   <span className="flex items-center gap-2">
                     <span className="text-sm">🗓️</span>
                     <span>7 derniers jours</span>
                   </span>
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-bandhu-secondary/60 text-sm">
                     {showRecentWeek ? '▾' : '▸'}
                   </span>
                 </button>
@@ -956,13 +955,13 @@ const renderThreadCard = (thread: Thread) => {
                 <button
                   type="button"
                   onClick={() => setShowArchive(prev => !prev)}
-                  className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                  className="w-full text-left text-xs font-semibold text-bandhu-secondary/80 mb-1 border-b border-bandhu-secondary/60 flex items-center justify-between"
                 >
                   <span className="flex items-center gap-2">
                     <span className="text-sm">📚</span>
                     <span>Archives</span>
                   </span>
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-bandhu-secondary/60 text-sm">
                     {showArchive ? '▾' : '▸'}
                   </span>
                 </button>
