@@ -820,164 +820,167 @@ const renderThreadCard = (thread: Thread) => {
     {/* ========== THREADS SCROLLABLES ========== */}
     <div className="flex-1 min-h-0 flex flex-col threads-scroll-container">
       <div 
-        className="flex-1 overflow-y-auto sidebar-no-scroll"
-        onScroll={(e) => {
-          const target = e.currentTarget
-          const isAtTop = target.scrollTop === 0
-          const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 1
-          
-          target.parentElement?.classList.toggle('scroll-top', !isAtTop)
-          target.parentElement?.classList.toggle('scroll-bottom', !isAtBottom)
-        }}
-      >
-        {isLoading ? (
-          <div className="text-center text-gray-500 p-5 text-sm">
-            Chargement...
+  className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gradient-to-br from-bandhu-primary/60 to-bandhu-secondary/60 [&::-webkit-scrollbar-thumb]:rounded-full [direction:rtl]"
+  onScroll={(e) => {
+    const target = e.currentTarget
+    const isAtTop = target.scrollTop === 0
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 1
+    
+    target.parentElement?.classList.toggle('scroll-top', !isAtTop)
+    target.parentElement?.classList.toggle('scroll-bottom', !isAtBottom)
+  }}
+>
+  <div className="[direction:ltr] pl-1"> {/* ← AJOUT de pl-1 pour compenser */}
+    {isLoading ? (
+      <div className="text-center text-gray-500 p-5 text-sm">
+        Chargement...
+      </div>
+    ) : threads.length === 0 ? (
+      <div className="space-y-6">
+        {/* SECTION "AUJOURD'HUI" TOUJOURS VISIBLE */}
+        <div>
+          <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
+            <span className="text-sm">📆</span>
+            <span>Aujourd'hui</span>
           </div>
-        ) : threads.length === 0 ? (
-          <div className="space-y-6">
-            {/* SECTION "AUJOURD'HUI" TOUJOURS VISIBLE */}
+          <div className="text-center text-gray-500 text-sm py-4 italic">
+            Aucune conversation aujourd'hui
+          </div>
+        </div>
+      </div>
+    ) : (
+      // ... TOUT le reste du contenu des threads inchangé ...
+      (() => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const getDayDiff = (dateStr: string) => {
+          const d = new Date(dateStr)
+          const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+          const diffMs = today.getTime() - dClean.getTime()
+          return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+        }
+
+        const todayThreads: Thread[] = []
+        const recentThreads: Thread[] = []
+        const archiveThreads: Thread[] = []
+
+        // TRI DES THREADS (EXCLUT LES ÉPINGLÉS)
+        threads.forEach(thread => {
+          // EXCLURE LES THREADS ÉPINGLÉS
+          if (thread.isPinned) return
+          
+          const last = new Date(thread.lastActivity)
+          const lastDateStr = last.toISOString().split('T')[0]
+          const diff = getDayDiff(lastDateStr)
+
+          if (diff === 0) {
+            todayThreads.push(thread)
+          } else if (diff > 0 && diff <= 7) {
+            recentThreads.push(thread)
+          } else if (diff > 7) {
+            archiveThreads.push(thread)
+          }
+        })
+
+        const sortByLastActivity = (arr: Thread[]) =>
+          arr.sort(
+            (a, b) =>
+              new Date(b.lastActivity).getTime() -
+              new Date(a.lastActivity).getTime(),
+          )
+
+        sortByLastActivity(todayThreads)
+        sortByLastActivity(recentThreads)
+        sortByLastActivity(archiveThreads)
+
+        return (
+          <div className="space-y-6 p-1">
+            {/* SECTION ÉPINGLÉS */}
+            {threads.some(t => t.isPinned) && (
+              <div className="mb-6">
+                <div className="text-xs font-semibold text-yellow-400 mb-2 pb-1 border-b border-yellow-600/30 flex items-center gap-2">
+                  <span className="text-sm">📌</span>
+                  <span>Épinglés</span>
+                </div>
+                {threads
+                  .filter(thread => thread.isPinned)
+                  .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
+                  .map(renderThreadCard)}
+              </div>
+            )}
+
+            {/* SECTION AUJOURD'HUI */}
             <div>
               <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
                 <span className="text-sm">📆</span>
                 <span>Aujourd'hui</span>
               </div>
-              <div className="text-center text-gray-500 text-sm py-4 italic">
-                Aucune conversation aujourd'hui
-              </div>
-            </div>
-          </div>
-        ) : (
-          (() => {
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-
-            const getDayDiff = (dateStr: string) => {
-              const d = new Date(dateStr)
-              const dClean = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-              const diffMs = today.getTime() - dClean.getTime()
-              return Math.floor(diffMs / (1000 * 60 * 60 * 24))
-            }
-
-            const todayThreads: Thread[] = []
-            const recentThreads: Thread[] = []
-            const archiveThreads: Thread[] = []
-
-            // TRI DES THREADS (EXCLUT LES ÉPINGLÉS)
-            threads.forEach(thread => {
-              // EXCLURE LES THREADS ÉPINGLÉS
-              if (thread.isPinned) return
-              
-              const last = new Date(thread.lastActivity)
-              const lastDateStr = last.toISOString().split('T')[0]
-              const diff = getDayDiff(lastDateStr)
-
-              if (diff === 0) {
-                todayThreads.push(thread)
-              } else if (diff > 0 && diff <= 7) {
-                recentThreads.push(thread)
-              } else if (diff > 7) {
-                archiveThreads.push(thread)
-              }
-            })
-
-            const sortByLastActivity = (arr: Thread[]) =>
-              arr.sort(
-                (a, b) =>
-                  new Date(b.lastActivity).getTime() -
-                  new Date(a.lastActivity).getTime(),
-              )
-
-            sortByLastActivity(todayThreads)
-            sortByLastActivity(recentThreads)
-            sortByLastActivity(archiveThreads)
-
-            return (
-              <div className="space-y-6 p-1">
-                {/* SECTION ÉPINGLÉS */}
-                {threads.some(t => t.isPinned) && (
-                  <div className="mb-6">
-                    <div className="text-xs font-semibold text-yellow-400 mb-2 pb-1 border-b border-yellow-600/30 flex items-center gap-2">
-                      <span className="text-sm">📌</span>
-                      <span>Épinglés</span>
-                    </div>
-                    {threads
-                      .filter(thread => thread.isPinned)
-                      .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
-                      .map(renderThreadCard)}
-                  </div>
-                )}
-
-                {/* SECTION AUJOURD'HUI */}
-                <div>
-                  <div className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-800 flex items-center gap-2">
-                    <span className="text-sm">📆</span>
-                    <span>Aujourd'hui</span>
-                  </div>
-                  {todayThreads.length > 0 ? (
-                    todayThreads.map(renderThreadCard)
-                  ) : (
-                    <div className="text-center text-gray-500 text-sm py-4 italic">
-                      Aucune conversation aujourd'hui
-                    </div>
-                  )}
+              {todayThreads.length > 0 ? (
+                todayThreads.map(renderThreadCard)
+              ) : (
+                <div className="text-center text-gray-500 text-sm py-4 italic">
+                  Aucune conversation aujourd'hui
                 </div>
+              )}
+            </div>
 
-                {/* 7 DERNIERS JOURS */}
-                {recentThreads.length > 0 && (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowRecentWeek(prev => !prev)}
-                      className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-sm">🗓️</span>
-                        <span>7 derniers jours</span>
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        {showRecentWeek ? '▾' : '▸'}
-                      </span>
-                    </button>
+            {/* 7 DERNIERS JOURS */}
+            {recentThreads.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowRecentWeek(prev => !prev)}
+                  className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">🗓️</span>
+                    <span>7 derniers jours</span>
+                  </span>
+                  <span className="text-gray-400 text-sm">
+                    {showRecentWeek ? '▾' : '▸'}
+                  </span>
+                </button>
 
-                    {showRecentWeek && (
-                      <div className="mt-1">
-                        {recentThreads.map(renderThreadCard)}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ARCHIVES */}
-                {archiveThreads.length > 0 && (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowArchive(prev => !prev)}
-                      className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-sm">📚</span>
-                        <span>Archives</span>
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        {showArchive ? '▾' : '▸'}
-                      </span>
-                    </button>
-
-                    {showArchive && (
-                      <div className="mt-1">
-                        {archiveThreads.map(renderThreadCard)}
-                      </div>
-                    )}
+                {showRecentWeek && (
+                  <div className="mt-1">
+                    {recentThreads.map(renderThreadCard)}
                   </div>
                 )}
               </div>
-            )
-          })()
-        )}
-      </div>
-    </div>
+            )}
+
+            {/* ARCHIVES */}
+            {archiveThreads.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowArchive(prev => !prev)}
+                  className="w-full text-left text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">📚</span>
+                    <span>Archives</span>
+                  </span>
+                  <span className="text-gray-400 text-sm">
+                    {showArchive ? '▾' : '▸'}
+                  </span>
+                </button>
+
+                {showArchive && (
+                  <div className="mt-1">
+                    {archiveThreads.map(renderThreadCard)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })()
+    )}
+  </div>
+</div>
+</div>
 
     {/* ========== FOOTER SIDEBAR ========== */}
 <div className="flex-shrink-0 px-0.8 py-1 relative">
