@@ -26,6 +26,7 @@ import { ArchiveIcon } from '@/app/components/icons/ArchiveIcon'
 // Icônes pour le menu utilisateur
 import { SettingsIcon } from '@/app/components/icons/SettingsIcon'
 import { LogoutIcon } from '@/app/components/icons/LogoutIcon'
+import { SendIcon } from '@/app/components/icons/SendIcon'
 
 interface Event {
   id: string
@@ -89,12 +90,35 @@ export default function ChatPage() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const BOTTOM_SPACER = 300 
   const COLLAPSE_HEIGHT = '16em'
+  const [scrollButtonIcon, setScrollButtonIcon] = useState<'down' | 'up'>('down')
 
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
   const editingThreadNameRef = useRef<string>('')
+  const scrollButtonIconRef = useRef<'down' | 'up'>('down')
+
+  // ========== FONCTION UTILITAIRE : CALCUL POSITION CIBLE ==========
+const getScrollTargetPosition = (): number => {
+  const container = scrollContainerRef.current
+  if (!container) return 0
+  
+  const allUserMessages = container.querySelectorAll('[data-message-type="user"]')
+  const lastUserMessage = allUserMessages[allUserMessages.length - 1] as HTMLElement
+
+  if (!lastUserMessage) {
+    return container.scrollHeight
+  }
+
+  const messageTop = lastUserMessage.offsetTop
+  const messageHeight = lastUserMessage.offsetHeight
+  const messageBottom = messageTop + messageHeight
+  const containerHeight = container.clientHeight
+
+  // MÊME calcul que scrollToBottom
+  return messageBottom - containerHeight * 0.6
+}
 
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
@@ -109,13 +133,42 @@ useEffect(() => {
   if (!container) return
 
   const handleScroll = () => {
-    const { scrollTop, scrollHeight, clientHeight } = container
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
-    setShowScrollButton(!isNearBottom)
+    const container = scrollContainerRef.current
+    if (!container) return
 
+    const { scrollTop } = container
+    
+    // 1. Toujours montrer le bouton
+    setShowScrollButton(events.length > 0)
+
+    // 2. Calcul position cible
+    const allUserMessages = container.querySelectorAll('[data-message-type="user"]')
+    const lastUserMessage = allUserMessages[allUserMessages.length - 1] as HTMLElement
+    
+    if (lastUserMessage) {
+      const targetPosition = getScrollTargetPosition()
+      const HYSTERESIS = 20
+      
+      if (targetPosition <= 0) return
+      
+      const isPastTarget = scrollTop > targetPosition + HYSTERESIS
+      const isBeforeTarget = scrollTop < targetPosition - HYSTERESIS
+      
+      // Utilise la REF, pas le STATE !
+      const currentIcon = scrollButtonIconRef.current
+      
+      if (isPastTarget && currentIcon !== 'up') {
+        console.log('🔼 Changement icône → UP')
+        setScrollButtonIcon('up')
+      } else if (isBeforeTarget && currentIcon !== 'down') {
+        console.log('🔽 Changement icône → DOWN')
+        setScrollButtonIcon('down')
+      }
+    }
+
+    // 3. Sauvegarde position
     const baseKey = getActiveThreadKey(session?.user?.email)
     if (!baseKey || !activeThreadId) return
-
     if (typeof window !== 'undefined') {
       const scrollKey = `${baseKey}_scroll_${activeThreadId}`
       localStorage.setItem(scrollKey, String(scrollTop))
@@ -123,12 +176,15 @@ useEffect(() => {
   }
 
   container.addEventListener('scroll', handleScroll)
-
   return () => {
     container.removeEventListener('scroll', handleScroll)
   }
-}, [session?.user?.email, activeThreadId])
+}, [session, session?.user?.email, activeThreadId, events.length]) // ← DÉPENDANCES CORRECTES
 
+// ========== SYNCHRONISATION REF/STATE POUR SCROLL ICON ==========
+useEffect(() => {
+  scrollButtonIconRef.current = scrollButtonIcon
+}, [scrollButtonIcon])  // Se ré-exécute quand scrollButtonIcon change
 
 useEffect(() => {
   setHasSidebar(true)
@@ -338,106 +394,81 @@ const useMessageHeight = (messageId: string, content: string) => {
   }
 
     // ========== COPY HELPER ==========
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text)
-      } else {
-        // Fallback pour vieux navigateurs
-        const textarea = document.createElement('textarea')
-        textarea.value = text
-        document.body.appendChild(textarea)
-        textarea.select()
-        document.execCommand('copy')
-        document.body.removeChild(textarea)
-      }
-    } catch (error) {
-      console.error('Erreur copie presse-papier :', error)
+const copyToClipboard = async (text: string) => {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback pour vieux navigateurs
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
     }
+  } catch (error) {
+    console.error('Erreur copie presse-papier :', error)
   }
+}
 
-   const handleCopyMessage = async (content: string, messageId: string) => {
+const handleCopyMessage = async (content: string, messageId: string) => {
   await copyToClipboard(content)
   setCopiedMessageId(messageId)
   setTimeout(() => setCopiedMessageId(null), 2000) // Reset après 2 secondes
 }
 
-  // ========== COLLAPSE MESSAGE + RECALAGE STANDARD ==========
-  const handleCollapseMessage = (messageId: string) => {
-    // On replie dans le state
-    setExpandedMessages(prev => ({ ...prev, [messageId]: false }))
+// ========== SCROLLER UN MESSAGE À LA POSITION STANDARD ==========
+const scrollMessageToStandardPosition = (messageId: string) => {
+  const container = scrollContainerRef.current
+  if (!container) return
 
-    // On laisse React rerender puis on scrolle proprement vers ce message
-    requestAnimationFrame(() => {
-      scrollMessageToStandardPosition(messageId)
-    })
-  }
+  const messageEl = container.querySelector(
+    `[data-message-id="${messageId}"]`
+  ) as HTMLElement | null
 
+  if (!messageEl) return
 
-    // ========== SCROLL TO BOTTOM (sur clic bouton uniquement) ==========
-  const scrollToBottom = () => {
-    const container = scrollContainerRef.current
-    if (!container) return
+  const messageTop = messageEl.offsetTop
+  const messageHeight = messageEl.offsetHeight
+  const messageBottom = messageTop + messageHeight
+  const containerHeight = container.clientHeight
 
-    // Trouver tous les messages user
-    const allUserMessages = container.querySelectorAll('[data-message-type="user"]')
-    const lastUserMessage = allUserMessages[allUserMessages.length - 1] as HTMLElement
+  // Même logique que scrollToBottom : bas du message vers le milieu de l'écran
+  const targetScroll = messageBottom - containerHeight * 0.5
 
-    if (!lastUserMessage) {
-      // Fallback : scroll tout en bas
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
-      })
-      return
-    }
+  container.scrollTo({
+    top: Math.max(0, targetScroll),
+    behavior: 'auto', // pas besoin d'anim ici
+  })
+}
 
-    // Forcer un reflow
-    lastUserMessage.getBoundingClientRect()
+// ========== COLLAPSE MESSAGE + RECALAGE STANDARD ==========
+const handleCollapseMessage = (messageId: string) => {
+  // On replie dans le state
+  setExpandedMessages(prev => ({ ...prev, [messageId]: false }))
 
-    const messageTop = lastUserMessage.offsetTop
-    const messageHeight = lastUserMessage.offsetHeight
-    const messageBottom = messageTop + messageHeight
-    const containerHeight = container.clientHeight
+  // On laisse React rerender puis on scrolle proprement vers ce message
+  requestAnimationFrame(() => {
+    scrollMessageToStandardPosition(messageId)
+  })
+}
 
-    // Position cible : bas du message au milieu de l'écran
-    const targetScroll = messageBottom - containerHeight * 0.5
+// ========== SCROLL TO BOTTOM (sur clic bouton uniquement) ==========
+const scrollToBottom = () => {
+  const container = scrollContainerRef.current
+  if (!container) return
 
-    container.scrollTo({
-      top: Math.max(0, targetScroll),
-      behavior: 'smooth',
-    })
-  }
+  const targetPosition = getScrollTargetPosition()
+  
+  container.scrollTo({
+    top: Math.max(0, targetPosition),
+    behavior: 'smooth',
+  })
+}
 
-  // ========== SCROLLER UN MESSAGE À LA POSITION STANDARD ==========
-  const scrollMessageToStandardPosition = (messageId: string) => {
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    const messageEl = container.querySelector(
-      `[data-message-id="${messageId}"]`
-    ) as HTMLElement | null
-
-    if (!messageEl) return
-
-    const messageTop = messageEl.offsetTop
-    const messageHeight = messageEl.offsetHeight
-    const messageBottom = messageTop + messageHeight
-    const containerHeight = container.clientHeight
-
-    // Même logique que scrollToBottom : bas du message vers le milieu de l'écran
-    const targetScroll = messageBottom - containerHeight * 0.5
-
-    container.scrollTo({
-      top: Math.max(0, targetScroll),
-      behavior: 'auto', // pas besoin d'anim ici
-    })
-  }
-
-
-  // ========== SEND MESSAGE (SANS auto-scroll) ==========
-  const sendMessage = async () => {
+// ========== SEND MESSAGE (SANS auto-scroll) ==========
+const sendMessage = async () => {
   if (!textareaRef.current?.value.trim() || isSending) return
 
   setIsSending(true)
@@ -459,88 +490,101 @@ const useMessageHeight = (messageId: string, content: string) => {
     textareaRef.current.style.height = '42px'
   }
 
-    // Si pas de thread actif, en créer un automatiquement
-    let threadToUse = activeThreadId
+  // Si pas de thread actif, en créer un automatiquement
+  let threadToUse = activeThreadId
 
-   if (!threadToUse) {
-  const autoLabel = `${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })}`
+  if (!threadToUse) {
+    const autoLabel = `${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`
 
-  const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'new_thread',
-      threadLabel: autoLabel,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error('Erreur création thread')
-  }
-
-  const data = await response.json()
-  threadToUse = data.threadId  // ✅ Utiliser l'ID du backend (cuid)
-  setActiveThreadId(threadToUse)
-}
-
-    // Optimistic update
-const tempEvent: Event = {
-  id: 'temp-' + Date.now(),
-  content: userMessage,
-  role: 'user',
-  type: 'USER_MESSAGE',
-  createdAt: new Date().toISOString(),
-}
-setEvents(prev => [...prev, tempEvent])
-
-// Auto-scroll uniquement AU MOMENT DU SEND
-setTimeout(() => {
-  scrollToBottom()
-}, 50)
-
-try {
-  const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageForAPI,
-          threadId: threadToUse,
-        }),
-      })
-
-      if (response.ok) {
-  const data = await response.json()
-  
-  if (data.events) {
-    // Mémoriser la position de scroll AVANT
-    const container = scrollContainerRef.current
-    const scrollTopBefore = container?.scrollTop || 0
-    
-    setEvents(data.events)
-    
-    // Restaurer la MÊME position (pas de mouvement)
-    requestAnimationFrame(() => {
-      if (container) {
-        container.scrollTop = scrollTopBefore
-      }
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'new_thread',
+        threadLabel: autoLabel,
+      }),
     })
-  }
-  
-  await loadThreads()
-} else {
-  setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
-}
-    } catch (error) {
-      console.error('Erreur envoi message:', error)
-      setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
-    } finally {
-      setIsSending(false)
+
+    if (!response.ok) {
+      throw new Error('Erreur création thread')
     }
+
+    const data = await response.json()
+    threadToUse = data.threadId
+    setActiveThreadId(threadToUse)
   }
 
+  // Optimistic update
+  const tempEvent: Event = {
+    id: 'temp-' + Date.now(),
+    content: userMessage,
+    role: 'user',
+    type: 'USER_MESSAGE',
+    createdAt: new Date().toISOString(),
+  }
+  setEvents(prev => [...prev, tempEvent])
+
+  // Auto-scroll uniquement AU MOMENT DU SEND
+  setTimeout(() => {
+    scrollToBottom()
+  }, 50)
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: messageForAPI,
+        threadId: threadToUse,
+      }),
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      
+      // ARRÊTER L'ANIMATION IMMÉDIATEMENT
+      setIsSending(false)
+      
+      if (data.events) {
+        // Mémoriser la position de scroll AVANT
+        const container = scrollContainerRef.current
+        const scrollTopBefore = container?.scrollTop || 0
+        
+        setEvents(data.events)
+        
+        // Restaurer la position
+        requestAnimationFrame(() => {
+          if (container) {
+            container.scrollTop = scrollTopBefore
+          }
+        })
+      }
+      
+      await loadThreads()
+    } else {
+      setIsSending(false)
+      setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+    }
+  } catch (error) {
+    console.error('Erreur envoi message:', error)
+    setIsSending(false)
+    setEvents(prev => prev.filter(e => e.id !== tempEvent.id))
+  } finally {
+    // FOCUS APRÈS UN COURT DÉLAI
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus()
+        // Positionne le curseur à la fin
+        const length = textareaRef.current.value.length
+        textareaRef.current.selectionStart = length
+        textareaRef.current.selectionEnd = length
+      }
+    }, 50)
+  }
+}
 // ========== FORMAT DATE DISCORD STYLE ==========
 const formatDiscordDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -1201,7 +1245,7 @@ const renderThreadCard = (thread: Thread) => {
     </div>
                   <div className="relative">
                     <div
-                      className="px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 text-gray-100 shadow-lg overflow-hidden relative"
+                      className="px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/50 border border-bandhu-secondary/30 text-gray-100 shadow-lg overflow-hidden relative"
                       style={{
                         maxHeight: expandedMessages[event.id] ? 'none' : COLLAPSE_HEIGHT,
                       }}
@@ -1470,112 +1514,108 @@ const renderThreadCard = (thread: Thread) => {
           )}
         </div>
 
-        {/* ========== BOUTON SCROLL TO BOTTOM ========== */}
-        {showScrollButton && events.length > 0 && (
-          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 pointer-events-none">
-            <button
-              onClick={scrollToBottom}
-              className="pointer-events-auto px-4 py-2 bg-bandhu-primary/90 hover:bg-bandhu-primary text-white rounded-full shadow-lg text-sm font-medium flex items-center gap-2 transition-all hover:scale-105"
-            >
-              <span>⬇</span>
-              Revenir au dernier échange
-            </button>
-          </div>
-        )}
-
-        {/* ========== INPUT FLOTTANT ========== */}
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none">
-          <div className="w-full max-w-3xl px-5 pointer-events-auto">
-            <div className="flex gap-3 items-end bg-blue-800/95 backdrop-blur-sm p-3 rounded-2xl shadow-2xl border border-blue-600">
-              
-              {/* Textarea - Prend tout l'espace disponible */}
-              <textarea
-                ref={textareaRef}
-                defaultValue={input}
-                onChange={e => {
-                  const el = e.target
-                  
-                  // Update React state en arrière-plan (pour sendMessage)
-                  startTransition(() => {
-                    setInput(el.value)
-                  })
-                  
-                  // Resize immédiat
-                  if (!el.dataset.resizing) {
-                    el.dataset.resizing = 'true'
-                    
-                    requestAnimationFrame(() => {
-                      el.style.height = 'auto'
-                      const min = 42
-                      const max = 500
-                      const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
-                      el.style.height = `${newHeight}px`
-                      delete el.dataset.resizing
-                    })
-                  }
-                }}
-                placeholder="Parlez à Ombrelien..."
-                className="scrollbar-bandhu flex-1 px-4 py-2.5 bg-gray-900/80 text-white border border-gray-600 rounded-xl text-sm leading-tight resize-none overflow-y-auto focus:outline-none focus:ring-2 focus:ring-bandhu-primary focus:border-transparent placeholder-gray-500"
-                style={{ 
-                  minHeight: '42px', 
-                  maxHeight: '500px',
-                  transition: 'height 0.05s ease-out'
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    sendMessage()
-                  }
-                }}
-                disabled={isSending}
-              />
-
-              {/* Groupe de boutons à droite */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                
-                {/* Bouton Exporter (compact) */}
-                <button 
-                  onClick={() => setShowExportModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-1 min-h-[42px] group relative"
-                  title="Exporter les conversations"
-                >
-                  <span className="text-base">📤</span>
-                  <span className="hidden sm:inline text-xs">Export</span>
-                  
-                  {/* Tooltip subtle */}
-                  <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                    Exporter les conversations
-                  </div>
-                </button>
-
-                {/* Bouton Envoyer */}
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isSending}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-medium min-h-[42px] transition-all flex items-center gap-2 ${
-                    input.trim() && !isSending
-                      ? 'bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white hover:scale-105 cursor-pointer shadow-lg'
-                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {isSending ? (
-                    <>
-                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Envoi...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>🚀</span>
-                      <span>Envoyer</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              
-            </div>
-          </div>
-        </div>
-
+        {/* ========== CAPSULE SPATIALE + SCROLL BUTTON ========== */}
+<div className="absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none">
+  <div className="w-full max-w-4xl px-5 pointer-events-auto flex flex-col items-center relative">
+    
+    {/* Bouton Scroll-to-bottom - DANS le même container */}
+    {events.length > 0 && (
+  <div className="absolute -top-6 right-7 pointer-events-none">
+    <button
+      onClick={scrollToBottom}
+      className="pointer-events-auto w-8 h-8 rounded-full bg-gradient-to-br from-gray-900/90 via-blue-800/90 to-blue-800/90 hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 group"
+    >
+      <span className={`text-base text-bandhu-primary group-hover:text-white transition-colors ${
+        scrollButtonIcon === 'up' ? 'rotate-180' : ''
+      }`}>
+        ↓
+      </span>
+      <div className="absolute -top-8 right-0 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700">
+        {scrollButtonIcon === 'up' 
+          ? 'Remonter au dernier échange' 
+          : 'Descendre au dernier échange'}
+      </div>
+    </button>
+  </div>
+)}
+    
+    {/* Container capsule (forme de capsule) */}
+    <div className="relative w-full max-w-2xl bg-gradient-to-br from-blue-700 to-gray-900/70 backdrop-blur-xl p-4 rounded-[40px] border border-bandhu-secondary/80 shadow-2xl shadow-bandhu-primary/15">
+      
+      {/* Textarea capsule */}
+      <textarea
+        ref={textareaRef}
+        defaultValue={input}
+        onChange={e => {
+          const el = e.target
+          
+          // Update React state en arrière-plan (pour sendMessage)
+          startTransition(() => {
+            setInput(el.value)
+          })
+          
+          // Resize immédiat
+          if (!el.dataset.resizing) {
+            el.dataset.resizing = 'true'
+            
+            requestAnimationFrame(() => {
+              el.style.height = 'auto'
+              const min = 50
+              const max = 500
+              const newHeight = Math.max(min, Math.min(max, el.scrollHeight))
+              el.style.height = `${newHeight}px`
+              delete el.dataset.resizing
+            })
+          }
+        }}
+        placeholder="Parlez à Ombrelien..."
+        className="scrollbar-bandhu w-full bg-bandhu-dark/90 text-white rounded-[20px] px-5 py-3 border border-bandhu-primary/20 focus:border-bandhu-primary focus:ring-2 focus:ring-bandhu-primary/30 focus:outline-none placeholder-gray-500 text-sm leading-tight resize-none overflow-y-auto"
+        style={{ 
+          minHeight: '50px', 
+          maxHeight: '500px',
+          transition: 'height 0.05s ease-out, border-color 0.2s ease'
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            sendMessage()
+          }
+        }}
+        disabled={isSending}
+      />
+      
+    </div> {/* Fin container capsule */}
+    
+    {/* Bouton Send À DROITE, qui chevauche - DANS LE CONTAINER */}
+    <div className="absolute -bottom-9 right-24">
+      <button
+  onClick={sendMessage}
+  type="button"
+  disabled={(!textareaRef.current?.value.trim() && !isSending) || isSending}
+  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-xl group ${
+    (!textareaRef.current?.value.trim() && !isSending)
+      ? 'bg-gray-700 cursor-not-allowed'
+      : isSending
+        ? 'bg-gradient-to-r from-bandhu-primary to-bandhu-secondary cursor-pointer'
+        : 'bg-gradient-to-br from-gray-900/90 via-blue-800/90 to-blue-800/90 hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary cursor-pointer'
+  }`}
+  title="Envoyer"
+>
+  {isSending ? (
+    <div className="w-7 h-7 border-2 border-white/50 border-t-bandhu-primary rounded-full animate-spin" />
+  ) : (
+    <SendIcon 
+      size={28} 
+      className={textareaRef.current?.value.trim() || isSending
+        ? "text-bandhu-primary group-hover:text-white transition-colors" 
+        : "text-gray-500"} 
+    />
+  )}
+</button>
+    </div>
+    
+  </div> {/* Fin max-w-lg */}
+</div> {/* Fin absolute bottom-20 */}
         {/* Modal Export - EN DEHORS du flux */}
         <ExportModal 
           isOpen={showExportModal} 
