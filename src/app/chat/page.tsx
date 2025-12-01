@@ -612,77 +612,75 @@ const renderThreadCard = (thread: Thread) => {
   const progress = Math.min(thread.messageCount, 100)
 
   return (
-    <div
-      key={thread.id}
-      className={`mb-2 p-3 rounded-lg transition group relative ${
-        isActive
-          ? 'bg-green-900/30 border border-green-600'
-          : 'hover:bg-gray-800/50 border border-transparent'
-      }`}
-    >
-      {/* Zone principale cliquable = charger le thread */}
+  <div
+    key={thread.id}
+    onClick={() => {
+      setOpenThreadMenuId(null)
+      loadThread(thread.id)
+    }}
+    className={`mb-2 p-3 rounded-lg transition group relative cursor-pointer ${
+      isActive
+        ? 'bg-green-900/30 border border-green-600'
+        : 'hover:bg-gray-800/50 border border-transparent'
+    }`}
+  >
+    {/* Contenu avec espace pour le bouton menu */}
+    <div className="pr-8">  {/* ← pr-8 pour laisser de la place visuelle */}
+      {/* Titre */}
       <div
-        onClick={() => {
-          setOpenThreadMenuId(null)
-          loadThread(thread.id)
-        }}
-        className="cursor-pointer pr-8"
+        className={`text-sm font-medium mb-1 flex items-center gap-2 ${
+          isActive ? 'text-green-400' : 'text-gray-300'
+        }`}
       >
-        {/* Titre */}
-        <div
-          className={`text-sm font-medium mb-1 flex items-center gap-2 ${
-            isActive ? 'text-green-400' : 'text-gray-300'
-          }`}
-        >
-          <span className="flex-1 truncate">{thread.label}</span>
-        </div>
-
-        {/* Méta + barre de progression */}
-        <div className="mt-1 space-y-1">
-          {/* Ligne temps création / temps dernière maj */}
-          <div className="text-[11px] text-gray-500 flex items-center justify-between">
-            <span>Âge : {ageLabel}</span>
-            <span className="flex items-center gap-2">
-              <span>Dernière maj : {sinceLastUpdateLabel}</span>
-              {isLoadingThis && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-green-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-ping" />
-                  <span>...</span>
-                </span>
-              )}
-            </span>
-          </div>
-
-          {/* Barre de progression + nombre de messages */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${
-                  isActive ? 'bg-green-500' : 'bg-gray-500'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="text-[10px] text-gray-400 whitespace-nowrap">
-              {thread.messageCount} msg
-            </span>
-          </div>
-        </div>
+        <span className="flex-1 truncate">{thread.label}</span>
       </div>
 
-      {/* Bouton ⋮ + menu déroulant */}
-<div className="absolute top-2 right-2">
-  {/* Bouton ⋮ - AJOUTE LA CLASSE thread-menu-button */}
-  <button
-    onClick={e => {
-      e.stopPropagation()
-      setOpenThreadMenuId(prev => (prev === thread.id ? null : thread.id))
-    }}
-    className="thread-menu-button p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition"
-    title="Options du thread"
-  >
-    <span className="text-lg leading-none">⋮</span>
-  </button>
+      {/* Méta + barre de progression */}
+      <div className="mt-1 space-y-1">
+        {/* Ligne temps création / temps dernière maj */}
+        <div className="text-[11px] text-gray-500 flex items-center justify-between">
+          <span>Âge : {ageLabel}</span>
+          <span className="flex items-center gap-2">
+            <span>Dernière maj : {sinceLastUpdateLabel}</span>
+            {isLoadingThis && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-green-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-ping" />
+                <span>...</span>
+              </span>
+            )}
+          </span>
+        </div>
+
+        {/* Barre de progression + nombre de messages */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${
+                isActive ? 'bg-green-500' : 'bg-gray-500'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-gray-400 whitespace-nowrap">
+            {thread.messageCount} msg
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {/* Bouton ⋮ + menu déroulant - MAINTENANT DANS LA ZONE CLIQUABLE */}
+    <div className="absolute top-2 right-2">
+      {/* Bouton ⋮ */}
+      <button
+        onClick={e => {
+          e.stopPropagation()  // ← BLOQUE le clic sur le parent
+          setOpenThreadMenuId(prev => (prev === thread.id ? null : thread.id))
+        }}
+        className="thread-menu-button p-1.5 rounded hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition"
+        title="Options du thread"
+      >
+        <span className="text-lg leading-none">⋮</span>
+      </button>
 
   {/* Menu déroulant */}
 {isMenuOpen && (
