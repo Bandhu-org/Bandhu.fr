@@ -27,6 +27,7 @@ import { ArchiveIcon } from '@/app/components/icons/ArchiveIcon'
 import { SettingsIcon } from '@/app/components/icons/SettingsIcon'
 import { LogoutIcon } from '@/app/components/icons/LogoutIcon'
 import { SendIcon } from '@/app/components/icons/SendIcon'
+import Image from 'next/image'
 
 interface Event {
   id: string
@@ -862,18 +863,18 @@ const renderThreadCard = (thread: Thread) => {
       </h2>
     </div>
 
-    {/* CONTAINER INTERMÉDIAIRE */}
-    <div className="flex-1 min-h-0 flex flex-col justify-center items-center mb-4 p-6 bg-gray-800/10 rounded-lg border border-gray-700/20">
-      <div className="text-center">
-        <div className="text-4xl mb-4">🌌</div>
-        <div className="text-sm text-gray-400 mb-2">
-          Espace de connexion
-        </div>
-        <div className="text-xs text-gray-500 max-w-xs">
-          Cette zone accueillera bientôt vos statistiques, raccourcis et outils de conversation.
-        </div>
-      </div>
-    </div>
+    {/* AVATAR OMBRELIEN - Élégant et simple */}
+<div className="flex-shrink-0 px-3 py-4">
+  <div className="relative rounded-xl overflow-hidden border border-gray-700/40 bg-gradient-to-br from-gray-900/30 to-gray-800/20">
+    <img
+      src="/images/Ombrelien-avatar.svg"
+      alt="Ombrelien AI Companion"
+      className="w-full h-auto"
+    />
+    {/* Gradient overlay pour fondre avec le fond */}
+    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/5 via-transparent to-transparent" />
+  </div>
+</div>
 
     {/* BOUTON NOUVELLE CONVERSATION */}
     <div className="flex-shrink-0 mb-5">
