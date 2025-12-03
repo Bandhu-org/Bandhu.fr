@@ -92,6 +92,9 @@ export default function ChatPage() {
   const BOTTOM_SPACER = 300 
   const COLLAPSE_HEIGHT = '16em'
   const [scrollButtonIcon, setScrollButtonIcon] = useState<'down' | 'up'>('down')
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set())
+  const [targetThreadIdForExport, setTargetThreadIdForExport] = useState<string | null>(null)
+  const [showClearSelectionModal, setShowClearSelectionModal] = useState(false)
 
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -451,6 +454,18 @@ const handleCopyMessage = async (content: string, messageId: string) => {
   await copyToClipboard(content)
   setCopiedMessageId(messageId)
   setTimeout(() => setCopiedMessageId(null), 2000) // Reset après 2 secondes
+}
+
+const toggleMessageSelection = (messageId: string) => {
+  setSelectedMessageIds(prev => {
+    const newSet = new Set(prev)
+    if (newSet.has(messageId)) {
+      newSet.delete(messageId)
+    } else {
+      newSet.add(messageId)
+    }
+    return newSet
+  })
 }
 
 // ========== SCROLLER UN MESSAGE À LA POSITION STANDARD ==========
@@ -843,6 +858,22 @@ const renderThreadCard = (thread: Thread) => {
   <span>Rename</span>
 </button>
 
+ {/* Exporter la conversation */}
+    <button
+      onClick={e => {
+        e.stopPropagation()
+        // 1. Charger les events de ce thread
+        loadThread(thread.id)
+        setTargetThreadIdForExport(thread.id)
+        setShowExportModal(true)
+        setOpenThreadMenuId(null)
+      }}
+      className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
+    >
+      <span className="text-gray-400 group-hover:text-gray-200">📤</span>
+      <span>Exporter la conversation</span>
+    </button>
+
 <button
   onClick={e => {
     e.stopPropagation()
@@ -904,7 +935,7 @@ const renderThreadCard = (thread: Thread) => {
         sizes="20px"
       />
       </div>
-    <span className="text-xl font-bold 
+    <span className="text-3xl font-bold 
   bg-gradient-to-r 
   from-bandhu-secondary 
   to-bandhu-primary 
@@ -1443,11 +1474,15 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
     </div>
                   <div className="relative">
                     <div
-                      className="px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/50 border border-bandhu-secondary/30 text-gray-100 shadow-lg overflow-hidden relative"
-                      style={{
-                        maxHeight: expandedMessages[event.id] ? 'none' : COLLAPSE_HEIGHT,
-                      }}
-                    >
+  className={`px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/50 border ${
+    selectedMessageIds.has(event.id) 
+      ? 'border-purple-500/60 ring-2 ring-purple-500/30'
+      : 'border-bandhu-secondary/30'
+  } text-gray-100 shadow-lg overflow-hidden relative`}
+  style={{
+    maxHeight: expandedMessages[event.id] ? 'none' : COLLAPSE_HEIGHT,
+  }}
+>
                       <div className="text-base leading-relaxed" style={{ lineHeight: '1.6em' }}>
                         <ReactMarkdown
                           components={{
@@ -1539,32 +1574,58 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
                       </div>
                     )}
 
-                    {/* Bouton Copier USER */}
-                    <div className="mt-2 flex justify-end">
-                      <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-blue-300/60 hover:text-blue-200 transition-all p-2 rounded hover:bg-blue-800/40 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 border border-transparent hover:border-blue-400/30" title="Copier le message">
-                        {copiedMessageId === event.id ? (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="group-hover:drop-shadow-[0_0_6px_rgba(59,130,246,0.4)]">
-                            <rect x="9" y="9" width="13" height="13" rx="1" ry="1"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                          </svg>
-                        )}
-                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl">
-                          {copiedMessageId === event.id ? 'Copié !' : 'Copier'}
-                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                    {/* Boutons d'action USER : Checkbox + Copier */}
+<div className="mt-2 flex justify-end items-center gap-3">
+  {/* Checkbox stylisée USER - version épurée */}
+<label className="relative inline-flex items-center cursor-pointer group/checkbox">
+  <input
+    type="checkbox"
+    checked={selectedMessageIds.has(event.id)}
+    onChange={() => toggleMessageSelection(event.id)}
+    className="peer sr-only"
+  />
+  <div className="w-5 h-5 flex items-center justify-center rounded-md bg-blue-400/10 border border-blue-400/30 group-hover/checkbox:border-blue-300/60 group-hover/checkbox:bg-blue-400/15 transition-all duration-200 peer-checked:bg-blue-500/20 peer-checked:border-blue-500 peer-checked:shadow-md peer-checked:shadow-blue-500/15">
+    {selectedMessageIds.has(event.id) && (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-blue-300">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    )}
+  </div>
+  
+  {/* Tooltip */}
+  <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/checkbox:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap border border-gray-700 shadow-lg">
+    {selectedMessageIds.has(event.id) ? 'Désélectionner' : 'Sélectionner'}
+    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-1.5 h-1.5 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+  </div>
+</label>
+  
+  <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-blue-300/60 hover:text-blue-200 transition-all p-2 rounded hover:bg-blue-800/40 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 border border-transparent hover:border-blue-400/30" title="Copier le message">
+    {copiedMessageId === event.id ? (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    ) : (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="group-hover:drop-shadow-[0_0_6px_rgba(59,130,246,0.4)]">
+        <rect x="9" y="9" width="13" height="13" rx="1" ry="1"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+    )}
+    <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl">
+      {copiedMessageId === event.id ? 'Copié !' : 'Copier'}
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+    </div>
+  </button>
+</div>
+</div>
+</div>
               ) : (
                 <div className="max-w-[800px] relative mb-8">
-                  {/* SECTION AI AVEC CONTAINER ESPACEMENT */}
-        
-                  <div className="bg-transparent rounded-2xl">
+  {/* SECTION AI AVEC CONTAINER ESPACEMENT */}
+  <div className={`bg-transparent rounded-2xl ${
+    selectedMessageIds.has(event.id) 
+      ? 'ring-1 ring-purple-500/30 shadow-lg shadow-purple-500/10' 
+      : ''
+  }`}>
                     
                     {/* Message AI */}
                     <div className="px-4 py-5 bg-transparent text-gray-100 relative">
@@ -1647,25 +1708,48 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
                       </ReactMarkdown>
                     </div>
 
-                    {/* Bouton Copier AI */}
-                    <div className="absolute bottom-4 right-4">
-                      <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-gray-500 hover:text-bandhu-primary transition-all p-2 rounded hover:bg-bandhu-primary/15 hover:scale-110 hover:shadow-lg hover:shadow-bandhu-primary/20 border border-transparent hover:border-bandhu-primary/30" title="Copier le message">
-                        {copiedMessageId === event.id ? (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="group-hover:drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]">
-                            <rect x="9" y="9" width="13" height="13" rx="1" ry="1"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                          </svg>
-                        )}
-                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl">
-                          {copiedMessageId === event.id ? 'Copié !' : 'Copier'}
-                          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-                        </div>
-                      </button>
-                    </div>
+                    {/* Boutons d'action AI : Checkbox + Copier */}
+<div className="absolute bottom-4 right-4 flex items-center gap-3">
+  {/* Checkbox stylisée AI - version épurée */}
+<label className="relative inline-flex items-center cursor-pointer group/checkbox">
+  <input
+    type="checkbox"
+    checked={selectedMessageIds.has(event.id)}
+    onChange={() => toggleMessageSelection(event.id)}
+    className="peer sr-only"
+  />
+  <div className="w-5 h-5 flex items-center justify-center rounded-md bg-bandhu-primary/10 border border-bandhu-primary/30 group-hover/checkbox:border-bandhu-primary/60 group-hover/checkbox:bg-bandhu-primary/15 transition-all duration-200 peer-checked:bg-bandhu-primary/20 peer-checked:border-bandhu-primary peer-checked:shadow-md peer-checked:shadow-bandhu-primary/15">
+    {selectedMessageIds.has(event.id) && (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-bandhu-primary">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    )}
+  </div>
+  
+  {/* Tooltip */}
+  <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover/checkbox:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap border border-gray-700 shadow-lg">
+    {selectedMessageIds.has(event.id) ? 'Désélectionner' : 'Sélectionner'}
+    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-1.5 h-1.5 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+  </div>
+</label>
+  
+  <button onClick={() => handleCopyMessage(event.content, event.id)} className="group relative text-gray-500 hover:text-bandhu-primary transition-all p-2 rounded hover:bg-bandhu-primary/15 hover:scale-110 hover:shadow-lg hover:shadow-bandhu-primary/20 border border-transparent hover:border-bandhu-primary/30" title="Copier le message">
+    {copiedMessageId === event.id ? (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-green-400">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    ) : (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="group-hover:drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]">
+        <rect x="9" y="9" width="13" height="13" rx="1" ry="1"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+    )}
+    <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl">
+      {copiedMessageId === event.id ? 'Copié !' : 'Copier'}
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+    </div>
+  </button>
+</div>
                     
                   </div>
                 </div>
@@ -1733,6 +1817,32 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
           ? 'Remonter au dernier échange' 
           : 'Descendre au dernier échange'}
       </div>
+    </button>
+  </div>
+)}
+
+{/* Bouton Export flottant (quand messages sélectionnés) */}
+{selectedMessageIds.size > 0 && (
+  <div className="absolute -top-6 left-7 pointer-events-none flex items-center gap-2">
+    {/* Bouton Clear - NOUVEAU */}
+    <button
+      onClick={() => setShowClearSelectionModal(true)}
+      className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-orange-500/90 to-red-500/90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 animate-in fade-in-0 slide-in-from-left-2 group"
+      title="Clear selection"
+    >
+      <span className="text-lg font-bold">×</span>
+      <div className="absolute -top-8 right-0 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700">
+        Clear selection
+      </div>
+    </button>
+    
+    {/* Bouton Export (existant) */}
+    <button
+      onClick={() => setShowExportModal(true)}
+      className="pointer-events-auto flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 animate-in fade-in-0 slide-in-from-left-2"
+    >
+      <span className="text-lg">📤</span>
+      <span className="font-semibold">Export ({selectedMessageIds.size})</span>
     </button>
   </div>
 )}
@@ -1816,9 +1926,58 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
 </div> {/* Fin absolute bottom-20 */}
         {/* Modal Export - EN DEHORS du flux */}
         <ExportModal 
-          isOpen={showExportModal} 
-          onClose={() => setShowExportModal(false)} 
-        />
+  isOpen={showExportModal} 
+  onClose={() => {
+    setShowExportModal(false)
+    setTargetThreadIdForExport(null) // ← Reset
+  }}
+  initialSelectedIds={Array.from(selectedMessageIds)}
+  preselectThreadId={targetThreadIdForExport || undefined}  // ← CHANGER ICI
+  // autoExpandTarget={targetThreadIdForExport ? true : false}  // ← SUPPRIMER (pas dans l'interface)
+/>
+
+{/* Clear Selection Modal */}
+{showClearSelectionModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+    <div className="bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl border border-gray-600 transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-center">
+          <span className="text-xl font-bold">×</span>
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-white">Clear selection?</h3>
+          <p className="text-gray-400 text-sm">
+            Remove all checkboxes from the chat
+          </p>
+        </div>
+      </div>
+      
+      <p className="text-gray-300 mb-6 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+        You have selected <span className="font-bold text-white">{selectedMessageIds.size}</span> message{selectedMessageIds.size > 1 ? 's' : ''}. 
+        This will clear all checkboxes and hide the export button.
+      </p>
+      
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setShowClearSelectionModal(false)}
+          className="px-5 py-2.5 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => {
+            setSelectedMessageIds(new Set())
+            setShowClearSelectionModal(false)
+          }}
+          className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 transition font-medium flex items-center gap-2"
+        >
+          <span>Clear</span>
+          <span className="text-sm opacity-90">({selectedMessageIds.size})</span>
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 {/* Rename Modal */}
 <RenameModal
