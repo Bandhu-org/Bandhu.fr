@@ -28,6 +28,7 @@ import { SettingsIcon } from '@/app/components/icons/SettingsIcon'
 import { LogoutIcon } from '@/app/components/icons/LogoutIcon'
 import { SendIcon } from '@/app/components/icons/SendIcon'
 import Image from 'next/image'
+import { ExportIcon } from '@/app/components/icons/ExportIcon'
 
 interface Event {
   id: string
@@ -870,7 +871,9 @@ const renderThreadCard = (thread: Thread) => {
       }}
       className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
     >
-      <span className="text-gray-400 group-hover:text-gray-200">📤</span>
+      <span className="text-gray-400 group-hover:text-gray-200">
+  <ExportIcon size={14} className="group-hover:scale-110 transition-transform" />
+</span>
       <span>Exporter la conversation</span>
     </button>
 
@@ -994,13 +997,17 @@ const renderThreadCard = (thread: Thread) => {
 
     {/* BOUTON NOUVELLE CONVERSATION */}
     <div className="flex-shrink-0 mb-5">
-      <button
-        onClick={handleNewConversation}
-        className="w-full px-4 py-2.5 bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 hover:scale-105 text-bandhu-primary rounded-lg text-sm font-medium transition-transform"
-      >
-        ➕ Nouvelle conversation
-      </button>
-    </div>
+  <button
+    onClick={handleNewConversation}
+    className="w-full px-4 py-2.5 bg-gradient-to-br from-gray-900/90 to-blue-800/90 border border-bandhu-secondary/30 text-bandhu-primary hover:text-white hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg group"
+  >
+    <span className="flex items-center justify-center gap-2">
+      <span className="group-hover:scale-110 transition-transform">➕</span>
+      <span>Nouvelle conversation</span>
+    </span>
+  </button>
+</div>
+    
 
     {/* ========== THREADS SCROLLABLES ========== */}
     <div className="flex-1 min-h-0 flex flex-col threads-scroll-container">
@@ -1215,16 +1222,17 @@ const renderThreadCard = (thread: Thread) => {
   </div>  {/* ← Fermeture w-80 */}
 </div>  {/* ← Fermeture wrapper sidebar */}
 
-{/* ========== BOUTON TOGGLE ========== */}
 <button
   onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-  className="absolute top-4 z-50 p-2 rounded-full bg-gray-800/80 backdrop-blur-sm border border-gray-700 text-gray-300 hover:text-white hover:bg-gray-700/80 transition-all duration-300 hover:scale-110"
+  className="absolute top-4 z-50 p-2 rounded-full bg-gradient-to-br from-gray-900/90 via-blue-800/90 to-blue-800/90 border border-gray-700 text-bandhu-primary hover:text-white hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary transition-all duration-300 hover:scale-110"
   style={{ 
     left: isSidebarCollapsed ? '1rem' : '17rem' 
   }}
   title={isSidebarCollapsed ? "Ouvrir la sidebar" : "Réduire la sidebar"}
 >
-  {isSidebarCollapsed ? '→' : '←'}
+  <span className="hover:scale-110 transition-transform">
+    {isSidebarCollapsed ? '→' : '←'}
+  </span>
 </button>
 
 
@@ -1821,32 +1829,37 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
   </div>
 )}
 
-{/* Bouton Export flottant (quand messages sélectionnés) */}
 {selectedMessageIds.size > 0 && (
-  <div className="absolute -top-6 left-7 pointer-events-none flex items-center gap-2">
-    {/* Bouton Clear - NOUVEAU */}
+  <div className="absolute -top-5 left-0 pointer-events-none flex flex-col items-center gap-1">
+    {/* Export - AU-DESSUS, CENTRÉ */}
+    <button
+      onClick={() => setShowExportModal(true)}
+      className="pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-br from-gray-900/90 via-blue-800/90 to-blue-800/90 hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary text-white shadow-lg transition-all hover:scale-105 group"
+    >
+      <span className="text-xs font-medium">
+        Export ({selectedMessageIds.size})
+      </span>
+      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700">
+        Export selected messages
+      </div>
+    </button>
+
+    {/* Clear - EN DESSOUS, CENTRÉ */}
     <button
       onClick={() => setShowClearSelectionModal(true)}
-      className="pointer-events-auto flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-orange-500/90 to-red-500/90 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 animate-in fade-in-0 slide-in-from-left-2 group"
+      className="pointer-events-auto flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-gray-900/90 via-blue-800/90 to-blue-800/90 hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary text-white shadow-lg transition-all hover:scale-110 group"
       title="Clear selection"
     >
-      <span className="text-lg font-bold">×</span>
-      <div className="absolute -top-8 right-0 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700">
+      <span className="text-base text-bandhu-primary group-hover:text-white transition-colors">
+        ×
+      </span>
+      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700">
         Clear selection
       </div>
     </button>
-    
-    {/* Bouton Export (existant) */}
-    <button
-      onClick={() => setShowExportModal(true)}
-      className="pointer-events-auto flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-bandhu-primary to-bandhu-secondary text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 animate-in fade-in-0 slide-in-from-left-2"
-    >
-      <span className="text-lg">📤</span>
-      <span className="font-semibold">Export ({selectedMessageIds.size})</span>
-    </button>
   </div>
 )}
-    
+
     {/* Container capsule (forme de capsule) */}
     <div className="relative w-full max-w-2xl bg-gradient-to-br from-blue-700 to-gray-900/70 backdrop-blur-xl p-4 rounded-[40px] border border-bandhu-secondary/80 shadow-2xl shadow-bandhu-primary/15">
       
