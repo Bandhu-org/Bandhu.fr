@@ -24,6 +24,8 @@ interface Thread {
 interface ExportModalProps {
   isOpen: boolean
   onClose: () => void
+  initialSelectedIds?: string[]
+  preselectThreadId?: string  // ← NOUVELLE prop : thread à pré-sélectionner
 }
 
 // Configuration des limites par format
@@ -33,7 +35,12 @@ const FORMAT_LIMITS = {
   docx: 100  // Limite stricte pour DOCX
 }
 
-export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
+export default function ExportModal({ 
+  isOpen, 
+  onClose, 
+  initialSelectedIds = [],
+  preselectThreadId  // ← NOUVEAU NOM
+}: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
   const [isLoading, setIsLoading] = useState(false)
@@ -55,44 +62,125 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
   const exceededLimit = allSelectedEvents.length > currentLimit
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
 
-  // Charger les données au montage
-  useEffect(() => {
-    if (isOpen) {
-      loadExportData()
-    }
-  }, [isOpen])
+  // Déclarer loadExportData AVANT le useEffect qui l'utilise
+const loadExportData = useCallback(async () => {
+  setIsLoading(true)
+  try {
+    const response = await fetch('/api/export/selection')
+    const data = await response.json()
+    if (data.success) {
+      // Appliquer la sélection initiale si fournie
+      // Appliquer la sélection initiale si fournie
+const threadsWithSelection = data.data.map((thread: Thread) => ({
+  ...thread,
+  events: thread.events.map(event => ({
+    ...event,
+    // LOGIQUE REVISÉE :
+    // 1. Si preselectThreadId existe → seulement CE thread est sélectionné
+    // 2. Sinon, utiliser initialSelectedIds (checkboxes du chat)
+    // 3. Sinon, false pour tout le monde
+    selected: preselectThreadId
+      ? thread.threadId === preselectThreadId  // true seulement pour le thread cible
+      : initialSelectedIds.length > 0 
+        ? initialSelectedIds.includes(event.id) // respecter les checkboxes existantes
+        : false                                 // par défaut : false pour tous
+  }))
+}))
+      setThreads(threadsWithSelection)
 
-  const loadExportData = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/export/selection')
-      const data = await response.json()
-      if (data.success) {
-        setThreads(data.data)
-      }
-    } catch (error) {
-      console.error('Erreur chargement données:', error)
-    } finally {
-      setIsLoading(false)
+// Auto-expand les threads avec sélections + thread présélectionné
+const threadsToExpand = new Set<string>()
+
+// 1. Ajouter tous les threads qui ont au moins un message sélectionné
+threadsWithSelection.forEach((thread: Thread) => {
+  if (thread.events.some(event => event.selected)) {
+    threadsToExpand.add(thread.threadId)
+  }
+})
+
+// 2. Ajouter le thread présélectionné (si fourni)
+if (preselectThreadId) {
+  threadsToExpand.add(preselectThreadId)
+}
+
+setExpandedThreads(threadsToExpand)
+    }
+  } catch (error) {
+    console.error('Erreur chargement données:', error)
+  } finally {
+    setIsLoading(false)
+  }
+}, [initialSelectedIds, preselectThreadId]) // ← N'OUBLIE PAS
+
+// Charger les données au montage (APRÈS la déclaration)
+useEffect(() => {
+  if (isOpen) {
+    loadExportData()
+  }
+}, [isOpen, loadExportData])
+
+useEffect(() => {
+  if (isOpen) {
+    // Si pas de thread présélectionné, on reset l'expansion
+    if (!preselectThreadId) {
+      setExpandedThreads(new Set())
     }
   }
+}, [isOpen, preselectThreadId])
 
-  // Fonction utilitaire partagée pour générer le contenu
-  const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
-    const response = await fetch('/api/export/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        format: selectedFormat,
-        selectedEvents: eventIds,
-        options: { 
-          includeTimestamps: true,
-          preview: isPreview
+// Scroll auto selon le contexte
+useEffect(() => {
+  if (threads.length === 0) return
+  
+  setTimeout(() => {
+    if (preselectThreadId) {
+      // CAS 1 : Menu thread → scroll vers le THREAD
+      const threadElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
+      if (threadElement) {
+        threadElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        })
+      }
+    } else {
+      // CAS 2 : Checkboxes chat → scroll vers premier MESSAGE sélectionné
+      let firstSelectedEventId: string | null = null
+      
+      for (const thread of threads) {
+        const selectedEvent = thread.events.find((event: Event) => event.selected)
+        if (selectedEvent) {
+          firstSelectedEventId = selectedEvent.id
+          break
         }
-      })
+      }
+      
+      if (firstSelectedEventId) {
+        const element = document.querySelector(`[data-event-id="${firstSelectedEventId}"]`)
+        element?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        })
+      }
+    }
+  }, 100) // Délai pour laisser le DOM se mettre à jour
+}, [threads, preselectThreadId])
+
+// Fonction utilitaire partagée pour générer le contenu
+const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
+  const response = await fetch('/api/export/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      format: selectedFormat,
+      selectedEvents: eventIds,
+      options: { 
+        includeTimestamps: true,
+        preview: isPreview
+      }
     })
-    return await response.json()
-  }, [selectedFormat])
+  })
+  return await response.json()
+}, [selectedFormat])
 
   // Basculer la sélection d'un event
   const toggleEventSelection = (threadId: string, eventId: string) => {
@@ -366,7 +454,11 @@ const toggleExpandAll = () => {
             ) : (
               <div className="space-y-6">
                 {threads.map((thread, threadIndex) => (
-                  <div key={thread.threadId} className="bg-gray-700/30 rounded-lg border border-gray-600/50 overflow-hidden">
+                  <div 
+  key={thread.threadId} 
+  className="bg-gray-700/30 rounded-lg border border-gray-600/50 overflow-hidden"
+  data-thread-id={thread.threadId}  // ← IMPORTANT
+>
   {/* En-tête de conversation (toujours visible) */}
   <div 
     className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-600/30 transition-colors"
@@ -422,6 +514,7 @@ const toggleExpandAll = () => {
         {thread.events.map((event, eventIndex) => (
           <label
             key={event.id}
+            data-event-id={event.id}
             className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
               event.selected 
                 ? 'bg-purple-500/20 border border-purple-500/30' 
