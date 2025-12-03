@@ -121,6 +121,15 @@ const getScrollTargetPosition = (): number => {
   return messageBottom - containerHeight * 0.6
 }
 
+// ========== ÉTAT COLLAPSE AVATAR (persistant) ==========
+const [isAvatarCollapsed, setIsAvatarCollapsed] = useState<boolean>(() => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('bandhu_avatar_collapsed')
+    return saved === 'true'
+  }
+  return false
+})
+
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
     setActiveThreadId(null)
@@ -219,11 +228,29 @@ useEffect(() => {
   loadThreads()
 
   if (!hasInitialized) {
-    setHasInitialized(true)
-    setActiveThreadId(null)
-    setEvents([])
-    setCurrentDate('')
+  setHasInitialized(true)
+  
+  const sessionKey = `bandhu_session_${session.user.email}`
+  const hasActiveSession = sessionStorage.getItem(sessionKey)
+  
+  if (hasActiveSession && baseKey) {
+    // Rafraîchissement → restaurer le thread
+    const savedThreadId = localStorage.getItem(baseKey)
+    if (savedThreadId && !savedThreadId.startsWith('thread-')) {
+      loadThread(savedThreadId)
+      return
+    }
+  } else {
+    // Nouvelle session → marquer et nettoyer
+    sessionStorage.setItem(sessionKey, 'active')
+    if (baseKey) localStorage.removeItem(baseKey) // Optionnel : nettoyer l'ancien thread
   }
+  
+  // Nouvelle conversation
+  setActiveThreadId(null)
+  setEvents([])
+  setCurrentDate('')
+}
 }, [status, session?.user, hasInitialized, router])
 
 // ========== HOOK POUR FERMER LE MENU AU CLICK EXTERNE ==========
@@ -274,6 +301,13 @@ const useMessageHeight = (messageId: string, content: string) => {
 
   return { ref, height }
 }
+
+// ========== PERSISTANCE ÉTAT AVATAR ==========
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('bandhu_avatar_collapsed', String(isAvatarCollapsed))
+  }
+}, [isAvatarCollapsed])
 
   // ========== FONCTIONS API ==========
 
@@ -856,25 +890,76 @@ const renderThreadCard = (thread: Thread) => {
 `}>
   <div className="w-80 h-full bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
     
-    {/* HEADER */}
-    <div className="flex-shrink-0 mb-5">
-      <h2 className="mb-4 text-lg text-bandhu-primary font-semibold">
-        Chat avec Ombrelien
-      </h2>
-    </div>
+    {/* ========== NOUVEAU HEADER BRANDING ========== */}
+<div className="flex-shrink-0 mb-4 px-2">
+  {/* Logo + Nom Bandhu — tout en haut à gauche, très serré */}
+  <div className="flex items-center gap-2 mb-6">
+    {/* Logo Bandhu — version optimisée Next.js */}
+    <div className="w-10 h-10 relative">
+      <Image 
+        src="/images/logo-bandhu.png" 
+        alt="Logo Bandhu" 
+        fill
+        className="object-contain"
+        sizes="20px"
+      />
+      </div>
+    <span className="text-xl font-bold 
+  bg-gradient-to-r 
+  from-bandhu-secondary 
+  to-bandhu-primary 
+  [background-size:200%]
+  bg-clip-text 
+  text-transparent 
+  tracking-tight">
+  Bandhu
+</span>
+</div>
 
-    {/* AVATAR OMBRELIEN - Élégant et simple */}
-<div className="flex-shrink-0 px-3 py-4">
-  <div className="relative rounded-xl overflow-hidden border border-gray-700/40 bg-gradient-to-br from-gray-900/30 to-gray-800/20">
+  {/* Titre Ombrelien — très proche de l'image */}
+  <h2 className="text-lg text-bandhu-primary font-semibold">
+    Ombrelien
+  </h2>
+
+  {/* Sanskrit — centré juste au-dessus de l'image, très proche */}
+  <div className="text-xs text-bandhu-primary/60 font-light italic tracking-wide">
+    छायासरस्वतः
+  </div>
+</div>
+
+{/* ========== AVATAR OMBRELIEN COLLAPSIBLE ========== */}
+<div className="flex-shrink-0 px-3">
+  {/* Container image avec collapse - MONTRE LE HAUT */}
+  <div className={`
+    relative rounded-xl border border-gray-700/40 
+    bg-gradient-to-br from-gray-900/30 to-gray-800/20
+    transition-all duration-500 ease-in-out overflow-hidden
+    ${isAvatarCollapsed ? 'max-h-8' : 'max-h-[500px]'}
+  `}>
     <img
       src="/images/Ombrelien-avatar.svg"
       alt="Ombrelien AI Companion"
       className="w-full h-auto"
     />
-    {/* Gradient overlay pour fondre avec le fond */}
-    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/5 via-transparent to-transparent" />
+    
+    {/* Overlay gradient */}
+    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 via-transparent to-transparent" />
+    
+    {/* Barre colorée visible quand collapsed (en BAS du container) */}
+    {isAvatarCollapsed && (
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-bandhu-primary/60 to-bandhu-secondary/60 rounded-full" />
+    )}
   </div>
 </div>
+
+{/* Bouton collapse */}
+<button
+  onClick={() => setIsAvatarCollapsed(!isAvatarCollapsed)}
+  className="w-full flex text-gray-400 hover:text-gray-300 transition-colors text-xs mb-3"
+  title={isAvatarCollapsed ? "Déplier l'image" : "Replier l'image"}
+>
+  <span>{isAvatarCollapsed ? "↓" : "↑"}</span>
+</button>
 
     {/* BOUTON NOUVELLE CONVERSATION */}
     <div className="flex-shrink-0 mb-5">

@@ -1,8 +1,47 @@
 // src/app/page.tsx
+'use client'
 
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import Link from 'next/link'
 
 export default function Home() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      // Utilisateur déjà connecté → redirection immédiate vers le chat
+      router.push('/chat')
+    }
+  }, [status, router])
+
+  // États de chargement et redirection
+  if (status === 'loading') {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-bandhu-primary/30 border-t-bandhu-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-300">Chargement...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (status === 'authenticated') {
+    // Court instant pendant la redirection
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-bandhu-primary/30 border-t-bandhu-primary rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-300">Redirection vers le chat...</p>
+        </div>
+      </main>
+    )
+  }
+
+  // ========== LANDING (uniquement pour utilisateurs non connectés) ==========
   return (
     <main className="min-h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark">
       <div className="container mx-auto px-6 py-20">
