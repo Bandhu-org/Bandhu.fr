@@ -1238,7 +1238,11 @@ const renderThreadCard = (thread: Thread) => {
 
 
       {/* ========== CHAT AREA ========== */}
-      <div className="flex-1 flex flex-col relative">
+      <div className={`
+  flex-1 flex flex-col relative
+  transition-all duration-300 ease-in-out
+  ${showExportModal ? 'lg:mr-[600px]' : ''}
+`}>
         {/* Header */}
 <div className={`py-1 px-5 border-b border-gray-800 bg-gray-900/30 transition-all duration-300 ${
   isSidebarCollapsed ? 'ml-16' : ''
@@ -1937,17 +1941,6 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
     
   </div> {/* Fin max-w-lg */}
 </div> {/* Fin absolute bottom-20 */}
-        {/* Modal Export - EN DEHORS du flux */}
-        <ExportModal 
-  isOpen={showExportModal} 
-  onClose={() => {
-    setShowExportModal(false)
-    setTargetThreadIdForExport(null) // ← Reset
-  }}
-  initialSelectedIds={Array.from(selectedMessageIds)}
-  preselectThreadId={targetThreadIdForExport || undefined}  // ← CHANGER ICI
-  // autoExpandTarget={targetThreadIdForExport ? true : false}  // ← SUPPRIMER (pas dans l'interface)
-/>
 
 {/* Clear Selection Modal */}
 {showClearSelectionModal && (
@@ -2019,6 +2012,17 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
 />
 
       </div>
+      {/* Modal Export - EN DEHORS du flux */}
+        <ExportModal 
+  isOpen={showExportModal} 
+  onClose={() => {
+    setShowExportModal(false)
+    setTargetThreadIdForExport(null) // ← Reset
+  }}
+  initialSelectedIds={Array.from(selectedMessageIds)}
+  preselectThreadId={targetThreadIdForExport || undefined}  // ← CHANGER ICI
+  // autoExpandTarget={targetThreadIdForExport ? true : false}  // ← SUPPRIMER (pas dans l'interface)
+/>
       </div>
   )
 }

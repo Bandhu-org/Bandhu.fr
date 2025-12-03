@@ -25,35 +25,32 @@ interface ExportModalProps {
   isOpen: boolean
   onClose: () => void
   initialSelectedIds?: string[]
-  preselectThreadId?: string  // ← NOUVELLE prop : thread à pré-sélectionner
+  preselectThreadId?: string
 }
 
-// Configuration des limites par format
 const FORMAT_LIMITS = {
   markdown: 500,
   pdf: 200,
-  docx: 100  // Limite stricte pour DOCX
+  docx: 100
 }
 
 export default function ExportModal({ 
   isOpen, 
   onClose, 
   initialSelectedIds = [],
-  preselectThreadId  // ← NOUVEAU NOM
+  preselectThreadId
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   
-  // États unifiés pour la prévisualisation
   const [showPreview, setShowPreview] = useState(false)
   const [previewData, setPreviewData] = useState<{
     content: string
     metrics: any
   } | null>(null)
 
-  // Calcul dynamique de la limite actuelle
   const currentLimit = FORMAT_LIMITS[selectedFormat]
   const allSelectedEvents = threads.flatMap(thread =>
     thread.events.filter(event => event.selected).map(event => event.id)
@@ -62,145 +59,122 @@ export default function ExportModal({
   const exceededLimit = allSelectedEvents.length > currentLimit
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
 
-  // Déclarer loadExportData AVANT le useEffect qui l'utilise
-const loadExportData = useCallback(async () => {
-  setIsLoading(true)
-  try {
-    const response = await fetch('/api/export/selection')
-    const data = await response.json()
-    if (data.success) {
-      // Appliquer la sélection initiale si fournie
-      // Appliquer la sélection initiale si fournie
-const threadsWithSelection = data.data.map((thread: Thread) => ({
-  ...thread,
-  events: thread.events.map(event => ({
-    ...event,
-    // LOGIQUE REVISÉE :
-    // 1. Si preselectThreadId existe → seulement CE thread est sélectionné
-    // 2. Sinon, utiliser initialSelectedIds (checkboxes du chat)
-    // 3. Sinon, false pour tout le monde
-    selected: preselectThreadId
-      ? thread.threadId === preselectThreadId  // true seulement pour le thread cible
-      : initialSelectedIds.length > 0 
-        ? initialSelectedIds.includes(event.id) // respecter les checkboxes existantes
-        : false                                 // par défaut : false pour tous
-  }))
-}))
-      setThreads(threadsWithSelection)
+  const loadExportData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/export/selection')
+      const data = await response.json()
+      if (data.success) {
+        const threadsWithSelection = data.data.map((thread: Thread) => ({
+          ...thread,
+          events: thread.events.map(event => ({
+            ...event,
+            selected: preselectThreadId
+              ? thread.threadId === preselectThreadId
+              : initialSelectedIds.length > 0 
+                ? initialSelectedIds.includes(event.id)
+                : false
+          }))
+        }))
+        setThreads(threadsWithSelection)
 
-// Auto-expand les threads avec sélections + thread présélectionné
-const threadsToExpand = new Set<string>()
-
-// 1. Ajouter tous les threads qui ont au moins un message sélectionné
-threadsWithSelection.forEach((thread: Thread) => {
-  if (thread.events.some(event => event.selected)) {
-    threadsToExpand.add(thread.threadId)
-  }
-})
-
-// 2. Ajouter le thread présélectionné (si fourni)
-if (preselectThreadId) {
-  threadsToExpand.add(preselectThreadId)
-}
-
-setExpandedThreads(threadsToExpand)
-    }
-  } catch (error) {
-    console.error('Erreur chargement données:', error)
-  } finally {
-    setIsLoading(false)
-  }
-}, [initialSelectedIds, preselectThreadId]) // ← N'OUBLIE PAS
-
-// Charger les données au montage (APRÈS la déclaration)
-useEffect(() => {
-  if (isOpen) {
-    loadExportData()
-  }
-}, [isOpen, loadExportData])
-
-useEffect(() => {
-  if (isOpen) {
-    // Si pas de thread présélectionné, on reset l'expansion
-    if (!preselectThreadId) {
-      setExpandedThreads(new Set())
-    }
-  }
-}, [isOpen, preselectThreadId])
-
-// Scroll auto selon le contexte
-useEffect(() => {
-  if (threads.length === 0) return
-  
-  setTimeout(() => {
-    if (preselectThreadId) {
-      // CAS 1 : Menu thread → scroll vers le THREAD
-      const threadElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
-      if (threadElement) {
-        threadElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
+        const threadsToExpand = new Set<string>()
+        threadsWithSelection.forEach((thread: Thread) => {
+          if (thread.events.some(event => event.selected)) {
+            threadsToExpand.add(thread.threadId)
+          }
         })
+        if (preselectThreadId) {
+          threadsToExpand.add(preselectThreadId)
+        }
+        setExpandedThreads(threadsToExpand)
       }
-    } else {
-      // CAS 2 : Checkboxes chat → scroll vers premier MESSAGE sélectionné
-      let firstSelectedEventId: string | null = null
-      
-      for (const thread of threads) {
-        const selectedEvent = thread.events.find((event: Event) => event.selected)
-        if (selectedEvent) {
-          firstSelectedEventId = selectedEvent.id
-          break
+    } catch (error) {
+      console.error('Erreur chargement données:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [initialSelectedIds, preselectThreadId])
+
+  useEffect(() => {
+    if (isOpen) {
+      loadExportData()
+    }
+  }, [isOpen, loadExportData])
+
+  useEffect(() => {
+    if (isOpen) {
+      if (!preselectThreadId) {
+        setExpandedThreads(new Set())
+      }
+    }
+  }, [isOpen, preselectThreadId])
+
+  useEffect(() => {
+    if (threads.length === 0) return
+    
+    setTimeout(() => {
+      if (preselectThreadId) {
+        const threadElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
+        if (threadElement) {
+          threadElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          })
+        }
+      } else {
+        let firstSelectedEventId: string | null = null
+        for (const thread of threads) {
+          const selectedEvent = thread.events.find((event: Event) => event.selected)
+          if (selectedEvent) {
+            firstSelectedEventId = selectedEvent.id
+            break
+          }
+        }
+        if (firstSelectedEventId) {
+          const element = document.querySelector(`[data-event-id="${firstSelectedEventId}"]`)
+          element?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          })
         }
       }
-      
-      if (firstSelectedEventId) {
-        const element = document.querySelector(`[data-event-id="${firstSelectedEventId}"]`)
-        element?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        })
-      }
-    }
-  }, 100) // Délai pour laisser le DOM se mettre à jour
-}, [threads, preselectThreadId])
+    }, 100)
+  }, [threads, preselectThreadId])
 
-// Fonction utilitaire partagée pour générer le contenu
-const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
-  const response = await fetch('/api/export/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      format: selectedFormat,
-      selectedEvents: eventIds,
-      options: { 
-        includeTimestamps: true,
-        preview: isPreview
-      }
+  const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
+    const response = await fetch('/api/export/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        format: selectedFormat,
+        selectedEvents: eventIds,
+        options: { 
+          includeTimestamps: true,
+          preview: isPreview
+        }
+      })
     })
-  })
-  return await response.json()
-}, [selectedFormat])
+    return await response.json()
+  }, [selectedFormat])
 
-  // Basculer la sélection d'un event
   const toggleEventSelection = (threadId: string, eventId: string) => {
-  setThreads(prev => 
-    prev.map(thread => 
-      thread.threadId === threadId
-        ? {
-            ...thread,
-            events: thread.events.map(event =>
-              event.id === eventId
-                ? { ...event, selected: !event.selected }
-                : event
-            )
-          }
-        : thread
+    setThreads(prev => 
+      prev.map(thread => 
+        thread.threadId === threadId
+          ? {
+              ...thread,
+              events: thread.events.map(event =>
+                event.id === eventId
+                  ? { ...event, selected: !event.selected }
+                  : event
+              )
+            }
+          : thread
+      )
     )
-  )
-}
+  }
 
-  // Sélectionner/désélectionner tout
   const toggleSelectAll = (selected: boolean) => {
     setThreads(prev => 
       prev.map(thread => ({
@@ -210,89 +184,63 @@ const generateExportContent = useCallback(async (eventIds: string[], isPreview =
     )
   }
 
-  // Expand/collapse une conversation
-const toggleThreadExpansion = (threadId: string) => {
-  setExpandedThreads(prev => {
-    const newSet = new Set(prev)
-    if (newSet.has(threadId)) {
-      newSet.delete(threadId)
-    } else {
-      newSet.add(threadId)
-    }
-    return newSet
-  })
-}
-
-// Expand/collapse toutes les conversations
-const toggleExpandAll = () => {
-  if (expandedThreads.size === threads.length) {
-    // Tout est expand → tout collapse
-    setExpandedThreads(new Set())
-  } else {
-    // Tout expand
-    setExpandedThreads(new Set(threads.map(t => t.threadId)))
-  }
-}
-
-  // Préparer et afficher la prévisualisation
-  const handlePreview = async () => {
-  console.log('🔄 handlePreview appelé')
-  console.log('📊 showPreview avant:', showPreview)
-
-  const allSelectedEvents = threads.flatMap(thread =>
-    thread.events.filter(event => event.selected).map(event => event.id)
-  )
-  const selectedEvents = allSelectedEvents.slice(0, currentLimit)
-  
-  if (selectedEvents.length === 0) {
-    alert('Sélectionne au moins un message à exporter !')
-    return
-  }
-
-  setIsLoading(true)
-  try {
-    const result = await generateExportContent(selectedEvents, true)
-    
-    if (!result.success) {
-      throw new Error(result.error)
-    }
-
-    const metrics = calculateMetrics(result.content, selectedFormat, selectedEvents.length)
-    
-    // 🔥 VERSION BLINDÉE
-    console.log('🚀 SET preview data + showPreview true')
-    setPreviewData({
-      content: result.content,
-      metrics
+  const toggleThreadExpansion = (threadId: string) => {
+    setExpandedThreads(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(threadId)) {
+        newSet.delete(threadId)
+      } else {
+        newSet.add(threadId)
+      }
+      return newSet
     })
-    
-    // Double assurance avec timeout
-    setShowPreview(true)
-    setTimeout(() => {
-      console.log('🛡️  Double check showPreview:', showPreview)
-      setShowPreview(true) // Force une deuxième fois
-    }, 100)
-    
-  } catch (error) {
-    console.error('Erreur génération preview:', error)
-    alert('❌ Erreur lors de la génération de l\'aperçu')
-    setShowPreview(false)
-  } finally {
-    setIsLoading(false)
   }
-}
 
-  // Exporter les données sélectionnées
+  const toggleExpandAll = () => {
+    if (expandedThreads.size === threads.length) {
+      setExpandedThreads(new Set())
+    } else {
+      setExpandedThreads(new Set(threads.map(t => t.threadId)))
+    }
+  }
+
+  const handlePreview = async () => {
+    const allSelectedEvents = threads.flatMap(thread =>
+      thread.events.filter(event => event.selected).map(event => event.id)
+    )
+    const selectedEvents = allSelectedEvents.slice(0, currentLimit)
+    
+    if (selectedEvents.length === 0) {
+      alert('Sélectionne au moins un message à exporter !')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const result = await generateExportContent(selectedEvents, true)
+      if (!result.success) throw new Error(result.error)
+
+      const metrics = calculateMetrics(result.content, selectedFormat, selectedEvents.length)
+      setPreviewData({
+        content: result.content,
+        metrics
+      })
+      setShowPreview(true)
+    } catch (error) {
+      console.error('Erreur génération preview:', error)
+      alert('❌ Erreur lors de la génération de l\'aperçu')
+      setShowPreview(false)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleExportConfirm = async (): Promise<void> => {
     setIsExporting(true)
     try {
       const result = await generateExportContent(limitedEvents, false)
+      if (!result.success) throw new Error(result.error)
 
-      if (!result.success) {
-        throw new Error(result.error)
-      }
-
-      // Télécharger le fichier
       const downloadResponse = await fetch('/api/export/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,7 +280,6 @@ const toggleExpandAll = () => {
     }
   }
 
-  // Calculer les stats
   const totalEvents = threads.reduce((sum, thread) => sum + thread.events.length, 0)
   const selectedEventsCount = threads.reduce((sum, thread) => 
     sum + thread.events.filter(event => event.selected).length, 0
@@ -343,21 +290,36 @@ const toggleExpandAll = () => {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-        <div className="bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-600 transform transition-all duration-300 scale-95 animate-in fade-in-0 zoom-in-95">
+      {/* SIDEBAR CONTAINER */}
+      <div className="
+  fixed inset-y-0 right-0 
+  w-full sm:w-[400px] md:w-[500px]
+  max-w-full z-50 
+  transform transition-transform duration-300 ease-in-out
+  lg:absolute lg:right-0 lg:transform-none lg:w-[600px] lg:h-full
+"
+  style={{ 
+    transform: isOpen ? 'translateX(0)' : 'translateX(100%)' 
+  }}
+>
+        <div className="h-full bg-gray-900/50 backdrop-blur-sm border-l border-gray-800 flex flex-col">
           
-          {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6">
+          {/* Header avec style Bandhu */}
+          <div className="bg-gradient-to-r from-gray-900/90 to-blue-800/90 p-6 border-b border-gray-700/50">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold text-white">Exporter mes conversations</h2>
-                <p className="text-white/80 mt-2">
+                <h2 className="text-2xl font-bold text-white">
+                  <span className="bg-gradient-to-r from-bandhu-secondary to-bandhu-primary bg-clip-text text-transparent">
+                    Exporter mes conversations
+                  </span>
+                </h2>
+                <p className="text-gray-300/80 mt-2">
                   Sélectionne les messages à exporter et choisis ton format
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="text-white/80 hover:text-white text-2xl transition-colors"
+                className="text-gray-400 hover:text-white text-2xl transition-colors hover:scale-110"
                 aria-label="Fermer"
               >
                 ✕
@@ -365,16 +327,16 @@ const toggleExpandAll = () => {
             </div>
           </div>
 
-          {/* Barre de contrôle sticky */}
-          <div className="bg-gray-700/50 border-b border-gray-600 p-4 sticky top-0 z-10">
+          {/* Barre de contrôle sticky - style Bandhu */}
+          <div className="bg-gray-800/30 border-b border-gray-700/50 p-4 sticky top-0 z-10">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4 flex-wrap">
-                <label className="flex items-center gap-2 text-white cursor-pointer">
+                <label className="flex items-center gap-2 text-gray-200 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={(e) => toggleSelectAll(e.target.checked)}
-                    className="w-4 h-4 rounded bg-gray-600 border-gray-500 focus:ring-2 focus:ring-purple-500"
+                    className="w-4 h-4 rounded bg-gray-700 border-gray-600 focus:ring-2 focus:ring-bandhu-primary"
                   />
                   <span className="text-sm font-medium">
                     {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
@@ -382,34 +344,32 @@ const toggleExpandAll = () => {
                 </label>
 
                 <button
-  onClick={toggleExpandAll}
-  className="text-sm font-medium text-gray-300 hover:text-white transition-colors flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-600/50"
->
-  {expandedThreads.size === threads.length ? '↥ Tout replier' : '↧ Tout déplier'}
-</button>
+                  onClick={toggleExpandAll}
+                  className="text-sm font-medium text-gray-300 hover:text-white transition-colors flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-700/50"
+                >
+                  {expandedThreads.size === threads.length ? '↥ Tout replier' : '↧ Tout déplier'}
+                </button>
                 
                 <span className="text-gray-300 text-sm">
                   {selectedEventsCount} / {totalEvents} messages sélectionnés
                 </span>
 
-                {/* Indicateur de limite */}
                 {exceededLimit && (
-                  <span className="text-orange-400 text-sm flex items-center gap-1">
+                  <span className="text-orange-300 text-sm flex items-center gap-1">
                     ⚠️ Limite {currentLimit} messages ({allSelectedEvents.length - currentLimit} ignorés)
                   </span>
                 )}
               </div>
 
               <div className="flex items-center gap-4 flex-wrap">
-                {/* Indicateur de limite par format */}
-                <div className="text-xs text-gray-400 bg-gray-600/50 px-2 py-1 rounded">
+                <div className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded border border-gray-600">
                   Limite : {currentLimit} messages
                 </div>
 
                 <select
                   value={selectedFormat}
                   onChange={(e) => setSelectedFormat(e.target.value as any)}
-                  className="bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-gray-200 text-sm focus:ring-2 focus:ring-bandhu-primary focus:border-transparent"
                 >
                   <option value="markdown">Markdown (.md)</option>
                   <option value="pdf">PDF</option>
@@ -419,7 +379,7 @@ const toggleExpandAll = () => {
                 <button
                   onClick={handlePreview}
                   disabled={isLoading || limitedEvents.length === 0}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="bg-gradient-to-r from-bandhu-primary to-bandhu-secondary hover:from-blue-600 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-800 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   {isLoading ? (
                     <>
@@ -437,12 +397,12 @@ const toggleExpandAll = () => {
             </div>
           </div>
 
-          {/* Liste des conversations */}
-          <div className="flex-1 overflow-y-auto p-6">
+          {/* Liste des conversations - scrollable */}
+          <div className="flex-1 overflow-y-auto p-6 scrollbar-bandhu">
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="flex items-center gap-3 text-gray-400">
-                  <div className="w-5 h-5 border-2 border-gray-500 border-t-purple-500 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-gray-600 border-t-bandhu-primary rounded-full animate-spin" />
                   Chargement de vos conversations...
                 </div>
               </div>
@@ -455,99 +415,99 @@ const toggleExpandAll = () => {
               <div className="space-y-6">
                 {threads.map((thread, threadIndex) => (
                   <div 
-  key={thread.threadId} 
-  className="bg-gray-700/30 rounded-lg border border-gray-600/50 overflow-hidden"
-  data-thread-id={thread.threadId}  // ← IMPORTANT
->
-  {/* En-tête de conversation (toujours visible) */}
-  <div 
-    className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-600/30 transition-colors"
-    onClick={() => toggleThreadExpansion(thread.threadId)}
-  >
-    <button
-      className="text-gray-400 hover:text-white transition-transform"
-      onClick={(e) => {
-        e.stopPropagation()
-        toggleThreadExpansion(thread.threadId)
-      }}
-    >
-      {expandedThreads.has(thread.threadId) ? '▾' : '▸'}
-    </button>
-    
-    <input
-      type="checkbox"
-      checked={thread.events.every(event => event.selected)}
-      onChange={(e) => {
-        e.stopPropagation()
-        const newSelected = e.target.checked
-        setThreads(prev => {
-          const newThreads = [...prev]
-          newThreads[threadIndex].events = 
-            newThreads[threadIndex].events.map(event => ({
-              ...event,
-              selected: newSelected
-            }))
-          return newThreads
-        })
-      }}
-      className="w-4 h-4 rounded bg-gray-600 border-gray-500 focus:ring-2 focus:ring-purple-500"
-      onClick={(e) => e.stopPropagation()}
-    />
-    
-    <div className="flex-1">
-      <h3 className="font-semibold text-white">{thread.threadLabel}</h3>
-      <div className="flex items-center gap-3 mt-1">
-        <span className="text-gray-400 text-sm">
-          {thread.events.length} messages
-        </span>
-        <span className="text-gray-500 text-xs">
-          {thread.events.filter(e => e.selected).length} sélectionnés
-        </span>
-      </div>
-    </div>
-  </div>
+                    key={thread.threadId} 
+                    className="bg-gray-800/20 rounded-lg border border-gray-700/50 overflow-hidden hover:border-gray-600 transition-colors"
+                    data-thread-id={thread.threadId}
+                  >
+                    {/* En-tête de conversation */}
+                    <div 
+                      className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-700/20 transition-colors"
+                      onClick={() => toggleThreadExpansion(thread.threadId)}
+                    >
+                      <button
+                        className="text-gray-400 hover:text-white transition-transform"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleThreadExpansion(thread.threadId)
+                        }}
+                      >
+                        {expandedThreads.has(thread.threadId) ? '▾' : '▸'}
+                      </button>
+                      
+                      <input
+                        type="checkbox"
+                        checked={thread.events.every(event => event.selected)}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          const newSelected = e.target.checked
+                          setThreads(prev => {
+                            const newThreads = [...prev]
+                            newThreads[threadIndex].events = 
+                              newThreads[threadIndex].events.map(event => ({
+                                ...event,
+                                selected: newSelected
+                              }))
+                            return newThreads
+                          })
+                        }}
+                        className="w-4 h-4 rounded bg-gray-700 border-gray-600 focus:ring-2 focus:ring-bandhu-primary"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-white">{thread.threadLabel}</h3>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-gray-400 text-sm">
+                            {thread.events.length} messages
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            {thread.events.filter(e => e.selected).length} sélectionnés
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-  {/* Messages (seulement si expandé) */}
-  {expandedThreads.has(thread.threadId) && (
-    <div className="border-t border-gray-600/50 p-4 bg-gray-800/20">
-      <div className="space-y-2">
-        {thread.events.map((event, eventIndex) => (
-          <label
-            key={event.id}
-            data-event-id={event.id}
-            className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
-              event.selected 
-                ? 'bg-purple-500/20 border border-purple-500/30' 
-                : 'hover:bg-gray-600/30'
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={event.selected}
-              onChange={() => toggleEventSelection(thread.threadId, event.id)}
-              className="w-4 h-4 rounded bg-gray-600 border-gray-500 mt-1 flex-shrink-0 focus:ring-2 focus:ring-purple-500"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-sm font-medium ${
-                  event.role === 'user' ? 'text-blue-400' : 'text-purple-400'
-                }`}>
-                  {event.role === 'user' ? 'Vous' : 'Assistant'}
-                </span>
-                <span className="text-gray-500 text-xs">
-                  {new Date(event.createdAt).toLocaleDateString('fr-FR')}
-                </span>
-              </div>
-              <p className="text-gray-300 text-sm line-clamp-2 group-hover:text-white transition-colors">
-                {event.content}
-              </p>
-            </div>
-          </label>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
+                    {/* Messages (seulement si expandé) */}
+                    {expandedThreads.has(thread.threadId) && (
+                      <div className="border-t border-gray-700/50 p-4 bg-gray-900/20">
+                        <div className="space-y-2">
+                          {thread.events.map((event) => (
+                            <label
+                              key={event.id}
+                              data-event-id={event.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
+                                event.selected 
+                                  ? 'bg-bandhu-primary/20 border border-bandhu-primary/30' 
+                                  : 'hover:bg-gray-700/30'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={event.selected}
+                                onChange={() => toggleEventSelection(thread.threadId, event.id)}
+                                className="w-4 h-4 rounded bg-gray-700 border-gray-600 mt-1 flex-shrink-0 focus:ring-2 focus:ring-bandhu-primary"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-sm font-medium ${
+                                    event.role === 'user' ? 'text-blue-300' : 'text-bandhu-secondary'
+                                  }`}>
+                                    {event.role === 'user' ? 'Vous' : 'Assistant'}
+                                  </span>
+                                  <span className="text-gray-500 text-xs">
+                                    {new Date(event.createdAt).toLocaleDateString('fr-FR')}
+                                  </span>
+                                </div>
+                                <p className="text-gray-300 text-sm line-clamp-2 group-hover:text-white transition-colors">
+                                  {event.content}
+                                </p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -555,8 +515,7 @@ const toggleExpandAll = () => {
         </div>
       </div>
 
-
-      {/* Modal de prévisualisation */}
+      {/* Modal de prévisualisation (reste identique) */}
       {previewData && (
         <PreviewModal
           isOpen={showPreview}
