@@ -275,9 +275,17 @@ useEffect(() => {
   
 }, [threads, isOpen, initialSelectedIds]) // initialSelectedIds ajouté
 
-// ✅ AJOUTE LE NOUVEAU ICI
+// Flag pour tracker si c'est la première ouverture
+const [hasScrolledInitial, setHasScrolledInitial] = useState(false)
+
+// ✅ Scroll initial UNIQUEMENT à la première ouverture
 useEffect(() => {
-  if (!isOpen || threads.length === 0 || initialSelectedIds.length === 0) return
+  if (!isOpen) {
+    setHasScrolledInitial(false) // Reset quand on ferme
+    return
+  }
+  
+  if (hasScrolledInitial || threads.length === 0 || initialSelectedIds.length === 0) return
   
   // Attendre que tout soit rendu
   const timeoutId = setTimeout(() => {
@@ -288,11 +296,12 @@ useEffect(() => {
         behavior: 'smooth', 
         block: 'center' 
       })
+      setHasScrolledInitial(true) // Marquer comme scrollé
     }
-  }, 100) // Délai pour laisser l'animation + le render
+  }, 600)
   
   return () => clearTimeout(timeoutId)
-}, [isOpen, threads.length, initialSelectedIds.length]) 
+}, [isOpen, threads.length]) // ← ENLÈVE initialSelectedIds.length
 
   const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
     const response = await fetch('/api/export/generate', {
