@@ -877,22 +877,45 @@ const renderThreadCard = (thread: Thread) => {
 </button>
 
  {/* Exporter la conversation */}
-    <button
-      onClick={e => {
-        e.stopPropagation()
-        // 1. Charger les events de ce thread
-        loadThread(thread.id)
-        setTargetThreadIdForExport(thread.id)
-        setShowExportModal(true)
-        setOpenThreadMenuId(null)
-      }}
-      className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
-    >
-      <span className="text-gray-400 group-hover:text-gray-200">
-  <ExportIcon size={14} className="group-hover:scale-110 transition-transform" />
-</span>
-      <span>Exporter la conversation</span>
-    </button>
+<button
+  onClick={async (e) => {
+    e.stopPropagation()
+    setOpenThreadMenuId(null)
+    
+    // ✅ 1. Charger le thread dans le chat (affichage + scroll)
+    await loadThread(thread.id)
+    
+    // ✅ 2. Attendre que React render les messages
+    setTimeout(async () => {
+      // ✅ 3. Récupérer les events du thread
+      const response = await fetch(`/api/threads/${thread.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        
+        // ✅ 4. Extraire les IDs des messages USER et AI
+        const messageIds = data.events
+          .filter((e: Event) => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
+          .map((e: Event) => e.id)
+        
+        // ✅ 5. Cocher les messages (comme si l'utilisateur avait cliqué)
+        setSelectedMessageIds(new Set(messageIds))
+        
+        // ✅ 6. Attendre un frame pour que les checkboxes s'affichent
+        requestAnimationFrame(() => {
+          // ✅ 7. Ouvrir le modal (maintenant selectedMessageIds est rempli)
+          setShowExportModal(true)
+          setTargetThreadIdForExport(null) // ← Plus besoin de ça
+        })
+      }
+    }, 100) // Court délai pour laisser loadThread finir
+  }}
+  className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
+>
+  <span className="text-gray-400 group-hover:text-gray-200">
+    <ExportIcon size={14} className="group-hover:scale-110 transition-transform" />
+  </span>
+  <span>Exporter la conversation</span>
+</button>
 
 <button
   onClick={e => {
