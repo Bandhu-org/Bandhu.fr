@@ -882,6 +882,26 @@ const renderThreadCard = (thread: Thread) => {
     e.stopPropagation()
     setOpenThreadMenuId(null)
     
+    // ✅ SI MODAL OUVERT → juste ajouter à la sélection
+    if (showExportModal) {
+      const response = await fetch(`/api/threads/${thread.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        const messageIds = data.events
+          .filter((e: Event) => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
+          .map((e: Event) => e.id)
+        
+        // Ajouter à la sélection existante
+        setSelectedMessageIds(prev => {
+          const newSet = new Set(prev)
+          messageIds.forEach((id: string) => newSet.add(id))
+          return newSet
+        })
+      }
+      return // ← STOP ICI
+    }
+    
+    // ✅ SI MODAL FERMÉ → comportement normal
     // ✅ 1. Charger le thread dans le chat (affichage + scroll)
     await loadThread(thread.id)
     
@@ -904,10 +924,10 @@ const renderThreadCard = (thread: Thread) => {
         requestAnimationFrame(() => {
           // ✅ 7. Ouvrir le modal (maintenant selectedMessageIds est rempli)
           setShowExportModal(true)
-          setTargetThreadIdForExport(null) // ← Plus besoin de ça
+          setTargetThreadIdForExport(null)
         })
       }
-    }, 100) // Court délai pour laisser loadThread finir
+    }, 100)
   }}
   className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-gray-800 flex items-center gap-2 group"
 >
