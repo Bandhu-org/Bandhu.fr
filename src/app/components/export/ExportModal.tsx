@@ -140,7 +140,21 @@ const [hasLoadedInitial, setHasLoadedInitial] = useState(false)
 // Chargement UNIQUEMENT à la première ouverture
 useEffect(() => {
   if (isOpen && !hasLoadedInitial) {
-    loadExportData()
+    loadExportData().then(() => {
+      // ✅ SCROLL APRÈS le chargement complet
+      if (initialSelectedIds.length > 0) {
+        setTimeout(() => {
+          const firstId = initialSelectedIds[0]
+          const element = document.querySelector(`[data-event-id="${firstId}"]`)
+          if (element) {
+            element.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            })
+          }
+        }, 500) // Délai suffisant pour que tout soit rendu
+      }
+    })
     setHasLoadedInitial(true)
   }
   
@@ -260,6 +274,25 @@ useEffect(() => {
   setEventToScrollTo(changedEventId)
   
 }, [threads, isOpen, initialSelectedIds]) // initialSelectedIds ajouté
+
+// ✅ AJOUTE LE NOUVEAU ICI
+useEffect(() => {
+  if (!isOpen || threads.length === 0 || initialSelectedIds.length === 0) return
+  
+  // Attendre que tout soit rendu
+  const timeoutId = setTimeout(() => {
+    const firstId = initialSelectedIds[0]
+    const element = document.querySelector(`[data-event-id="${firstId}"]`)
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+    }
+  }, 100) // Délai pour laisser l'animation + le render
+  
+  return () => clearTimeout(timeoutId)
+}, [isOpen, threads.length, initialSelectedIds.length]) 
 
   const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
     const response = await fetch('/api/export/generate', {
