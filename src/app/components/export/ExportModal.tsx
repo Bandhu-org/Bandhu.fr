@@ -57,8 +57,6 @@ function ExportModal({
     metrics: any
   } | null>(null)
 
-  const [hasUserModified, setHasUserModified] = useState(false)
-
   const currentLimit = FORMAT_LIMITS[selectedFormat]
   const allSelectedEvents = threads.flatMap(thread =>
     thread.events.filter(event => event.selected).map(event => event.id)
@@ -66,6 +64,15 @@ function ExportModal({
   const limitedEvents = allSelectedEvents.slice(0, currentLimit)
   const exceededLimit = allSelectedEvents.length > currentLimit
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
+  const prevSelectedIdsRef = useRef<Set<string>>(new Set())
+
+
+ // Garder une référence à jour de initialSelectedIds (sans re-render)
+const initialIdsRef = useRef<string[]>(initialSelectedIds)
+
+useEffect(() => {
+  initialIdsRef.current = initialSelectedIds
+}, [initialSelectedIds])
   
 
   const loadExportData = useCallback(async () => {
@@ -135,21 +142,30 @@ useEffect(() => {
   // Reset quand le modal ferme
   if (!isOpen) {
     setHasLoadedInitial(false)
-    setHasUserModified(false) // ← AJOUTE CETTE LIGNE
   }
 }, [isOpen])
 
 // Gestion de l'expansion basée sur preselectThreadId
+// Auto-expand les threads qui ont des messages sélectionnés
 useEffect(() => {
-  if (isOpen && preselectThreadId) {
-    // Auto-expand le thread cible si preselectThreadId existe
+  if (!isOpen || threads.length === 0) return
+  
+  const threadsWithSelection = new Set<string>()
+  
+  threads.forEach(thread => {
+    if (thread.events.some(event => event.selected)) {
+      threadsWithSelection.add(thread.threadId)
+    }
+  })
+  
+  if (threadsWithSelection.size > 0) {
     setExpandedThreads(prev => {
       const newSet = new Set(prev)
-      newSet.add(preselectThreadId)
+      threadsWithSelection.forEach(threadId => newSet.add(threadId))
       return newSet
     })
   }
-}, [isOpen, preselectThreadId])
+}, [threads, isOpen])
 
   useEffect(() => {
   if (threads.length === 0 || !isOpen) return
@@ -232,8 +248,7 @@ useEffect(() => {
 
 // Synchronisation des sélections depuis le chat (sans recharger l'API)
 useEffect(() => {
-  if (!isOpen || hasUserModified) return // ← AJOUTE hasUserModified
-  
+
   setThreads(prev => prev.map(thread => ({
     ...thread,
     events: thread.events.map(event => ({
@@ -243,7 +258,62 @@ useEffect(() => {
         : initialSelectedIds.includes(event.id)
     }))
   })))
-}, [initialSelectedIds, preselectThreadId, isOpen, hasUserModified]) // ← AJOUTE hasUserModified
+}, [initialSelectedIds, preselectThreadId, isOpen])
+
+// Scroll vers le dernier message qui a changé de statut (sélectionné ou désélectionné)
+useEffect(() => {
+  if (!isOpen || threads.length === 0) return
+  
+  const currentInitialIds = initialIdsRef.current // ← ICI
+  
+  // Trouver le message qui a changé récemment
+  let changedEventId: string | null = null
+  let mostRecentDate: Date = new Date(0)
+  
+  threads.forEach(thread => {
+    thread.events.forEach(event => {
+      const wasSelected = currentInitialIds.includes(event.id) // ← ICI
+      const isSelected = event.selected
+      
+      // Si le statut a changé
+      if (wasSelected !== isSelected) {
+        const eventDate = new Date(event.createdAt)
+        if (eventDate > mostRecentDate) {
+          mostRecentDate = eventDate
+          changedEventId = event.id
+        }
+      }
+    })
+  })
+  
+  if (!changedEventId) return
+  
+  // Scroll vers ce message
+  setTimeout(() => {
+    const element = document.querySelector(`[data-event-id="${changedEventId}"]`)
+    if (!element) return
+    
+    const container = document.querySelector('.scrollbar-bandhu')
+    if (!container) return
+    
+    // Vérifier si l'élément est visible
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    
+    const isVisible = (
+      elementRect.top >= containerRect.top &&
+      elementRect.bottom <= containerRect.bottom
+    )
+    
+    // Scroll seulement si pas visible
+    if (!isVisible) {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+    }
+  }, 150)
+}, [threads, isOpen, initialSelectedIds]) // initialSelectedIds vient de ChatPage
 
   const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
     const response = await fetch('/api/export/generate', {
@@ -262,7 +332,6 @@ useEffect(() => {
   }, [selectedFormat])
 
   const toggleEventSelection = (threadId: string, eventId: string) => {
-  setHasUserModified(true)
   setThreads(prev => {
     const newThreads = prev.map(thread => 
       thread.threadId === threadId
@@ -282,15 +351,16 @@ useEffect(() => {
       thread.events.filter(event => event.selected).map(event => event.id)
     )
     
-    // Notifier le parent (ChatPage)
-    onSelectionChange?.(newSelectedIds)
+    // Notifier le parent (ChatPage) AVEC UN DÉLAI
+    setTimeout(() => {
+      onSelectionChange?.(newSelectedIds)
+    }, 0)
     
     return newThreads
   })
 }
 
   const toggleSelectAll = (selected: boolean) => {
-  setHasUserModified(true)
   setThreads(prev => {
     const newThreads = prev.map(thread => ({
       ...thread,
@@ -303,7 +373,10 @@ useEffect(() => {
       : [] // Si tout désélectionner
     
     // Notifier le parent (ChatPage)
-    onSelectionChange?.(newSelectedIds)
+    // Notifier le parent (ChatPage) AVEC UN DÉLAI
+setTimeout(() => {
+  onSelectionChange?.(newSelectedIds)
+}, 0)
     
     return newThreads
   })

@@ -135,17 +135,21 @@ const [isAvatarCollapsed, setIsAvatarCollapsed] = useState<boolean>(() => {
 })
 
 const exportModal = useMemo(() => (
-    <ExportModal 
-      key={`export-modal-${showExportModal}`}
-      isOpen={showExportModal} 
-      onClose={() => {
-        setShowExportModal(false)
-        setTargetThreadIdForExport(null)
-      }}
-      initialSelectedIds={Array.from(selectedMessageIds)}
-      preselectThreadId={targetThreadIdForExport || undefined}
-    />
-  ), [showExportModal, selectedMessageIds, targetThreadIdForExport])
+  <ExportModal 
+    key={`export-modal-${showExportModal}`}
+    isOpen={showExportModal} 
+    onClose={() => {
+      setShowExportModal(false)
+      // setTargetThreadIdForExport(null) // ← À SUPPRIMER PLUS TARD
+    }}
+    initialSelectedIds={Array.from(selectedMessageIds)}
+    preselectThreadId={targetThreadIdForExport || undefined}
+    onSelectionChange={(newSelectedIds) => {
+      // CE QUI MANQUE !
+      setSelectedMessageIds(new Set(newSelectedIds))
+    }}
+  />
+), [showExportModal, selectedMessageIds, targetThreadIdForExport])
 
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
