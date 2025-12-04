@@ -30,6 +30,7 @@ interface ExportModalProps {
   initialSelectedIds?: string[]
   preselectThreadId?: string
   onSelectionChange?: (selectedIds: string[]) => void  // ← NOUVEAU
+  activeThreadId?: string 
 }
 
 const FORMAT_LIMITS = {
@@ -44,7 +45,8 @@ function ExportModal({
   onClose, 
   initialSelectedIds = [],
   preselectThreadId,
-  onSelectionChange
+  onSelectionChange,
+  activeThreadId
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
@@ -57,6 +59,8 @@ function ExportModal({
     metrics: any
   } | null>(null)
 
+  const [eventToScrollTo, setEventToScrollTo] = useState<string | null>(null)
+
   const currentLimit = FORMAT_LIMITS[selectedFormat]
   const allSelectedEvents = threads.flatMap(thread =>
     thread.events.filter(event => event.selected).map(event => event.id)
@@ -65,6 +69,7 @@ function ExportModal({
   const exceededLimit = allSelectedEvents.length > currentLimit
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
   const prevSelectedIdsRef = useRef<Set<string>>(new Set())
+  const actionTimestampsRef = useRef<Map<string, number>>(new Map())
 
 
  // Garder une référence à jour de initialSelectedIds (sans re-render)
@@ -165,90 +170,12 @@ useEffect(() => {
       return newSet
     })
   }
-}, [threads, isOpen])
-
-  useEffect(() => {
-  if (threads.length === 0 || !isOpen) return
-  
-  const container = document.querySelector('.scrollbar-bandhu')
-  
-  setTimeout(() => {
-    const isElementInViewport = (element: Element) => {
-      if (!container || !element) return false
-      
-      const containerRect = container.getBoundingClientRect()
-      const elementRect = element.getBoundingClientRect()
-      
-      return (
-        elementRect.top >= containerRect.top &&
-        elementRect.bottom <= containerRect.bottom
-      )
-    }
-    
-    // CAS 1: Changement de conversation (preselectThreadId fourni)
-    if (preselectThreadId) {
-      const threadElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
-      
-      if (threadElement) {
-        // Vérifier si le thread est EXPANDÉ (sinon, attendre un peu)
-        const isExpanded = expandedThreads.has(preselectThreadId)
-        
-        if (isExpanded) {
-          // Thread expandé → vérifier visibilité et scroll si besoin
-          if (!isElementInViewport(threadElement)) {
-            threadElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center' 
-            })
-          }
-        } else {
-          // Thread pas encore expandé → on va l'expandre et scroller après
-          setExpandedThreads(prev => {
-            const newSet = new Set(prev)
-            newSet.add(preselectThreadId)
-            return newSet
-          })
-          
-          // Attendre que l'expansion soit rendue, PUIS scroller
-          setTimeout(() => {
-            const expandedElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
-            if (expandedElement && !isElementInViewport(expandedElement)) {
-              expandedElement.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-              })
-            }
-          }, 150) // Délai pour l'animation d'expansion
-        }
-      }
-    } 
-    // CAS 2: Sélections depuis le chat (pas de preselectThreadId)
-    else {
-      let firstSelectedEventId: string | null = null
-      for (const thread of threads) {
-        const selectedEvent = thread.events.find((event: Event) => event.selected)
-        if (selectedEvent) {
-          firstSelectedEventId = selectedEvent.id
-          break
-        }
-      }
-      
-      if (firstSelectedEventId) {
-        const element = document.querySelector(`[data-event-id="${firstSelectedEventId}"]`)
-        if (element && !isElementInViewport(element)) {
-          element?.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          })
-        }
-      }
-    }
-  }, 100)
-}, [threads, preselectThreadId, isOpen, expandedThreads]) // ← AJOUTER expandedThreads aux dépendances
+}, [threads, isOpen, initialSelectedIds])
 
 // Synchronisation des sélections depuis le chat (sans recharger l'API)
 useEffect(() => {
-
+  if (!isOpen) return
+  
   setThreads(prev => prev.map(thread => ({
     ...thread,
     events: thread.events.map(event => ({
@@ -260,38 +187,17 @@ useEffect(() => {
   })))
 }, [initialSelectedIds, preselectThreadId, isOpen])
 
-// Scroll vers le dernier message qui a changé de statut (sélectionné ou désélectionné)
+// useEffect pour effectuer le scroll APRÈS le rendu
 useEffect(() => {
-  if (!isOpen || threads.length === 0) return
+  if (!eventToScrollTo) return
   
-  const currentInitialIds = initialIdsRef.current // ← ICI
-  
-  // Trouver le message qui a changé récemment
-  let changedEventId: string | null = null
-  let mostRecentDate: Date = new Date(0)
-  
-  threads.forEach(thread => {
-    thread.events.forEach(event => {
-      const wasSelected = currentInitialIds.includes(event.id) // ← ICI
-      const isSelected = event.selected
-      
-      // Si le statut a changé
-      if (wasSelected !== isSelected) {
-        const eventDate = new Date(event.createdAt)
-        if (eventDate > mostRecentDate) {
-          mostRecentDate = eventDate
-          changedEventId = event.id
-        }
-      }
-    })
-  })
-  
-  if (!changedEventId) return
-  
-  // Scroll vers ce message
-  setTimeout(() => {
-    const element = document.querySelector(`[data-event-id="${changedEventId}"]`)
-    if (!element) return
+  // Donner le temps au DOM de se mettre à jour
+  const timeoutId = setTimeout(() => {
+    const element = document.querySelector(`[data-event-id="${eventToScrollTo}"]`)
+    if (!element) {
+      console.log('❌ Élément pas trouvé même après attente:', eventToScrollTo)
+      return
+    }
     
     const container = document.querySelector('.scrollbar-bandhu')
     if (!container) return
@@ -312,8 +218,48 @@ useEffect(() => {
         block: 'center' 
       })
     }
-  }, 150)
-}, [threads, isOpen, initialSelectedIds]) // initialSelectedIds vient de ChatPage
+    
+    // Reset
+    setEventToScrollTo(null)
+  }, 300) // Délai plus long pour laisser React rendre
+  
+  return () => clearTimeout(timeoutId)
+}, [eventToScrollTo])
+
+// Scroll simple : seulement quand le Chat modifie la sélection
+useEffect(() => {
+  if (!isOpen || threads.length === 0) return
+  
+  const currentInitialIds = initialIdsRef.current
+  
+  // 1. Trouver le message qui vient d'être modifié PAR LE CHAT
+  // (son statut a changé par rapport à ce qu'on avait reçu)
+  let changedEventId: string | null = null
+  
+  // Parcourir à l'envers pour trouver le PLUS RÉCENT visuellement
+  for (let i = threads.length - 1; i >= 0; i--) {
+    const thread = threads[i]
+    for (let j = thread.events.length - 1; j >= 0; j--) {
+      const event = thread.events[j]
+      const wasSelected = currentInitialIds.includes(event.id)
+      const isSelected = event.selected
+      
+      // Si différent → le Chat a modifié ce message
+      if (wasSelected !== isSelected) {
+        changedEventId = event.id
+        break
+      }
+    }
+    if (changedEventId) break
+  }
+  
+  // 2. Si aucun changement détecté → c'est ExportModal qui a modifié → on ne scroll pas
+  if (!changedEventId) return
+  
+  // 3. Planifier le scroll vers ce message
+  setEventToScrollTo(changedEventId)
+  
+}, [threads, isOpen, initialSelectedIds]) // initialSelectedIds ajouté
 
   const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
     const response = await fetch('/api/export/generate', {
@@ -648,7 +594,9 @@ setTimeout(() => {
                               const newSelectedIds = newThreads.flatMap(t =>
       t.events.filter(e => e.selected).map(e => e.id)
     )
-    onSelectionChange?.(newSelectedIds)
+    setTimeout(() => {
+  onSelectionChange?.(newSelectedIds)
+}, 0)
                             return newThreads
                           })
                         }}

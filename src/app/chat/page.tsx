@@ -140,16 +140,16 @@ const exportModal = useMemo(() => (
     isOpen={showExportModal} 
     onClose={() => {
       setShowExportModal(false)
-      // setTargetThreadIdForExport(null) // ← À SUPPRIMER PLUS TARD
+      setTargetThreadIdForExport(null)
     }}
     initialSelectedIds={Array.from(selectedMessageIds)}
     preselectThreadId={targetThreadIdForExport || undefined}
+    activeThreadId={activeThreadId || undefined}
     onSelectionChange={(newSelectedIds) => {
-      // CE QUI MANQUE !
       setSelectedMessageIds(new Set(newSelectedIds))
     }}
   />
-), [showExportModal, selectedMessageIds, targetThreadIdForExport])
+), [showExportModal, selectedMessageIds, targetThreadIdForExport, activeThreadId])
 
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
