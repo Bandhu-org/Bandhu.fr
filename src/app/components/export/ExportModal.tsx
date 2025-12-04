@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import React from 'react'
 import PreviewModal from './PreviewModal'
 import { calculateMetrics } from '@/utils/exportMetrics'
-import { threadId } from 'worker_threads'
 
+// 1. Event d'abord
 interface Event {
   id: string
   content: string
@@ -14,6 +15,7 @@ interface Event {
   selected: boolean
 }
 
+// 2. Thread ensuite (utilise Event)
 interface Thread {
   threadId: string
   threadLabel: string
@@ -21,11 +23,13 @@ interface Thread {
   events: Event[]
 }
 
+// 3. ExportModalProps enfin (utilise Thread)
 interface ExportModalProps {
   isOpen: boolean
   onClose: () => void
   initialSelectedIds?: string[]
   preselectThreadId?: string
+  onSelectionChange?: (selectedIds: string[]) => void  // ← NOUVEAU
 }
 
 const FORMAT_LIMITS = {
@@ -34,11 +38,13 @@ const FORMAT_LIMITS = {
   docx: 100
 }
 
-export default function ExportModal({ 
+// 4. Fonction
+function ExportModal({ 
   isOpen, 
   onClose, 
   initialSelectedIds = [],
-  preselectThreadId
+  preselectThreadId,
+  onSelectionChange
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
@@ -51,6 +57,8 @@ export default function ExportModal({
     metrics: any
   } | null>(null)
 
+  const [hasUserModified, setHasUserModified] = useState(false)
+
   const currentLimit = FORMAT_LIMITS[selectedFormat]
   const allSelectedEvents = threads.flatMap(thread =>
     thread.events.filter(event => event.selected).map(event => event.id)
@@ -58,6 +66,7 @@ export default function ExportModal({
   const limitedEvents = allSelectedEvents.slice(0, currentLimit)
   const exceededLimit = allSelectedEvents.length > currentLimit
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
+  
 
   const loadExportData = useCallback(async () => {
     setIsLoading(true)
@@ -96,51 +105,145 @@ export default function ExportModal({
     }
   }, [initialSelectedIds, preselectThreadId])
 
-  useEffect(() => {
-    if (isOpen) {
-      loadExportData()
-    }
-  }, [isOpen, loadExportData])
+  const [processedPreselectId, setProcessedPreselectId] = useState<string | null>(null)
+
+useEffect(() => {
+  if (isOpen && preselectThreadId && processedPreselectId !== preselectThreadId) {
+    setExpandedThreads(prev => {
+      const newSet = new Set(prev)
+      newSet.add(preselectThreadId)
+      return newSet
+    })
+    setProcessedPreselectId(preselectThreadId)
+  }
+  
+  if (!isOpen) {
+    setProcessedPreselectId(null)
+  }
+}, [isOpen, preselectThreadId, processedPreselectId])
+
+  // État pour tracker le chargement initial
+const [hasLoadedInitial, setHasLoadedInitial] = useState(false)
+
+// Chargement UNIQUEMENT à la première ouverture
+useEffect(() => {
+  if (isOpen && !hasLoadedInitial) {
+    loadExportData()
+    setHasLoadedInitial(true)
+  }
+  
+  // Reset quand le modal ferme
+  if (!isOpen) {
+    setHasLoadedInitial(false)
+    setHasUserModified(false) // ← AJOUTE CETTE LIGNE
+  }
+}, [isOpen])
+
+// Gestion de l'expansion basée sur preselectThreadId
+useEffect(() => {
+  if (isOpen && preselectThreadId) {
+    // Auto-expand le thread cible si preselectThreadId existe
+    setExpandedThreads(prev => {
+      const newSet = new Set(prev)
+      newSet.add(preselectThreadId)
+      return newSet
+    })
+  }
+}, [isOpen, preselectThreadId])
 
   useEffect(() => {
-    if (isOpen) {
-      if (!preselectThreadId) {
-        setExpandedThreads(new Set())
-      }
+  if (threads.length === 0 || !isOpen) return
+  
+  const container = document.querySelector('.scrollbar-bandhu')
+  
+  setTimeout(() => {
+    const isElementInViewport = (element: Element) => {
+      if (!container || !element) return false
+      
+      const containerRect = container.getBoundingClientRect()
+      const elementRect = element.getBoundingClientRect()
+      
+      return (
+        elementRect.top >= containerRect.top &&
+        elementRect.bottom <= containerRect.bottom
+      )
     }
-  }, [isOpen, preselectThreadId])
-
-  useEffect(() => {
-    if (threads.length === 0) return
     
-    setTimeout(() => {
-      if (preselectThreadId) {
-        const threadElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
-        if (threadElement) {
-          threadElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          })
-        }
-      } else {
-        let firstSelectedEventId: string | null = null
-        for (const thread of threads) {
-          const selectedEvent = thread.events.find((event: Event) => event.selected)
-          if (selectedEvent) {
-            firstSelectedEventId = selectedEvent.id
-            break
+    // CAS 1: Changement de conversation (preselectThreadId fourni)
+    if (preselectThreadId) {
+      const threadElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
+      
+      if (threadElement) {
+        // Vérifier si le thread est EXPANDÉ (sinon, attendre un peu)
+        const isExpanded = expandedThreads.has(preselectThreadId)
+        
+        if (isExpanded) {
+          // Thread expandé → vérifier visibilité et scroll si besoin
+          if (!isElementInViewport(threadElement)) {
+            threadElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            })
           }
+        } else {
+          // Thread pas encore expandé → on va l'expandre et scroller après
+          setExpandedThreads(prev => {
+            const newSet = new Set(prev)
+            newSet.add(preselectThreadId)
+            return newSet
+          })
+          
+          // Attendre que l'expansion soit rendue, PUIS scroller
+          setTimeout(() => {
+            const expandedElement = document.querySelector(`[data-thread-id="${preselectThreadId}"]`)
+            if (expandedElement && !isElementInViewport(expandedElement)) {
+              expandedElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              })
+            }
+          }, 150) // Délai pour l'animation d'expansion
         }
-        if (firstSelectedEventId) {
-          const element = document.querySelector(`[data-event-id="${firstSelectedEventId}"]`)
+      }
+    } 
+    // CAS 2: Sélections depuis le chat (pas de preselectThreadId)
+    else {
+      let firstSelectedEventId: string | null = null
+      for (const thread of threads) {
+        const selectedEvent = thread.events.find((event: Event) => event.selected)
+        if (selectedEvent) {
+          firstSelectedEventId = selectedEvent.id
+          break
+        }
+      }
+      
+      if (firstSelectedEventId) {
+        const element = document.querySelector(`[data-event-id="${firstSelectedEventId}"]`)
+        if (element && !isElementInViewport(element)) {
           element?.scrollIntoView({ 
             behavior: 'smooth', 
             block: 'center' 
           })
         }
       }
-    }, 100)
-  }, [threads, preselectThreadId])
+    }
+  }, 100)
+}, [threads, preselectThreadId, isOpen, expandedThreads]) // ← AJOUTER expandedThreads aux dépendances
+
+// Synchronisation des sélections depuis le chat (sans recharger l'API)
+useEffect(() => {
+  if (!isOpen || hasUserModified) return // ← AJOUTE hasUserModified
+  
+  setThreads(prev => prev.map(thread => ({
+    ...thread,
+    events: thread.events.map(event => ({
+      ...event,
+      selected: preselectThreadId
+        ? thread.threadId === preselectThreadId
+        : initialSelectedIds.includes(event.id)
+    }))
+  })))
+}, [initialSelectedIds, preselectThreadId, isOpen, hasUserModified]) // ← AJOUTE hasUserModified
 
   const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
     const response = await fetch('/api/export/generate', {
@@ -159,30 +262,52 @@ export default function ExportModal({
   }, [selectedFormat])
 
   const toggleEventSelection = (threadId: string, eventId: string) => {
-    setThreads(prev => 
-      prev.map(thread => 
-        thread.threadId === threadId
-          ? {
-              ...thread,
-              events: thread.events.map(event =>
-                event.id === eventId
-                  ? { ...event, selected: !event.selected }
-                  : event
-              )
-            }
-          : thread
-      )
+  setHasUserModified(true)
+  setThreads(prev => {
+    const newThreads = prev.map(thread => 
+      thread.threadId === threadId
+        ? {
+            ...thread,
+            events: thread.events.map(event =>
+              event.id === eventId
+                ? { ...event, selected: !event.selected }
+                : event
+            )
+          }
+        : thread
     )
-  }
+    
+    // Calculer les nouveaux IDs sélectionnés
+    const newSelectedIds = newThreads.flatMap(thread =>
+      thread.events.filter(event => event.selected).map(event => event.id)
+    )
+    
+    // Notifier le parent (ChatPage)
+    onSelectionChange?.(newSelectedIds)
+    
+    return newThreads
+  })
+}
 
   const toggleSelectAll = (selected: boolean) => {
-    setThreads(prev => 
-      prev.map(thread => ({
-        ...thread,
-        events: thread.events.map(event => ({ ...event, selected }))
-      }))
-    )
-  }
+  setHasUserModified(true)
+  setThreads(prev => {
+    const newThreads = prev.map(thread => ({
+      ...thread,
+      events: thread.events.map(event => ({ ...event, selected }))
+    }))
+    
+    // Calculer les nouveaux IDs sélectionnés
+    const newSelectedIds = selected 
+      ? newThreads.flatMap(thread => thread.events.map(event => event.id))
+      : [] // Si tout désélectionner
+    
+    // Notifier le parent (ChatPage)
+    onSelectionChange?.(newSelectedIds)
+    
+    return newThreads
+  })
+}
 
   const toggleThreadExpansion = (threadId: string) => {
     setExpandedThreads(prev => {
@@ -447,6 +572,10 @@ export default function ExportModal({
                                 ...event,
                                 selected: newSelected
                               }))
+                              const newSelectedIds = newThreads.flatMap(t =>
+      t.events.filter(e => e.selected).map(e => e.id)
+    )
+    onSelectionChange?.(newSelectedIds)
                             return newThreads
                           })
                         }}
@@ -535,3 +664,4 @@ export default function ExportModal({
     </>
   )
 }
+export default React.memo(ExportModal)

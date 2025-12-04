@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
-import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
+import { useState, useEffect, useRef, useCallback, startTransition, useMemo } from 'react'
 import { useSidebar } from '@/contexts/SidebarContext'
 import ExportModal from '../components/export/ExportModal'
 console.log('🔍 ExportModal =', ExportModal)
@@ -133,6 +133,19 @@ const [isAvatarCollapsed, setIsAvatarCollapsed] = useState<boolean>(() => {
   }
   return false
 })
+
+const exportModal = useMemo(() => (
+    <ExportModal 
+      key={`export-modal-${showExportModal}`}
+      isOpen={showExportModal} 
+      onClose={() => {
+        setShowExportModal(false)
+        setTargetThreadIdForExport(null)
+      }}
+      initialSelectedIds={Array.from(selectedMessageIds)}
+      preselectThreadId={targetThreadIdForExport || undefined}
+    />
+  ), [showExportModal, selectedMessageIds, targetThreadIdForExport])
 
     // ========== NOUVELLE CONVERSATION (même effet que le bouton) ==========
   const handleNewConversation = () => {
@@ -2011,18 +2024,9 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
   threadName={selectedThread?.label || ''}
 />
 
-      </div>
+            </div>
       {/* Modal Export - EN DEHORS du flux */}
-        <ExportModal 
-  isOpen={showExportModal} 
-  onClose={() => {
-    setShowExportModal(false)
-    setTargetThreadIdForExport(null) // ← Reset
-  }}
-  initialSelectedIds={Array.from(selectedMessageIds)}
-  preselectThreadId={targetThreadIdForExport || undefined}  // ← CHANGER ICI
-  // autoExpandTarget={targetThreadIdForExport ? true : false}  // ← SUPPRIMER (pas dans l'interface)
-/>
+      {exportModal}
       </div>
   )
 }
