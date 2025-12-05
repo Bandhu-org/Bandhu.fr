@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
+import { generateStyledMarkdown } from '@/utils/exportStyles'
+import type { ExportStyle } from '@/utils/exportTemplates'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +15,13 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { format, selectedEvents, options = {} } = body
+    const style: ExportStyle = options.style || 'epic-color' // Style par défaut
 
-    console.log('🔄 Génération demandée:', { format, selectedEventsCount: selectedEvents?.length })
+    console.log('🔄 Génération demandée:', { 
+      format, 
+      style,
+      selectedEventsCount: selectedEvents?.length 
+    })
 
     // Validation
     if (!format || !selectedEvents || !Array.isArray(selectedEvents)) {
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
     let result
     switch (format) {
       case 'markdown':
-        result = await generateMarkdown(events, options)
+        result = await generateMarkdown(events, options, style)
         break
       case 'pdf':
         result = await generatePDF(events, options)
@@ -94,31 +101,12 @@ export async function POST(request: NextRequest) {
 // GÉNÉRATEURS (le reste du code reste identique)
 // ============================================================================
 
-// 🎯 GÉNÉRATEUR MARKDOWN (le plus simple)
-async function generateMarkdown(events: any[], options: any) {
-  let markdown = `# Export de conversations\n\n`
-  markdown += `*Généré le ${new Date().toLocaleDateString('fr-FR')}*\n\n`
-  markdown += `---\n\n`
-
-  let currentThreadId: string | null = null
-
-  events.forEach(event => {
-    // Nouvelle section pour chaque thread
-    if (event.threadId !== currentThreadId) {
-      if (currentThreadId !== null) {
-        markdown += '\n---\n\n'
-      }
-      markdown += `## ${event.thread.label}\n\n`
-      currentThreadId = event.threadId
-    }
-
-    // Ajouter le message
-    const timestamp = options.includeTimestamps 
-      ? ` *(${new Date(event.createdAt).toLocaleString('fr-FR')})*` 
-      : ''
-
-    const prefix = event.role === 'user' ? '**Vous**' : '**Assistant**'
-    markdown += `${prefix}: ${event.content}${timestamp}\n\n`
+// 🎯 GÉNÉRATEUR MARKDOWN (avec support des styles)
+async function generateMarkdown(events: any[], options: any, style: ExportStyle) {
+  // Utiliser le générateur de style
+  const markdown = await generateStyledMarkdown(events, style, {
+    includeTimestamps: options.includeTimestamps,
+    preview: options.preview
   })
 
   const estimatedSize = `${Math.round(Buffer.byteLength(markdown, 'utf8') / 1024)}KB`
@@ -287,7 +275,7 @@ async function generatePDF(events: any[], options: any) {
   } catch (error) {
     console.error('Erreur génération PDF:', error)
     // Fallback vers Markdown en cas d'erreur
-    const markdownResult = await generateMarkdown(events, options)
+    const markdownResult = await generateMarkdown(events, options, 'sobre')
     return {
       content: Buffer.from(markdownResult.content).toString('base64'),
       pageCount: markdownResult.pageCount,
@@ -512,7 +500,7 @@ async function generateDOCX(events: any[], options: any) {
   } catch (error) {
     console.error('❌ Erreur génération DOCX:', error)
     // Fallback vers Markdown
-    const markdownResult = await generateMarkdown(events, options)
+    const markdownResult = await generateMarkdown(events, options, 'sobre')
     return {
       content: `DOCX_PLACEHOLDER:${Buffer.from(markdownResult.content).toString('base64')}`,
       pageCount: markdownResult.pageCount,

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import React from 'react'
 import PreviewModal from './PreviewModal'
 import { calculateMetrics } from '@/utils/exportMetrics'
+import { EXPORT_TEMPLATES, type ExportStyle } from '@/utils/exportTemplates'
 
 // 1. Event d'abord
 interface Event {
@@ -50,6 +51,7 @@ function ExportModal({
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
+  const [exportStyle, setExportStyle] = useState<ExportStyle>('design')
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   
@@ -312,12 +314,13 @@ useEffect(() => {
         selectedEvents: eventIds,
         options: { 
           includeTimestamps: true,
-          preview: isPreview
+          preview: isPreview,
+          style: exportStyle
         }
       })
     })
     return await response.json()
-  }, [selectedFormat])
+  }, [selectedFormat, exportStyle])
 
   const toggleEventSelection = (threadId: string, eventId: string) => {
   setThreads(prev => {
@@ -561,6 +564,33 @@ setTimeout(() => {
                   <option value="pdf">PDF</option>
                   <option value="docx">Word (.docx)</option>
                 </select>
+
+                {/* Sélecteur de style */}
+                <div className="flex items-center gap-2">
+                  {Object.entries(EXPORT_TEMPLATES).map(([key, template]) => (
+                    <button
+                      key={key}
+                      onClick={() => setExportStyle(key as ExportStyle)}
+                      className={`
+                        relative group px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium
+                        ${exportStyle === key 
+                          ? 'border-bandhu-primary bg-bandhu-primary/20 text-white' 
+                          : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+                        }
+                      `}
+                      title={template.description}
+                    >
+                      <span className="text-base">{template.icon}</span>
+                      
+                      {/* Tooltip au hover */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
+                        <div className="font-semibold">{template.name}</div>
+                        <div className="text-gray-400 mt-0.5">{template.description}</div>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
 
                 <button
                   onClick={handlePreview}

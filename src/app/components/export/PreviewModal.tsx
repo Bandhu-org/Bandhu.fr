@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github-dark.css'
 
 interface PreviewModalProps {
   isOpen: boolean
@@ -217,6 +220,7 @@ export default function PreviewModal({
   metadata 
 }: PreviewModalProps) {
   const [activeTab, setActiveTab] = useState<'preview' | 'metrics'>('preview')
+  const [viewMode, setViewMode] = useState<'render' | 'code'>('render')
   const [isDownloading, setIsDownloading] = useState(false)
 
   // Gérer la touche Escape pour fermer
@@ -320,10 +324,98 @@ export default function PreviewModal({
               
               <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
                 {format === 'markdown' ? (
-                  <div className="max-h-96 overflow-y-auto p-4">
-                    <pre className="text-gray-300 text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                      {previewContent}
-                    </pre>
+                  <div className="flex flex-col h-[500px]">
+                    {/* Toggle Render/Code */}
+                    <div className="flex items-center justify-between bg-gray-800/50 border-b border-gray-700 px-4 py-2">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setViewMode('render')}
+                          className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                            viewMode === 'render'
+                              ? 'bg-bandhu-primary text-white'
+                              : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50'
+                          }`}
+                        >
+                          🎨 Render
+                        </button>
+                        <button
+                          onClick={() => setViewMode('code')}
+                          className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                            viewMode === 'code'
+                              ? 'bg-bandhu-primary text-white'
+                              : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700/50'
+                          }`}
+                        >
+                          💻 Code
+                        </button>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {viewMode === 'render' ? 'Aperçu stylisé' : 'Markdown brut'}
+                      </span>
+                    </div>
+
+                    {/* Contenu selon le mode */}
+                    <div className="flex-1 overflow-y-auto p-6">
+                      {viewMode === 'render' ? (
+                        <div className="prose prose-invert max-w-none">
+                          <ReactMarkdown
+                            rehypePlugins={[rehypeHighlight]}
+                            components={{
+                              p: ({ children, ...props }: any) => (
+                                <p className="my-3 leading-relaxed text-gray-200" {...props}>
+                                  {children}
+                                </p>
+                              ),
+                              h1: ({ children, ...props }: any) => (
+                                <h1 className="text-2xl font-bold mt-6 mb-4 text-bandhu-primary" {...props}>
+                                  {children}
+                                </h1>
+                              ),
+                              h2: ({ children, ...props }: any) => (
+                                <h2 className="text-xl font-semibold mt-5 mb-3 text-bandhu-secondary" {...props}>
+                                  {children}
+                                </h2>
+                              ),
+                              code: ({ node, inline, className, children, ...props }: any) => {
+                                return inline ? (
+                                  <code className="bg-gray-800 px-1.5 py-0.5 rounded text-sm text-bandhu-primary" {...props}>
+                                    {children}
+                                  </code>
+                                ) : (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                )
+                              },
+                              pre: ({ children, ...props }: any) => (
+                                <pre className="bg-gray-950 p-4 rounded-lg overflow-x-auto my-4 border border-gray-700" {...props}>
+                                  {children}
+                                </pre>
+                              ),
+                              blockquote: ({ children, ...props }: any) => (
+                                <blockquote className="border-l-4 border-bandhu-primary pl-4 italic text-gray-300 my-4" {...props}>
+                                  {children}
+                                </blockquote>
+                              ),
+                              hr: ({ ...props }: any) => (
+                                <hr className="my-6 border-gray-700" {...props} />
+                              ),
+                              strong: ({ children, ...props }: any) => (
+                                <strong className="font-semibold text-white" {...props}>
+                                  {children}
+                                </strong>
+                              ),
+                            }}
+                          >
+                            {previewContent}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <pre className="text-gray-300 text-sm whitespace-pre-wrap font-mono leading-relaxed">
+                          {previewContent}
+                        </pre>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="h-96 relative">
