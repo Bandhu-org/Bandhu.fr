@@ -8,6 +8,7 @@ import type { ExportStyle } from '@/utils/exportTemplates'
 import { generateReactPDF } from '@/app/components/pdf/generator'
 import { splitEventsForPDF } from '@/utils/pdf/splitter'
 import JSZip from 'jszip'
+import { generateChatHTML } from '@/utils/exportStyles/html-generator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,21 +62,24 @@ export async function POST(request: NextRequest) {
     // Router vers le bon générateur
     let result
     switch (format) {
-      case 'markdown':
-        result = await generateMarkdown(events, options, style)
-        break
-      case 'pdf':
-        result = await generatePDF(events, options, style)
-        break
-      case 'docx':
-        result = await generateDOCX(events, options)
-        break
-      default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Format non supporté'
-        }), { status: 400 })
-    }
+  case 'markdown':
+    result = await generateMarkdown(events, options, style)
+    break
+  case 'pdf':
+    result = await generatePDF(events, options, style)
+    break
+  case 'docx':
+    result = await generateDOCX(events, options)
+    break
+  case 'html':  // ← AJOUTE
+    result = await generateHTML(events, options)
+    break
+  default:
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Format non supporté'
+    }), { status: 400 })
+}
 
     return new Response(JSON.stringify({
       success: true,
@@ -386,5 +390,28 @@ async function generateDOCX(events: any[], options: any) {
       pageCount: markdownResult.pageCount,
       estimatedSize: markdownResult.estimatedSize
     }
+  }
+}
+
+// 🌐 GÉNÉRATEUR HTML
+async function generateHTML(events: any[], options: any) {
+  try {
+    console.log('🔄 Début génération HTML...')
+    
+    const html = await generateChatHTML(events, {
+      style: options.style === 'sobre' ? 'sobre' : 'design',
+      includeTimestamps: options.includeTimestamps
+    })
+    
+    console.log('✅ HTML généré:', html.length, 'caractères')
+    
+    return {
+      content: html,
+      pageCount: 1,
+      estimatedSize: `${Math.round(Buffer.byteLength(html, 'utf8') / 1024)}KB`
+    }
+  } catch (error) {
+    console.error('❌ Erreur génération HTML:', error)
+    throw error
   }
 }

@@ -42,58 +42,55 @@ export class MarkdownToPDFConverter {
   }
   
   // ==================== POST-PROCESSING HTML ====================
- private transformHtmlForPDF(html: string): string {
+private transformHtmlForPDF(html: string): string {
   console.log('🔍 [HTML TRANSFORM] Début transformation...')
   
-  // Étape 1 : ENLEVER les <blockquote> autour du user
+  // Étape 1 : ENLEVER les <blockquote>
   html = html.replace(/<blockquote>/g, '<div class="user-content">').replace(/<\/blockquote>/g, '</div>')
   
-  // Étape 2 : Capturer chaque paire user+ai AVEC leur contenu
-  const pairRegex = /<h2[^>]*>🔵\s*<strong>([^<]+)<\/strong><\/h2>([\s\S]*?)<h2[^>]*>🟣\s*<strong>([^<]+)<\/strong><\/h2>([\s\S]*?)(?=<h2[^>]*>🔵|$)/g
-  
-  const transformed = html.replace(pairRegex, (match, userName, userContent, aiName, aiContent) => {
-    // Nettoyer les contenus (garder TOUT, y compris les <hr> à l'intérieur)
-    userContent = userContent.toString().trim()
-    aiContent = aiContent.toString().trim()
-    
-    return `
-<div class="message-pair">
-  <div class="message message-user">
-    <div class="message-header">
-      <svg class="message-author-icon"><use href="#icon-user"></use></svg>
-      ${userName}
-    </div>
-    <div class="message-content">
-      ${userContent}
-    </div>
+  // Étape 2 : Wrapper USER
+  html = html.replace(
+    /<h2[^>]*>🔵\s*<strong>([^<]+)<\/strong><\/h2>([\s\S]*?)(?=<h2[^>]*>🟣|<h2[^>]*>🔵|$)/g,
+    (match, userName, userContent) => `
+<div class="message message-user">
+  <div class="message-header">
+    <svg class="message-author-icon"><use href="#icon-user"></use></svg>
+    ${userName}
   </div>
-  
-  <div class="message message-ai">
-    <div class="message-header">
-      <svg class="message-author-icon"><use href="#icon-ai"></use></svg>
-      ${aiName}
-    </div>
-    <div class="message-content">
-      ${aiContent}
-    </div>
+  <div class="message-content">
+    ${userContent.trim()}
   </div>
 </div>
 `
-  })
+  )
   
-  // Étape 3 : Supprimer les <hr> qui sont ENTRE les paires (pas dans .message-content)
-  // On cherche les <hr> qui ne sont pas entre des balises de contenu
-  let cleaned = transformed
+  // Étape 3 : Wrapper AI
+  html = html.replace(
+    /<h2[^>]*>🟣\s*<strong>([^<]+)<\/strong><\/h2>([\s\S]*?)(?=<h2[^>]*>🔵|<h2[^>]*>🟣|$)/g,
+    (match, aiName, aiContent) => `
+<div class="message message-ai">
+  <div class="message-header">
+    <svg class="message-author-icon"><use href="#icon-ai"></use></svg>
+    ${aiName}
+  </div>
+  <div class="message-content">
+    ${aiContent.trim()}
+  </div>
+</div>
+`
+  )
   
-  // Supprimer les <hr> isolés entre les paires
-  cleaned = cleaned.replace(/(<\/div>\s*)<hr[^>]*>(\s*<div)/g, '$1$2')
+  // Étape 4 : Wrapper les paires USER+AI consécutives
+  html = html.replace(
+    /(<div class="message message-user">[\s\S]*?<\/div>\s*)(<div class="message message-ai">[\s\S]*?<\/div>)/g,
+    '<div class="message-pair">$1$2</div>'
+  )
   
-  // Supprimer les <hr> en début/fin de #content
-  cleaned = cleaned.replace(/(<div id="content">\s*)<hr[^>]*>/g, '$1')
-  cleaned = cleaned.replace(/<hr[^>]*>(\s*<\/div>\s*$)/g, '$1')
+  // Étape 5 : Nettoyer les <hr> entre messages
+  html = html.replace(/(<\/div>\s*)<hr[^>]*>(\s*<div)/g, '$1$2')
   
   console.log('🔍 [HTML TRANSFORM] Transformation terminée.')
-  return cleaned
+  return html
 }
   
   // ==================== ENCODAGE IMAGES ====================

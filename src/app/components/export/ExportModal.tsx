@@ -37,9 +37,9 @@ interface ExportModalProps {
 const FORMAT_LIMITS = {
   markdown: 500,
   pdf: Infinity,
-  docx: 100
+  docx: 100,
+  html: 500  // ← AJOUTE
 }
-
 // 4. Fonction
 function ExportModal({ 
   isOpen, 
@@ -50,7 +50,7 @@ function ExportModal({
   activeThreadId
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
-  const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
+  const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx' | 'html'>('markdown')
   const [exportStyle, setExportStyle] = useState<ExportStyle | PDFExportStyle>('design')
 //                                               ↑ Ajouter PDFExportStyle
   const [isLoading, setIsLoading] = useState(false)
@@ -598,14 +598,15 @@ setTimeout(() => {
                 </div>
 
                 <select
-                  value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value as any)}
-                  className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-gray-200 text-sm focus:ring-2 focus:ring-bandhu-primary focus:border-transparent"
-                >
-                  <option value="markdown">Markdown (.md)</option>
-                  <option value="pdf">PDF</option>
-                  <option value="docx">Word (.docx)</option>
-                </select>
+  value={selectedFormat}
+  onChange={(e) => setSelectedFormat(e.target.value as any)}
+  className="bg-gray-800 border border-gray-600..."
+>
+  <option value="markdown">Markdown (.md)</option>
+  <option value="html">HTML (Web) 🌐</option>  {/* ← AJOUTE */}
+  <option value="pdf">PDF</option>
+  <option value="docx">Word (.docx)</option>
+</select>
 
                 {/* Sélecteur de style */}
                 <div className="flex items-center gap-2">

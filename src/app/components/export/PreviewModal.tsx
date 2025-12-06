@@ -10,7 +10,7 @@ interface PreviewModalProps {
   onClose: () => void
   onConfirm: () => void
   onModify: () => void
-  format: 'markdown' | 'pdf' | 'docx'
+  format: 'markdown' | 'pdf' | 'docx' | 'html'  // ← AJOUTE 'html'
   selectedEventsCount: number
   previewContent: string
   metadata: {
@@ -254,17 +254,19 @@ export default function PreviewModal({
 
   if (!isOpen) return null
 
-  const formatIcons = {
-    markdown: '📝',
-    pdf: '📄', 
-    docx: '📋'
-  }
+  const formatIcons: Record<'markdown' | 'pdf' | 'docx' | 'html', string> = {
+  markdown: '📝',
+  pdf: '📄', 
+  docx: '📋',
+  html: '🌐'
+}
 
-  const formatNames = {
-    markdown: 'Markdown',
-    pdf: 'PDF',
-    docx: 'Word Document'
-  }
+const formatNames: Record<'markdown' | 'pdf' | 'docx' | 'html', string> = {
+  markdown: 'Markdown',
+  pdf: 'PDF',
+  docx: 'Word Document',
+  html: 'HTML Web'
+}
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] p-4 backdrop-blur-sm">
@@ -322,7 +324,7 @@ export default function PreviewModal({
           {activeTab === 'preview' ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm text-gray-400 bg-gray-700/30 rounded-lg p-3">
-                <span className="text-lg">{formatIcons[format]}</span>
+                <span className="text-lg">{formatIcons[format as keyof typeof formatIcons] || '📄'}</span>
                 <span>Format: <strong className="text-white">{formatNames[format]}</strong></span>
                 <span className="text-gray-600">•</span>
                 <span>{metadata.eventCount} messages sélectionnés</span>
