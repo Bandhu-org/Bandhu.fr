@@ -196,7 +196,9 @@ function getHTMLTemplate(): string {
       background: rgba(0, 0, 0, 0.5);
       padding: 16px;
       border-radius: 8px;
-      overflow-x: auto;
+      overflow-x: visible;
+      white-space: pre-wrap;
+      word-wrap: break-word;
       border: 1px solid var(--border-color);
       margin: 1.2em 0;
     }

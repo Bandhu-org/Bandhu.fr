@@ -1,5 +1,5 @@
 // Epic Color Markdown Generator
-// Style Bandhu complet avec emojis et formatage riche
+// Version BULLETPROOF - Neutralise les éléments markdown problématiques
 
 interface Event {
   id: string
@@ -22,6 +22,122 @@ interface GeneratorOptions {
   endIndex?: number
 }
 
+/**
+ * Neutralise les éléments markdown dangereux (headers, HR, code blocks)
+ */
+function neutralizeMarkdown(content: string): string {
+  return content
+    // Headers ## → HTML comment
+    .replace(/^(#{1,6}\s)/gm, '<!-- $1 -->')
+    // HR --- → HTML comment
+    .replace(/^(---+)$/gm, '<!-- $1 -->')
+    // Code blocks ``` → HTML comment
+    .replace(/^(```)$/gm, '<!-- $1 -->')
+}
+
+/**
+ * Détecte si le contenu contient un export collé via timestamps
+ */
+function detectPastedExport(content: string, userTimestamp: string | null): {
+  isPasted: boolean
+  userStart: number
+  ombrelienStart: number
+} {
+  if (!userTimestamp) {
+    return { isPasted: false, userStart: -1, ombrelienStart: -1 }
+  }
+  
+  // Chercher timestamp Ombrelien
+  const ombrelienMatch = content.match(/\[Ombrelien.*?à\s+(\d{2}:\d{2})\]/)
+  
+  if (!ombrelienMatch) {
+    return { isPasted: false, userStart: -1, ombrelienStart: -1 }
+  }
+  
+  // Vérifier proximité temporelle (±2 minutes)
+  const [uh, um] = userTimestamp.split(':').map(Number)
+  const [oh, om] = ombrelienMatch[1].split(':').map(Number)
+  
+  const userMinutes = uh * 60 + um
+  const ombrelienMinutes = oh * 60 + om
+  
+  const diff = Math.abs(userMinutes - ombrelienMinutes)
+  
+  if (diff <= 2) {
+    // C'est un export collé - trouver les positions
+    const userPos = content.search(/\[.+?\s+•\s+.+?\s+à\s+\d{2}:\d{2}\]/)
+    const ombrelienPos = content.indexOf(ombrelienMatch[0])
+    
+    return {
+      isPasted: true,
+      userStart: userPos,
+      ombrelienStart: ombrelienPos
+    }
+  }
+  
+  return { isPasted: false, userStart: -1, ombrelienStart: -1 }
+}
+
+/**
+ * Quote intelligent avec neutralisation des exports collés
+ */
+function smartQuote(content: string, userTimestamp: string | null): string {
+  const detection = detectPastedExport(content, userTimestamp)
+  
+  if (detection.isPasted) {
+    // EXPORT COLLÉ DÉTECTÉ
+    
+    // Partie avant l'export (si existe)
+    const before = content.substring(0, detection.userStart).trim()
+    
+    // Export collé (entre les deux timestamps)
+    const pastedPart = content.substring(detection.userStart).trim()
+    
+    // Neutraliser l'export collé
+    const neutralized = neutralizeMarkdown(pastedPart)
+    
+    let result = ''
+    
+    // Quote la partie avant (si existe)
+    if (before) {
+      result += before.split('\n').map(line => `> ${line}`).join('\n') + '\n>\n'
+    }
+    
+    // Quote l'export neutralisé avec marqueur visuel
+    result += '> **📋 Export collé :**\n>\n'
+    result += neutralized.split('\n').map(line => `> ${line}`).join('\n')
+    
+    return result + '\n\n'
+  }
+  
+  // PAS D'EXPORT COLLÉ - Quote normal avec extraction des code blocks
+  const codeBlockRegex = /```[\s\S]*?```/g
+  const codeBlocks: string[] = []
+  const placeholder = '___CODEBLOCK___'
+  
+  // Extraire les code blocks
+  let processed = content.replace(codeBlockRegex, (match) => {
+    codeBlocks.push(match)
+    return `${placeholder}${codeBlocks.length - 1}`
+  })
+  
+  // Quoter le texte
+  processed = processed.split('\n').map(line => `> ${line}`).join('\n')
+  
+  // Réinjecter les code blocks HORS quote
+  codeBlocks.forEach((block, i) => {
+    processed = processed.replace(
+      `> ${placeholder}${i}`,
+      `\n${block}\n>`
+    )
+  })
+  
+  // Nettoyer les > vides finaux
+  processed = processed.replace(/>\s*$/g, '')
+  
+  return processed + '\n\n'
+}
+
 export async function generateDesignMarkdown(
   events: Event[], 
   options: GeneratorOptions = {}
@@ -29,13 +145,12 @@ export async function generateDesignMarkdown(
   let markdown = ''
   
   // ═══════════════════════════════════════════════════════════════
-  // HEADER EPIC COLOR - Style Discord riche
+  // HEADER
   // ═══════════════════════════════════════════════════════════════
   
   markdown += `---\n\n`
   markdown += `# 🌌 BANDHU EXPORT\n\n`
   
-  // Si multi-parties
   if (options.totalParts && options.totalParts > 1) {
     markdown += `## Partie ${options.partNumber} sur ${options.totalParts}\n\n`
     markdown += `> 📄 Messages ${options.startIndex}-${options.endIndex}\n\n`
@@ -62,12 +177,12 @@ export async function generateDesignMarkdown(
   markdown += `---\n\n`
   
   // ═══════════════════════════════════════════════════════════════
-  // CONTENU DES CONVERSATIONS
+  // CONTENU
   // ═══════════════════════════════════════════════════════════════
   
   let currentThreadId: string | null = null
   
-  events.forEach((event, index) => {
+  events.forEach((event) => {
     // Nouvelle section pour chaque thread
     if (event.threadId !== currentThreadId) {
       if (currentThreadId !== null) {
@@ -78,15 +193,14 @@ export async function generateDesignMarkdown(
       currentThreadId = event.threadId
     }
     
-    // Formatage du message
     const isUser = event.role === 'user'
     
     if (isUser) {
-      // Extraire le nom et l'heure du header [Nom • Date à HH:MM]
+      // Extraire header
       const headerMatch = event.content.match(/^\[(.+?)\s+•\s+.+?\s+à\s+(\d{2}:\d{2})\]/)
       
       let displayName = 'User'
-      let displayTime = ''
+      let displayTime: string | null = null
       let cleanContent = event.content
       
       if (headerMatch) {
@@ -98,20 +212,22 @@ export async function generateDesignMarkdown(
       // Header user
       markdown += `## 🔵 **${displayName}**\n\n`
       
-      // Date/heure en-dessous du nom
+      // Timestamp
       if (options.includeTimestamps && displayTime) {
         const date = new Date(event.createdAt)
         const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
         markdown += `${dateStr} à ${displayTime}\n\n`
       }
       
-      markdown += `> ${cleanContent.split('\n').join('\n> ')}\n\n`
+      // CONTENU EN BLOC CODE USER (avec marqueur spécial)
+markdown += '```user\n'  // ← "user" comme langage fictif
+markdown += cleanContent
+markdown += '\n```\n\n'
       
     } else {
-      // Header Ombrelien
+      // Ombrelien
       markdown += `## 🟣 **Ombrelien**\n\n`
       
-      // Date/heure en-dessous du nom
       if (options.includeTimestamps) {
         const date = new Date(event.createdAt)
         const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -122,7 +238,6 @@ export async function generateDesignMarkdown(
       markdown += `${event.content}\n\n`
     }
     
-    // Barre de séparation entre les messages
     markdown += `---\n\n\n`
   })
   
@@ -134,13 +249,12 @@ export async function generateDesignMarkdown(
   markdown += `### ✨ Export généré par Bandhu ✨\n\n`
   markdown += `*Ombrelien - छायासरस्वतः - L'ombre qui écoute*\n\n`
   
-  // Footer avec info partie si multi-PDF
   if (options.totalParts && options.totalParts > 1) {
     markdown += `📄 **Partie ${options.partNumber}/${options.totalParts}** • `
     markdown += `Messages ${options.startIndex}-${options.endIndex}\n\n`
   }
   
-  markdown += `📊 **${events.length}** messages • 🧵 **${new Set(events.map(e => e.threadId)).size}** conversations • 🌌 Export Epic Color\n\n`
+  markdown += `📊 **${events.length}** messages • 🧵 **${new Set(events.map(e => e.threadId)).size}** conversations • 🌌 Export Design\n\n`
   markdown += `</div>\n`
   
   return markdown
