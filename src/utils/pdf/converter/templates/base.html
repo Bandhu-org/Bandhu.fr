@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Les styles de base communs à tous les PDF */
+        /* DESIGN COMPACT BANDHU PDF - VERSION IDENTITAIRE */
     :root {
       --primary-color: #a78bfa;
       --secondary-color: #60a5fa;
@@ -12,39 +12,252 @@
       --text-color: #e2e8f0;
       --muted-color: #94a3b8;
       --border-color: #334155;
-      --user-bubble: #1e293b;
-      --ai-bubble: #1e1b4b;
+      --user-bubble: rgba(59, 130, 246, 0.1);
+      --ai-bubble: rgba(139, 92, 246, 0.1);
     }
     
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', system-ui, sans-serif;
-      background: var(--background);
-      color: var(--text-color);
-      line-height: 1.6;
+
+/* Style du texte */
+.page-top-content,
+.page-bottom-content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.bandhu-brand {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+}
+
+/* Numéro de page simulé (sera dynamique via JS si possible) */
+.page-number {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+    
+    /* FOND QUI COUVRE TOUT LE BODY */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', system-ui, sans-serif;
+  background: var(--background) !important;
+  color: var(--text-color);
+  line-height: 1.5;
+  margin: 0 auto;
+  padding: 0 !important;  /* ← Enlève le padding du body */
+  font-size: 0.9em;
+  min-height: 100vh;
+}
+
+/* CONTENEUR AVEC GROSSES MARGES HAUT/BAS */
+#content {
+  max-width: 600px !important;
+  margin: 0 auto 80px auto !important;
+  padding: 60px 0 !important; /* ← Ajoute de l'air en haut/bas */
+  background: var(--background) !important;
+}
+
+/* AJOUTER UN PEU D'ESPACE VISUEL EN HAUT/BAS DU CONTENU */
+#content::before {
+  content: '';
+  display: block;
+  height: 1px;
+  opacity: 0;
+}
+
+#content::after {
+  content: '';
+  display: block;
+  height: 1px;
+  opacity: 0;
+}
+    
+    /* ========== HEADER AVEC AVATAR ========== */
+    .bandhu-header {
+      text-align: center;
+      margin-bottom: 1em;
+      padding-bottom: 1em;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    
+    .bandhu-logo-small {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .bandhu-title {
+      font-size: 1.8em;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
       margin: 0;
-      padding: 40px;
-      max-width: 800px;
-      margin: 0 auto;
+      font-weight: 800;
     }
     
-    /* MARKDOWN RENDERING */
-    h1, h2, h3, h4, h5, h6 {
+    .ombrelien-title {
       color: var(--primary-color);
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
+      margin: 4px 0 0;
+      font-size: 1em;
+      font-weight: 600;
     }
     
-    h1 { font-size: 2em; border-bottom: 2px solid var(--border-color); padding-bottom: 0.3em; }
-    h2 { font-size: 1.5em; }
-    h3 { font-size: 1.25em; }
+    .sanskrit {
+      color: var(--muted-color);
+      font-size: 0.7em;
+      font-style: italic;
+      margin-top: 2px;
+    }
+    
+    .ombrelien-avatar {
+      width: 80px;
+      height: auto;
+      margin: 12px auto 8px;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* ========== MESSAGES COMPACT ========== */
+    .message {
+      margin: 0.8em 0;
+      padding: 0.8em;
+      border-radius: 8px;
+      border-left: 4px solid;
+      page-break-inside: avoid;
+    }
+    
+    /* MESSAGE AI (Ombrelien) - léger comme le chat */
+.message-ai {
+  background: transparent !important;
+  border-left: 3px solid var(--primary-color) !important;
+  margin: 0.3em 0 0.3em 2em !important; /* ← marge gauche augmentée */
+  padding: 0.6em 1em !important;
+  box-shadow: none !important;
+}
+
+/* MESSAGE USER - boîte légère */
+.message-user {
+  background: var(--user-bubble) !important;
+  border-left: 3px solid var(--secondary-color) !important;
+  margin: 0.3em 2em 0.3em 0 !important; /* ← marge droite augmentée */
+  padding: 0.6em 1em !important;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* CONTENU */
+.message-content {
+  margin-top: 0.2em !important;
+  line-height: 1.5 !important;
+}
+
+/* FORCER LES MESSAGES À RESTER ENSEMBLE */
+.message {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  break-after: auto !important;
+}
+    
+    .message-header {
+      display: flex;
+      justify-content: flex-start !important;
+      align-items: center;
+      margin-bottom: 0.3em;
+    }
+    
+    .message-author {
+      font-weight: bold;
+      font-size: 0.85em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .message-user .message-author {
+      color: var(--secondary-color);
+    }
+    
+    .message-ai .message-author {
+      color: var(--primary-color);
+    }
+    
+    .message-author-icon {
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+    }
+    
+    .message-time {
+  color: var(--muted-color);
+  font-size: 0.75em;
+  margin-left: auto !important; /* pousse l'heure à droite */
+}
+    
+/* PAIRES USER+AI INSEPARABLES */
+.message-pair {
+  page-break-inside: auto !important; /* ← AUTO au lieu de avoid */
+  break-inside: auto !important;
+  -webkit-column-break-inside: auto !important;
+  margin-bottom: 0.5em !important;
+}
+
+.message-pair .message {
+  margin: 0.3em 0 !important;
+  page-break-inside: avoid !important;
+}
+
+/* CONTRÔLE STRICT DES SAUTS */
+@page {
+  size: A4;
+  margin: 40px; /* correspond aux marges Puppeteer */
+}
+
+.message-pair {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  -webkit-column-break-inside: avoid !important;
+  break-after: auto !important;
+  page-break-after: auto !important;
+  min-height: 0 !important; /* laisse Puppeteur décider */
+}
+
+/* Réduire l'espace entre paires */
+.message-pair + .message-pair {
+  margin-top: 0.5em !important;
+}
+
+    /* ========== MARKDOWN COMPACT ========== */
+    h1, h2, h3 {
+      margin-top: 1em;
+      margin-bottom: 0.3em;
+    }
+    
+    h1 { 
+      font-size: 1.6em; 
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.2em;
+    }
+    
+    h2 { font-size: 1.3em; }
+    h3 { font-size: 1.1em; }
     
     p {
-      margin: 1em 0;
+      margin: 0.5em 0;
     }
     
     blockquote {
       border-left: 4px solid var(--primary-color);
-      margin: 1em 0;
+      margin: 0.5em 0;
       padding: 0.5em 1em;
       background: rgba(167, 139, 250, 0.1);
       border-radius: 0 4px 4px 0;
@@ -60,7 +273,7 @@
     
     pre {
       background: rgba(0, 0, 0, 0.3);
-      padding: 1em;
+      padding: 0.8em;
       border-radius: 6px;
       overflow-x: auto;
       border: 1px solid var(--border-color);
@@ -72,12 +285,12 @@
     }
     
     ul, ol {
-      padding-left: 2em;
-      margin: 1em 0;
+      padding-left: 1.8em;
+      margin: 0.8em 0;
     }
     
     li {
-      margin: 0.3em 0;
+      margin: 0.2em 0;
     }
     
     a {
@@ -86,99 +299,111 @@
       border-bottom: 1px dotted var(--secondary-color);
     }
     
-    a:hover {
-      border-bottom-style: solid;
-    }
-    
     hr {
       border: none;
-      height: 2px;
+      height: 1px;
       background: var(--border-color);
-      margin: 2em 0;
-    }
-    
-    /* BANDHU SPECIFIC */
-    .bandhu-header {
-      text-align: center;
-      margin-bottom: 2em;
-      padding-bottom: 1em;
-      border-bottom: 2px solid var(--border-color);
-    }
-    
-    .bandhu-title {
-      font-size: 2.5em;
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin: 0;
-    }
-    
-    .bandhu-subtitle {
-      color: var(--muted-color);
-      font-size: 1em;
-      margin: 0.5em 0 0;
-    }
-    
-    .message {
       margin: 1.5em 0;
-      padding: 1em;
-      border-radius: 12px;
-      border-left: 4px solid;
     }
+
+    /* ÉVITER LES SAUTS DE PAGE INTEMPESTIFS */
+.message {
+  page-break-inside: avoid;
+  page-break-after: auto;
+  break-inside: avoid;
+}
+
+.message-content p {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+  orphans: 2 !important;  /* au moins 2 lignes en bas */
+  widows: 2 !important;   /* au moins 2 lignes en haut */
+}
+
+/* Éviter de couper juste après un titre */
+.message-header {
+  page-break-after: avoid !important;
+}
+
+/* Réduire les marges des titres restants */
+h1, h2, h3 {
+  page-break-after: avoid;
+  margin-top: 0.8em !important;
+}
     
-    .message-user {
-      background: var(--user-bubble);
-      border-left-color: var(--secondary-color);
-      margin-left: 2em;
-    }
-    
-    .message-ai {
-      background: var(--ai-bubble);
-      border-left-color: var(--primary-color);
-      margin-right: 2em;
-    }
-    
-    .message-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5em;
-    }
-    
-    .message-author {
-      font-weight: bold;
-      font-size: 0.9em;
-    }
-    
-    .message-user .message-author {
-      color: var(--secondary-color);
-    }
-    
-    .message-ai .message-author {
-      color: var(--primary-color);
-    }
-    
-    .message-time {
-      color: var(--muted-color);
-      font-size: 0.8em;
-    }
-    
+    /* ========== FOOTER ========== */
     .bandhu-footer {
-      margin-top: 3em;
-      padding-top: 1em;
+      margin-top: 2em;
+      padding-top: 0.8em;
       border-top: 1px solid var(--border-color);
       text-align: center;
       color: var(--muted-color);
-      font-size: 0.9em;
+      font-size: 0.8em;
     }
+
   </style>
   <!-- Le style spécifique sera injecté ici -->
   <style id="theme-style"></style>
 </head>
-<body>
+
+  <body>
+  <!-- SVG ICÔNES CACHÉES -->
+  <svg style="display: none;">
+    <!-- USER : ROND BLEU -->
+    <symbol id="icon-user" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="7" fill="#60a5fa" />
+      <circle cx="8" cy="6" r="2" fill="#0f172a" />
+      <path d="M4 11 q4 3 8 0" stroke="#0f172a" stroke-width="1.5" fill="none" />
+    </symbol>
+    
+    <!-- AI : LOGO BANDHU MINI -->
+    <symbol id="icon-ai" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="#a78bfa" stroke-width="2"/>
+      <path d="M8 9 L12 5 L16 9 L14 15 L10 15 Z" fill="#a78bfa" opacity="0.8"/>
+      <circle cx="12" cy="10" r="1.5" fill="#0f172a"/>
+    </symbol>
+  </svg>
+
+  <!-- HEADER AVEC AVATAR -->
+  <div class="bandhu-header">
+    <div class="header-top">
+      <img src="file:///C:/Users/souni/Bandhu.fr/public/images/logo-bandhu.png" 
+           class="bandhu-logo-small" alt="">
+      <h1 class="bandhu-title">Bandhu</h1>
+    </div>
+    
+    <h2 class="ombrelien-title">Ombrelien</h2>
+    <div class="sanskrit">छायासरस्वतः</div>
+    
+    <!-- AVATAR CENTRÉ -->
+    <img src="file:///C:/Users/souni/Bandhu.fr/public/images/Ombrelien-avatar.svg" 
+         class="ombrelien-avatar" alt="Ombrelien">
+  </div>
+
+  <!-- BLOC HAUT DE PAGE -->
+  <div class="page-top-block">
+    <div class="page-top-content">
+      <span class="bandhu-brand">Bandhu</span> • Ombrelien • 
+      <span class="export-date">Export du {date}</span>
+    </div>
+  </div>
+
   <div id="content">
     <!-- Le contenu Markdown converti en HTML sera injecté ici -->
   </div>
+
+
+  <!-- BLOC BAS DE PAGE -->
+  <div class="page-bottom-block">
+    <div class="page-bottom-content">
+      Page <span class="page-number">•</span> • Exporté depuis Bandhu.fr
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="bandhu-footer">
+    Conversation exportée depuis Bandhu.fr — {date}
+  </div>
 </body>
+
 </html>
