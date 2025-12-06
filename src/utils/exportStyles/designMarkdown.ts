@@ -16,6 +16,10 @@ interface Event {
 interface GeneratorOptions {
   includeTimestamps?: boolean
   preview?: boolean
+  partNumber?: number
+  totalParts?: number
+  startIndex?: number
+  endIndex?: number
 }
 
 export async function generateDesignMarkdown(
@@ -30,6 +34,13 @@ export async function generateDesignMarkdown(
   
   markdown += `---\n\n`
   markdown += `# 🌌 BANDHU EXPORT\n\n`
+  
+  // Si multi-parties
+  if (options.totalParts && options.totalParts > 1) {
+    markdown += `## Partie ${options.partNumber} sur ${options.totalParts}\n\n`
+    markdown += `> 📄 Messages ${options.startIndex}-${options.endIndex}\n\n`
+  }
+  
   markdown += `## Ombrelien - छायासरस्वतः\n\n`
   markdown += `> *Conversations sauvegardées depuis l'ombre numérique*\n\n`
   markdown += `---\n\n`
@@ -56,7 +67,7 @@ export async function generateDesignMarkdown(
   
   let currentThreadId: string | null = null
   
-events.forEach((event, index) => {
+  events.forEach((event, index) => {
     // Nouvelle section pour chaque thread
     if (event.threadId !== currentThreadId) {
       if (currentThreadId !== null) {
@@ -114,9 +125,21 @@ events.forEach((event, index) => {
     // Barre de séparation entre les messages
     markdown += `---\n\n\n`
   })
+  
+  // ═══════════════════════════════════════════════════════════════
+  // FOOTER
+  // ═══════════════════════════════════════════════════════════════
+  
   markdown += `<div align="center">\n\n`
   markdown += `### ✨ Export généré par Bandhu ✨\n\n`
   markdown += `*Ombrelien - छायासरस्वतः - L'ombre qui écoute*\n\n`
+  
+  // Footer avec info partie si multi-PDF
+  if (options.totalParts && options.totalParts > 1) {
+    markdown += `📄 **Partie ${options.partNumber}/${options.totalParts}** • `
+    markdown += `Messages ${options.startIndex}-${options.endIndex}\n\n`
+  }
+  
   markdown += `📊 **${events.length}** messages • 🧵 **${new Set(events.map(e => e.threadId)).size}** conversations • 🌌 Export Epic Color\n\n`
   markdown += `</div>\n`
   

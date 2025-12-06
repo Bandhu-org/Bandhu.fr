@@ -1,0 +1,110 @@
+/* design-color.css - Style Bandhu riche en couleurs */
+:root {
+  --primary-color: #a78bfa;
+  --secondary-color: #60a5fa;
+  --accent-color: #f59e0b;
+  --background: #0f172a;
+  --text-color: #e2e8f0;
+  --muted-color: #94a3b8;
+  --border-color: #334155;
+  --user-bubble: rgba(59, 130, 246, 0.15);
+  --ai-bubble: rgba(139, 92, 246, 0.15);
+  --success-color: #10b981;
+}
+
+.bandhu-title {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.bandhu-subtitle {
+  color: var(--muted-color);
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+.message-user {
+  background: var(--user-bubble);
+  border-left-color: var(--secondary-color);
+  border-left-width: 6px;
+  box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.15);
+  margin-left: 1em;
+  position: relative;
+}
+
+.message-user::before {
+  content: "👤";
+  position: absolute;
+  left: -1.5em;
+  top: 0.5em;
+  font-size: 1em;
+}
+
+.message-ai {
+  background: var(--ai-bubble);
+  border-left-color: var(--primary-color);
+  border-left-width: 6px;
+  box-shadow: 0 4px 12px -2px rgba(139, 92, 246, 0.15);
+  margin-right: 1em;
+  position: relative;
+}
+
+.message-ai::before {
+  content: "🌌";
+  position: absolute;
+  right: -1.5em;
+  top: 0.5em;
+  font-size: 1em;
+}
+
+.message-author {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.message-user .message-author {
+  color: var(--secondary-color);
+}
+
+.message-ai .message-author {
+  color: var(--primary-color);
+}
+
+code {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(96, 165, 250, 0.1));
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
+}
+
+pre {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+blockquote {
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.1), transparent);
+  border-left-color: var(--primary-color);
+  border-left-width: 6px;
+  border-radius: 0 8px 8px 0;
+}
+
+hr {
+  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+  height: 3px;
+  border: none;
+  opacity: 0.5;
+}
+
+.bandhu-footer {
+  background: linear-gradient(transparent, rgba(15, 23, 42, 0.5));
+  padding: 1.5em;
+  border-radius: 12px;
+  margin-top: 3em;
+  border: 1px solid var(--border-color);
+}

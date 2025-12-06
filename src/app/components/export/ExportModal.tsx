@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import React from 'react'
 import PreviewModal from './PreviewModal'
 import { calculateMetrics } from '@/utils/exportMetrics'
-import { EXPORT_TEMPLATES, type ExportStyle } from '@/utils/exportTemplates'
+import { EXPORT_TEMPLATES, type ExportStyle, type PDFExportStyle } from '@/utils/exportTemplates'
 
 // 1. Event d'abord
 interface Event {
@@ -36,7 +36,7 @@ interface ExportModalProps {
 
 const FORMAT_LIMITS = {
   markdown: 500,
-  pdf: 200,
+  pdf: Infinity,
   docx: 100
 }
 
@@ -51,7 +51,8 @@ function ExportModal({
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx'>('markdown')
-  const [exportStyle, setExportStyle] = useState<ExportStyle>('design')
+  const [exportStyle, setExportStyle] = useState<ExportStyle | PDFExportStyle>('design')
+//                                               ↑ Ajouter PDFExportStyle
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   
@@ -67,7 +68,9 @@ function ExportModal({
   const allSelectedEvents = threads.flatMap(thread =>
     thread.events.filter(event => event.selected).map(event => event.id)
   )
-  const limitedEvents = allSelectedEvents.slice(0, currentLimit)
+  const limitedEvents = selectedFormat === 'pdf'
+  ? allSelectedEvents
+  : allSelectedEvents.slice(0, currentLimit)
   const exceededLimit = allSelectedEvents.length > currentLimit
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
   const prevSelectedIdsRef = useRef<Set<string>>(new Set())
@@ -305,6 +308,31 @@ useEffect(() => {
   return () => clearTimeout(timeoutId)
 }, [isOpen, threads.length]) // ← ENLÈVE initialSelectedIds.length
 
+// Fonction pour obtenir les styles disponibles selon le format
+const getAvailableStyles = (format: 'markdown' | 'pdf' | 'docx') => {
+  switch (format) {
+    case 'markdown':
+    case 'docx':
+      return ['design', 'sobre']
+    case 'pdf':
+      return ['design-color', 'design-bw', 'sobre-color', 'sobre-bw']
+    default:
+      return ['design']
+  }
+}
+
+// Fonction pour mapper les styles avant envoi à l'API
+const mapStyleForAPI = (style: string, format: string): string => {
+  if (format === 'pdf') {
+    // Si l'utilisateur a sélectionné un style Markdown, le convertir en style PDF par défaut
+    if (style === 'design') return 'design-color'
+    if (style === 'sobre') return 'sobre-color'
+    // Si c'est déjà un style PDF (design-color, etc.), le garder tel quel
+  }
+  // Pour Markdown et DOCX, garder le style tel quel
+  return style
+}
+
   const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) => {
     const response = await fetch('/api/export/generate', {
       method: 'POST',
@@ -313,10 +341,11 @@ useEffect(() => {
         format: selectedFormat,
         selectedEvents: eventIds,
         options: { 
-          includeTimestamps: true,
-          preview: isPreview,
-          style: exportStyle
-        }
+  includeTimestamps: true,
+  preview: isPreview,
+  style: mapStyleForAPI(exportStyle as string, selectedFormat)
+}
+
       })
     })
     return await response.json()
@@ -425,31 +454,44 @@ setTimeout(() => {
   }
 
   const handleExportConfirm = async (): Promise<void> => {
-    setIsExporting(true)
-    try {
-      const result = await generateExportContent(limitedEvents, false)
-      if (!result.success) throw new Error(result.error)
+  setIsExporting(true)
+  try {
+    const result = await generateExportContent(
+      selectedFormat === 'pdf' ? allSelectedEvents : limitedEvents,
+      false
+    )
+    if (!result.success) throw new Error(result.error)
 
-      const downloadResponse = await fetch('/api/export/download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          format: selectedFormat,
-          content: result.content,
-          filename: `bandhu-export-${new Date().toISOString().split('T')[0]}.${
-            selectedFormat === 'markdown' ? 'md' : selectedFormat
-          }`
-        })
+    // Détecter si ZIP
+    const isZip = result.content.startsWith('UEsDB')
+    
+    const downloadResponse = await fetch('/api/export/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        format: isZip ? 'zip' : selectedFormat,
+        content: result.content,
+        filename: isZip
+          ? `bandhu-export-${new Date().toISOString().split('T')[0]}.zip`
+          : `bandhu-export-${new Date().toISOString().split('T')[0]}.${
+              selectedFormat === 'markdown' ? 'md' : selectedFormat
+            }`
       })
+    })
 
       if (downloadResponse.ok) {
-        const blob = await downloadResponse.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `bandhu-export-${new Date().toISOString().split('T')[0]}.${
-          selectedFormat === 'markdown' ? 'md' : selectedFormat
-        }`
+  const blob = await downloadResponse.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = isZip
+    ? `bandhu-export-${new Date().toISOString().split('T')[0]}.zip`
+    : `bandhu-export-${new Date().toISOString().split('T')[0]}.${
+        selectedFormat === 'markdown' ? 'md' : selectedFormat
+      }`
+  document.body.appendChild(a)
+  a.click()
+  // ...
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -567,29 +609,32 @@ setTimeout(() => {
 
                 {/* Sélecteur de style */}
                 <div className="flex items-center gap-2">
-                  {Object.entries(EXPORT_TEMPLATES).map(([key, template]) => (
-                    <button
-                      key={key}
-                      onClick={() => setExportStyle(key as ExportStyle)}
-                      className={`
-                        relative group px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium
-                        ${exportStyle === key 
-                          ? 'border-bandhu-primary bg-bandhu-primary/20 text-white' 
-                          : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
-                        }
-                      `}
-                      title={template.description}
-                    >
-                      <span className="text-base">{template.icon}</span>
-                      
-                      {/* Tooltip au hover */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
-                        <div className="font-semibold">{template.name}</div>
-                        <div className="text-gray-400 mt-0.5">{template.description}</div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-                      </div>
-                    </button>
-                  ))}
+                  {getAvailableStyles(selectedFormat).map(styleKey => {
+  const template = EXPORT_TEMPLATES[styleKey as ExportStyle | PDFExportStyle]
+  return (
+    <button
+      key={styleKey}
+      onClick={() => setExportStyle(styleKey as any)}
+      className={`
+        relative group px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium
+        ${exportStyle === styleKey 
+          ? 'border-bandhu-primary bg-bandhu-primary/20 text-white' 
+          : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+        }
+      `}
+      title={template.description}
+    >
+      <span className="text-base">{template.icon}</span>
+      
+      {/* Tooltip */}
+      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
+        <div className="font-semibold">{template.name}</div>
+        <div className="text-gray-400 mt-0.5">{template.description}</div>
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+      </div>
+    </button>
+  )
+})}
                 </div>
 
                 <button

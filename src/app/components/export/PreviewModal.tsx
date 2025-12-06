@@ -51,12 +51,15 @@ const PdfDocxPreview = ({ content, format, metadata }: {
   }
 
   useEffect(() => {
-    // Pour DOCX, on affiche directement le fallback (pas d'iframe)
-    if (format === 'docx') {
-      setShowFallback(true)
-      setIsLoading(false)
-      return
-    }
+  // Détecter si c'est un ZIP (multi-PDF)
+  const isZip = content.startsWith('UEsDB') // Signature ZIP
+  
+  // Pour DOCX ou ZIP, afficher le fallback
+  if (format === 'docx' || isZip) {
+    setShowFallback(true)
+    setIsLoading(false)
+    return
+  }
 
     // Pour PDF, essayer de créer l'aperçu
     if (format === 'pdf' && content) {
@@ -108,8 +111,13 @@ const PdfDocxPreview = ({ content, format, metadata }: {
           <div className="text-center text-yellow-400 mb-4">
             <div className="text-2xl mb-2">{format === 'docx' ? '📋' : '📄'}</div>
             <div className="text-sm font-medium">
-              {format === 'docx' ? 'Aperçu DOCX non disponible' : `Aperçu ${format.toUpperCase()} limité`}
-            </div>
+  {content.startsWith('UEsDB') 
+    ? `Export multi-fichiers (${Math.ceil(metadata.eventCount / 200)} PDFs en ZIP)`
+    : format === 'docx' 
+      ? 'Aperçu DOCX non disponible' 
+      : `Aperçu ${format.toUpperCase()} limité`
+  }
+</div>
             <div className="text-xs text-gray-400 mt-1">
               {format === 'docx' 
                 ? "Les documents Word ne peuvent pas être prévisualisés dans le navigateur"

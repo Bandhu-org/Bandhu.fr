@@ -5,6 +5,9 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
 import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
+import { generateReactPDF } from '@/app/components/pdf/generator'
+import { splitEventsForPDF } from '@/utils/pdf/splitter'
+import JSZip from 'jszip'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { format, selectedEvents, options = {} } = body
-    const style: ExportStyle = options.style || 'epic-color' // Style par défaut
+    const style: ExportStyle = options.style || 'design-color'
 
     console.log('🔄 Génération demandée:', { 
       format, 
@@ -33,18 +36,18 @@ export async function POST(request: NextRequest) {
 
     // Récupérer les events sélectionnés avec leurs threads (OPTIMISÉ)
     const events = await prisma.event.findMany({
-      where: {
-        id: { in: selectedEvents.slice(0, 100) }, // Limiter ici aussi
-        user: { email: session.user.email }
-      },
-      include: {
-        thread: {
-          select: { id: true, label: true } // Seulement les champs nécessaires
-        }
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 100 // Double sécurité
-    })
+  where: {
+    id: { in: selectedEvents }, // ← Enlève slice(0, 100)
+    user: { email: session.user.email }
+  },
+  include: {
+    thread: {
+      select: { id: true, label: true }
+    }
+  },
+  orderBy: { createdAt: 'asc' }
+  // ← Enlève take: 100
+})
 
     if (events.length === 0) {
       return new Response(JSON.stringify({
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
         result = await generateMarkdown(events, options, style)
         break
       case 'pdf':
-        result = await generatePDF(events, options)
+        result = await generatePDF(events, options, style)
         break
       case 'docx':
         result = await generateDOCX(events, options)
@@ -119,200 +122,77 @@ async function generateMarkdown(events: any[], options: any, style: ExportStyle)
   }
 }
 
-// 📄 GÉNÉRATEUR PDF
-async function generatePDF(events: any[], options: any) {
+// 📄 GÉNÉRATEUR PDF (React-PDF)
+async function generatePDF(
+  events: any[], 
+  options: any, 
+  style: ExportStyle
+): Promise<{ content: string; pageCount: number; estimatedSize: string }> {
   try {
-    // Créer un nouveau document PDF
-    const pdfDoc = await PDFDocument.create()
+    console.log(`📄 Génération PDF avec style: ${style}`)
     
-    // Ajouter une page
-    let page = pdfDoc.addPage()
-    const { width, height } = page.getSize()
+    // Split en chunks si > 200 messages
+    const chunks = splitEventsForPDF(events)
     
-    // Charger les polices
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-    
-    // Configurer les styles
-    const margin = 50
-    let yPosition = height - margin
-    const lineHeight = 20
-    const titleSize = 16
-    const textSize = 10
-    const smallTextSize = 8
-    
-    // Titre
-    page.drawText('Export de conversations Bandhu', {
-      x: margin,
-      y: yPosition,
-      size: titleSize,
-      font: boldFont,
-      color: rgb(0.2, 0.2, 0.2),
-    })
-    yPosition -= lineHeight * 2
-    
-    // Date de génération
-    page.drawText(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, {
-      x: margin,
-      y: yPosition,
-      size: smallTextSize,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
-    })
-    yPosition -= lineHeight * 1.5
-    
-    // Séparateur
-    page.drawLine({
-      start: { x: margin, y: yPosition },
-      end: { x: width - margin, y: yPosition },
-      thickness: 1,
-      color: rgb(0.8, 0.8, 0.8),
-    })
-    yPosition -= lineHeight
-    
-    let currentThreadId: string | null = null
-    
-    // Parcourir les events
-    for (const event of events) {
-      // Vérifier si on doit changer de page
-      if (yPosition < margin + 100) {
-        const newPage = pdfDoc.addPage()
-        page = newPage
-        yPosition = height - margin
-      }
-      
-      // Nouveau thread = nouvelle section
-      if (event.threadId !== currentThreadId) {
-        if (currentThreadId !== null) {
-          yPosition -= lineHeight // Espace entre les threads
-        }
-        
-        page.drawText(event.thread.label, {
-          x: margin,
-          y: yPosition,
-          size: textSize + 2,
-          font: boldFont,
-          color: rgb(0.1, 0.3, 0.6),
-        })
-        yPosition -= lineHeight * 1.2
-        
-        currentThreadId = event.threadId
-      }
-      
-      // Afficher le rôle (Vous/Assistant)
-      const role = event.role === 'user' ? 'Vous' : 'Assistant'
-      const roleColor = event.role === 'user' ? rgb(0.2, 0.5, 0.8) : rgb(0.8, 0.4, 0.1)
-      
-      page.drawText(`${role}:`, {
-        x: margin,
-        y: yPosition,
-        size: textSize,
-        font: boldFont,
-        color: roleColor,
+    if (chunks.length === 1) {
+      // Un seul PDF
+      const result = await generateReactPDF(chunks[0].events, { 
+        ...options, 
+        style 
       })
-      yPosition -= lineHeight
       
-      // Afficher le contenu (nettoyer le texte pour PDF)
-      const content = cleanTextForPDF(event.content)
-      const maxWidth = width - (margin * 2)
-      
-      // Découper le texte si trop long
-      const lines = splitTextIntoLines(content, font, textSize, maxWidth)
-      
-      for (const line of lines) {
-        if (yPosition < margin + 20) {
-          const newPage = pdfDoc.addPage()
-          page = newPage
-          yPosition = height - margin
-        }
-        
-        page.drawText(line, {
-          x: margin + 10, // Indentation
-          y: yPosition,
-          size: textSize,
-          font: font,
-          color: rgb(0.1, 0.1, 0.1),
-        })
-        yPosition -= lineHeight
+      return {
+        content: result.content,
+        pageCount: result.pageCount,
+        estimatedSize: result.estimatedSize
       }
       
-      // Timestamp optionnel
-      if (options.includeTimestamps) {
-        const timestamp = new Date(event.createdAt).toLocaleString('fr-FR')
-        page.drawText(timestamp, {
-          x: margin + 10,
-          y: yPosition,
-          size: smallTextSize,
-          font: font,
-          color: rgb(0.6, 0.6, 0.6),
-        })
-        yPosition -= lineHeight
-      }
-      
-      yPosition -= lineHeight / 2 // Espace entre les messages
-    }
-    
-    // Pied de page sur la dernière page
-    const pages = pdfDoc.getPages()
-    const lastPage = pages[pages.length - 1]
-    lastPage.drawText(`Bandhu - ${events.length} messages exportés`, {
-      x: margin,
-      y: 30,
-      size: smallTextSize,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
+    } else {
+  // Multiple PDFs → ZIP
+  console.log(`📦 ${chunks.length} PDFs à générer`)
+  
+  const pdfs = await Promise.all(
+    chunks.map(chunk => {
+      console.log(`🔧 Génération chunk ${chunk.partNumber}/${chunk.totalParts}`)
+      console.log(`📊 Events: ${chunk.events.length}`)
+      return generateReactPDF(chunk.events, {
+        ...options,
+        style,
+        partNumber: chunk.partNumber,
+        totalParts: chunk.totalParts,
+        startIndex: chunk.startIndex,
+        endIndex: chunk.endIndex
+      })
     })
-    
-    // Sauvegarder le PDF
-    const pdfBytes = await pdfDoc.save()
-    
-    return {
-      content: Buffer.from(pdfBytes).toString('base64'),
-      pageCount: pdfDoc.getPageCount(),
-      estimatedSize: `${Math.round(pdfBytes.length / 1024)}KB`
-    }
+  )
+  
+  console.log(`✅ ${pdfs.length} PDFs générés`)
+  
+  // Créer ZIP
+  const zip = new JSZip()
+  
+  chunks.forEach((chunk, index) => {
+    const filename = `conversation-partie-${chunk.partNumber}-sur-${chunk.totalParts}.pdf`
+    const pdfBuffer = Buffer.from(pdfs[index].content, 'base64')
+    console.log(`📦 Ajout au ZIP: ${filename} (${pdfBuffer.length} bytes)`)
+    zip.file(filename, pdfBuffer)
+  })
+  
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+  console.log(`✅ ZIP généré: ${zipBuffer.length} bytes`)
+  console.log(`🔍 ZIP signature: ${zipBuffer.toString('base64').substring(0, 10)}`)
+  
+  return {
+    content: zipBuffer.toString('base64'),
+    pageCount: pdfs.reduce((sum, pdf) => sum + pdf.pageCount, 0),
+    estimatedSize: `${Math.round(zipBuffer.length / 1024)}KB`
+  }
+}
     
   } catch (error) {
-    console.error('Erreur génération PDF:', error)
-    // Fallback vers Markdown en cas d'erreur
-    const markdownResult = await generateMarkdown(events, options, 'sobre')
-    return {
-      content: Buffer.from(markdownResult.content).toString('base64'),
-      pageCount: markdownResult.pageCount,
-      estimatedSize: markdownResult.estimatedSize
-    }
+    console.error('❌ Erreur génération PDF (React-PDF):', error)
+    throw new Error(`Échec génération PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
-}
-
-// Nettoyer le texte pour PDF (supprimer caractères non supportés)
-function cleanTextForPDF(text: string): string {
-  return text
-    .replace(/\n/g, ' ') // Remplacer les sauts de ligne par des espaces
-    .replace(/[^\x20-\x7E\u00C0-\u00FF]/g, '') // Garder seulement ASCII étendu
-    .replace(/\s+/g, ' ') // Normaliser les espaces
-    .trim()
-}
-
-// Fonction utilitaire pour découper le texte
-function splitTextIntoLines(text: string, font: any, fontSize: number, maxWidth: number): string[] {
-  const lines: string[] = []
-  const words = text.split(' ')
-  let currentLine = ''
-  
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word
-    const width = font.widthOfTextAtSize(testLine, fontSize)
-    
-    if (width <= maxWidth) {
-      currentLine = testLine
-    } else {
-      if (currentLine) lines.push(currentLine)
-      currentLine = word
-    }
-  }
-  
-  if (currentLine) lines.push(currentLine)
-  return lines
 }
 
 // 📝 GÉNÉRATEUR DOCX

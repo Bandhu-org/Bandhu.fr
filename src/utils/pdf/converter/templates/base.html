@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Les styles de base communs à tous les PDF */
+    :root {
+      --primary-color: #a78bfa;
+      --secondary-color: #60a5fa;
+      --background: #0f172a;
+      --text-color: #e2e8f0;
+      --muted-color: #94a3b8;
+      --border-color: #334155;
+      --user-bubble: #1e293b;
+      --ai-bubble: #1e1b4b;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', system-ui, sans-serif;
+      background: var(--background);
+      color: var(--text-color);
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    /* MARKDOWN RENDERING */
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--primary-color);
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+    
+    h1 { font-size: 2em; border-bottom: 2px solid var(--border-color); padding-bottom: 0.3em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.25em; }
+    
+    p {
+      margin: 1em 0;
+    }
+    
+    blockquote {
+      border-left: 4px solid var(--primary-color);
+      margin: 1em 0;
+      padding: 0.5em 1em;
+      background: rgba(167, 139, 250, 0.1);
+      border-radius: 0 4px 4px 0;
+    }
+    
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9em;
+    }
+    
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1em;
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+    }
+    
+    pre code {
+      background: none;
+      padding: 0;
+    }
+    
+    ul, ol {
+      padding-left: 2em;
+      margin: 1em 0;
+    }
+    
+    li {
+      margin: 0.3em 0;
+    }
+    
+    a {
+      color: var(--secondary-color);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--secondary-color);
+    }
+    
+    a:hover {
+      border-bottom-style: solid;
+    }
+    
+    hr {
+      border: none;
+      height: 2px;
+      background: var(--border-color);
+      margin: 2em 0;
+    }
+    
+    /* BANDHU SPECIFIC */
+    .bandhu-header {
+      text-align: center;
+      margin-bottom: 2em;
+      padding-bottom: 1em;
+      border-bottom: 2px solid var(--border-color);
+    }
+    
+    .bandhu-title {
+      font-size: 2.5em;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+    
+    .bandhu-subtitle {
+      color: var(--muted-color);
+      font-size: 1em;
+      margin: 0.5em 0 0;
+    }
+    
+    .message {
+      margin: 1.5em 0;
+      padding: 1em;
+      border-radius: 12px;
+      border-left: 4px solid;
+    }
+    
+    .message-user {
+      background: var(--user-bubble);
+      border-left-color: var(--secondary-color);
+      margin-left: 2em;
+    }
+    
+    .message-ai {
+      background: var(--ai-bubble);
+      border-left-color: var(--primary-color);
+      margin-right: 2em;
+    }
+    
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5em;
+    }
+    
+    .message-author {
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    
+    .message-user .message-author {
+      color: var(--secondary-color);
+    }
+    
+    .message-ai .message-author {
+      color: var(--primary-color);
+    }
+    
+    .message-time {
+      color: var(--muted-color);
+      font-size: 0.8em;
+    }
+    
+    .bandhu-footer {
+      margin-top: 3em;
+      padding-top: 1em;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      color: var(--muted-color);
+      font-size: 0.9em;
+    }
+  </style>
+  <!-- Le style spécifique sera injecté ici -->
+  <style id="theme-style"></style>
+</head>
+<body>
+  <div id="content">
+    <!-- Le contenu Markdown converti en HTML sera injecté ici -->
+  </div>
+</body>
+</html>
