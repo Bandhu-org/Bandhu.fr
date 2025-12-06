@@ -175,10 +175,10 @@ function getHTMLTemplate(): string {
     }
     
     .content blockquote {
-      border-left: 4px solid var(--primary-color);
+      border-left: 4px solid var(--secondary-color);
       padding: 0.8em 1.2em;
       margin: 1em 0;
-      background: rgba(167, 139, 250, 0.1);
+      background: rgba(96, 165, 250, 0.15); /* même couleur, très léger */
       border-radius: 0 8px 8px 0;
       font-style: italic;
     }
@@ -192,16 +192,86 @@ function getHTMLTemplate(): string {
       color: var(--secondary-color);
     }
     
-    .content pre {
-      background: rgba(0, 0, 0, 0.5);
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: visible;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border: 1px solid var(--border-color);
-      margin: 1.2em 0;
-    }
+    /* BLOCS CODE USER (style original) */
+.content pre.language-user {
+  background: rgba(0, 0, 0, 0.5) !important;
+  padding: 16px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid var(--border-color) !important;
+  margin: 1.2em 0;
+}
+
+/* ===== BLOCS CODE AI ===== */
+.content pre:not(.language-user) {
+  background: #111111 !important; /* noir pur */
+  padding: 20px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid #334155 !important; /* bordure gris sur les 4 côtés */
+  border-left: 4px solid rgba(0, 0, 0, 0.5) !important; /* ← couleur fond user */
+  margin: 1.2em 0;
+}
+
+/* Header de langage en haut des blocs AI */
+.content pre:not(.language-user)::before {
+  content: attr(class);
+  content: attr(class).replace('language-', '');
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #252526;
+  color: #cccccc;
+  font-size: 11px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  padding: 6px 16px;
+  border-bottom: 1px solid #444;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* Code à l'intérieur */
+.content pre code {
+  background: none;
+  padding: 0;
+  color: var(--text-color);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* ===== THÈME VS CODE ÉTENDU ===== */
+.hljs-keyword { color: #569cd6 !important; font-style: italic !important; } /* blue */
+.hljs-string { color: #ce9178 !important; } /* orange */
+.hljs-function { color: #dcdcaa !important; } /* light yellow */
+.hljs-title.function_ { color: #dcdcaa !important; } /* functions */
+.hljs-number { color: #b5cea8 !important; } /* green */
+.hljs-comment { color: #6a9955 !important; font-style: italic !important; } /* green */
+.hljs-params { color: #9cdcfe !important; } /* light blue */
+.hljs-variable { color: #9cdcfe !important; } /* light blue */
+.hljs-built_in { color: #4ec9b0 !important; } /* teal */
+.hljs-type { color: #4ec9b0 !important; } /* teal */
+.hljs-literal { color: #569cd6 !important; } /* blue */
+.hljs-symbol { color: #569cd6 !important; } /* blue */
+.hljs-class { color: #4ec9b0 !important; } /* teal */
+.hljs-meta { color: #9cdcfe !important; } /* light blue */
+.hljs-tag { color: #569cd6 !important; } /* blue */
+.hljs-name { color: #569cd6 !important; } /* blue */
+.hljs-attr { color: #9cdcfe !important; } /* light blue */
+.hljs-selector-tag { color: #569cd6 !important; } /* blue */
+.hljs-selector-id { color: #569cd6 !important; } /* blue */
+.hljs-selector-class { color: #4ec9b0 !important; } /* teal */
+.hljs-selector-attr { color: #9cdcfe !important; } /* light blue */
+.hljs-selector-pseudo { color: #4ec9b0 !important; } /* teal */
+
+/* Fond général du code */
+.hljs {
+  background: transparent !important;
+  color: #d4d4d4 !important; /* gris clair VS Code */
+}
     
     .content pre code {
       background: none;
@@ -304,7 +374,19 @@ export async function generateChatHTML(
   console.log('✅ [HTML GENERATOR] Markdown généré:', markdown.length, 'caractères')
   
   // 2. Convertir Markdown → HTML
-  const contentHTML = await marked.parse(markdown) as string
+  // 2. Convertir Markdown → HTML
+let contentHTML = await marked.parse(markdown) as string
+
+// 1. Ajouter classe language-user aux blocs user
+contentHTML = contentHTML.replace(
+  /(<h2[^>]*>🔵[\s\S]*?<\/h2>)([\s\S]*?)(<pre[^>]*>)/g,
+  (match, h2Part, middlePart, preTag) => {
+    return h2Part + middlePart + '<pre class="language-user"' + preTag.substring(4)
+  }
+)
+
+// 2. Nettoyer les éventuels styles inline restants (optionnel)
+contentHTML = contentHTML.replace(/ style="[^"]*"/g, '')
   
   console.log('✅ [HTML GENERATOR] HTML converti:', contentHTML.length, 'caractères')
   
