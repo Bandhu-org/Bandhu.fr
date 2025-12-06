@@ -30,7 +30,7 @@ function neutralizeMarkdown(content: string): string {
     // Headers ## → HTML comment
     .replace(/^(#{1,6}\s)/gm, '<!-- $1 -->')
     // HR --- → HTML comment
-    .replace(/^(---+)$/gm, '<!-- $1 -->')
+    //.replace(/^(---+)$/gm, '<!-- $1 -->')
     // Code blocks ``` → HTML comment
     .replace(/^(```)$/gm, '<!-- $1 -->')
 }
