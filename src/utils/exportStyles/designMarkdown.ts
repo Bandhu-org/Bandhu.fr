@@ -170,7 +170,7 @@ export async function generateDesignMarkdown(
   markdown += `### 📅 Export du ${dateStr}\n\n`
   markdown += `**Contenu :**\n`
   markdown += `- 💬 **${events.length}** messages exportés\n`
-  markdown += `- 🧵 **${new Set(events.map(e => e.threadId)).size}** conversations\n`
+  markdown += `- ✨ **${new Set(events.map(e => e.threadId)).size}** conversations\n`
   markdown += `- 👤 **${events.filter(e => e.role === 'user').length}** messages utilisateur\n`
   markdown += `- 🌑 **${events.filter(e => e.role === 'assistant').length}** réponses Ombrelien\n\n`
   
@@ -189,7 +189,7 @@ export async function generateDesignMarkdown(
         markdown += '\n---\n\n'
       }
       
-      markdown += `## 🧵 ${event.thread.label}\n\n`
+      markdown += `## बन्धु : ${event.thread.label}\n\n`
       currentThreadId = event.threadId
     }
     

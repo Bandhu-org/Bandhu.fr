@@ -114,3 +114,22 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
 .animate-pulse-soft {
   animation: pulse-soft 4s ease-in-out infinite;
 }
+
+:root {
+  --bandhu-gradient-start: #7c3aed;
+  --bandhu-gradient-end: #2563eb;
+}
+
+/* Classe utilitaire pour le texte gradient */
+.bandhu-gradient-text {
+  background: linear-gradient(to right, var(--bandhu-gradient-start), var(--bandhu-gradient-end));
+  background-size: 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Pour l'utiliser avec Tailwind classes existantes */
+.text-gradient-bandhu {
+  @apply bg-gradient-to-r from-[#7c3aed] to-[#2563eb] bg-clip-text text-transparent;
+}

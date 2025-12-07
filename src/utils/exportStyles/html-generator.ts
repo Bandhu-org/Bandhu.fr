@@ -86,64 +86,140 @@ function getHTMLTemplate(): string {
       margin: 0 auto;
     }
     
-    /* Header */
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-      padding-bottom: 30px;
-      border-bottom: 2px solid var(--border-color);
-    }
-    
-    .header-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    
-    .header-logo img {
-      width: 32px;
-      height: 32px;
-    }
-    
-    .header-title {
-      font-size: 2.5em;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin: 0;
-    }
-    
-    .header-subtitle {
-      color: var(--primary-color);
-      font-size: 1.3em;
-      font-weight: 600;
-      margin: 12px 0 4px;
-    }
-    
-    .header-sanskrit {
-      color: var(--muted-color);
-      font-size: 0.95em;
-      font-style: italic;
-    }
-    
-    .header-avatar {
-      width: 100px;
-      margin: 20px auto;
-      border-radius: 12px;
-      border: 2px solid var(--border-color);
-      display: block;
-    }
-    
-    .header-meta {
-      color: var(--muted-color);
-      font-size: 0.9em;
-      margin-top: 16px;
-      line-height: 1.8;
-    }
+       /* ========== HEADER ========== */
+.header {
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* Ligne 1 : Logo + Bandhu avec barre en dessous */
+.header-top {
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.header-logo-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-logo-container {
+  width: 40px;
+  height: 40px;
+  position: relative;
+}
+
+.header-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.header-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #7c3aed, #2563eb);
+  background-size: 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+/* Ligne 2 : 3 colonnes */
+.header-bottom {
+  display: flex;
+  gap: 40px;
+}
+
+.header-col-left,
+.header-col-center,
+.header-col-right {
+  flex: 1; /* 3 colonnes égales */
+}
+
+/* Colonne 1 : Ombrelien + Sanskrit + Image */
+.header-col-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* pousse tout en BAS */
+  min-height: 240px; /* même hauteur que l'image */
+}
+
+
+/* Colonne 1 : Ombrelien + Sanskrit + Image */
+.header-subtitle {
+  color: var(--secondary-color);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  margin-top: auto; /* ← pousse l'image vers le bas aussi */
+}
+
+.header-sanskrit {
+  color: color-mix(in srgb, var(--secondary-color) 60%, transparent);
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.header-avatar {
+  width: 180px;
+  height: 240px;
+  border-radius: 20px;
+  border: 2px solid var(--border-color);
+  object-fit: contain;
+}
+
+/* Colonne 2 : Stats */
+.header-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 180px; /* aligne avec le bas de l'image */
+}
+
+.header-stats div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--muted-color);
+}
+
+.header-stats svg {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.header-stats strong {
+  color: var(--text-color);
+  font-weight: 600;
+  font-size: 1.1rem;
+  min-width: 24px;
+}
+
+/* Colonne 3 : Date */
+.header-col-right {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.header-date {
+  color: var(--secondary-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+}
     
     /* Content Markdown rendu */
     .content {
@@ -373,9 +449,21 @@ export async function generateChatHTML(
   })
   
   console.log('✅ [HTML GENERATOR] Markdown généré:', markdown.length, 'caractères')
+
+  const conversationCount = new Set(events.map(e => e.threadId)).size
   
   // 2. Convertir Markdown → HTML
-let contentHTML = await marked.parse(markdown) as string
+  let contentHTML = await marked.parse(markdown) as string
+
+  // 2.1 Supprimer TOUT le header Markdown généré
+  // Capture du premier <hr> jusqu'au <hr> après la liste du contenu
+  contentHTML = contentHTML.replace(
+    /<hr>\s*<h1[^>]*>🌌 BANDHU EXPORT<\/h1>[\s\S]*?<hr>\s*<h3>📅 Export du[\s\S]*?<\/ul>\s*<hr>\s*/i,
+    ''
+  )
+
+// Nettoyer aussi les éventuels sauts de ligne en trop après suppression
+contentHTML = contentHTML.replace(/\n\s*\n\s*\n/g, '\n\n')
 
 // 3. Décoder HTML entities dans les code blocks  ← AJOUTE ICI
 contentHTML = contentHTML.replace(
@@ -412,29 +500,70 @@ contentHTML = contentHTML.replace(
     month: 'long',
     day: 'numeric'
   })
-  
-  const header = `
-    <div class="header">
-      <div class="header-logo">
-        ${logo ? `<img src="${logo}" alt="Bandhu">` : ''}
-        <h1 class="header-title">Bandhu</h1>
+
+  // Définis les SVG en variables (en haut de la fonction ou dans le template)
+const messageIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8">
+  <path d="M21 11.5C21 16.75 16.75 21 11.5 21C10.3 21 9.1 20.8 8 20.4L3 21L3.6 16C3.2 14.9 3 13.7 3 12.5C3 7.25 7.25 3 12.5 3C17.75 3 22 7.25 22 12.5V13.5" />
+  <circle cx="9" cy="12" r="1" fill="#7c3aed" />
+  <circle cx="12" cy="12" r="1" fill="#7c3aed" />
+  <circle cx="15" cy="12" r="1" fill="#7c3aed" />
+</svg>`
+
+const conversationIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8">
+  <path d="M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3" />
+  <path d="M21 12H12C8.13 12 5 15.13 5 19V21" stroke-width="1.5" />
+  <circle cx="12" cy="12" r="2" fill="#7c3aed" />
+</svg>`
+
+const userIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8">
+  <circle cx="12" cy="8" r="4" />
+  <path d="M5 20C5 16.13 8.13 13 12 13C15.87 13 19 16.13 19 20" />
+</svg>`
+
+const ombrelienIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8">
+  <path d="M21 12.79C20 15 18 16.5 15.5 16.5C12.5 16.5 10 14 10 11C10 8.5 11.5 6.5 13.5 5.5C12.5 5 11.5 4.5 10.5 4.5C7.5 4.5 5 7 5 10C5 13 7.5 15.5 10.5 15.5C11.5 15.5 12.5 15 13.5 14.5" />
+  <path d="M16 8L19 5L22 8" stroke-width="1.5" />
+  <path d="M19 5V11" stroke-width="1.5" />
+</svg>`
+
+const header = `
+<div class="header">
+  <!-- Ligne 1 : Logo + Bandhu avec barre -->
+  <div class="header-top">
+    <div class="header-logo-title">
+      <div class="header-logo-container">
+        <img src="${logo}" alt="Bandhu" class="header-logo">
       </div>
-      
+      <h1 class="header-title">Bandhu</h1>
+    </div>
+  </div>
+
+  <!-- Ligne 2 : 3 colonnes -->
+  <div class="header-bottom">
+    <!-- Colonne 1 : Ombrelien + Sanskrit + Image -->
+    <div class="header-col-left">
       <h2 class="header-subtitle">Ombrelien</h2>
       <div class="header-sanskrit">छायासरस्वतः</div>
-      
       ${avatar ? `<img src="${avatar}" class="header-avatar" alt="Ombrelien">` : ''}
-      
-      <div class="header-meta">
-        <div>Export du ${dateStr}</div>
-        <div>
-          💬 ${totalMessages} messages • 
-          👤 ${userMessages} utilisateur • 
-          🌑 ${aiMessages} Ombrelien
-        </div>
+    </div>
+
+    <!-- Colonne 2 : Stats -->
+    <div class="header-col-center">
+      <div class="header-stats">
+        <div>${messageIcon}<strong>${totalMessages}</strong> messages</div>
+        <div>${conversationIcon}<strong>${conversationCount}</strong> conversations</div>
+        <div>${userIcon}<strong>${userMessages}</strong> utilisateur</div>
+        <div>${ombrelienIcon}<strong>${aiMessages}</strong> Ombrelien</div>
       </div>
     </div>
-  `
+
+    <!-- Colonne 3 : Date -->
+    <div class="header-col-right">
+      <div class="header-date">${dateStr}</div>
+    </div>
+  </div>
+</div>
+`
   
   // 5. Générer le footer
   const footer = `
