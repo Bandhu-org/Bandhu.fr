@@ -76,13 +76,13 @@ function getHTMLTemplate(): string {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       background: var(--background);
       color: var(--text-color);
-      line-height: 1.6;
-      padding: 40px 20px;
-      font-size: 15px;
+      line-height: 1.4;
+      padding: 2.5rem 1.25rem;
+      font-size: 18px;
     }
     
     .container {
-      max-width: 900px;
+      max-width: 46rem;
       margin: 0 auto;
     }
     
@@ -223,7 +223,7 @@ function getHTMLTemplate(): string {
     
     /* Content Markdown rendu */
     .content {
-      line-height: 1.7;
+      line-height: 1.8;
     }
     
     .content h1 {
@@ -235,9 +235,10 @@ function getHTMLTemplate(): string {
     }
     
     .content h2 {
-      font-size: 1.4em;
-      color: var(--secondary-color);
-      margin: 1.3em 0 0.6em;
+  font-size: 1.4rem;
+  margin: 1.3rem 0 0.6rem;
+  color: var(--secondary-color);
+  font-weight: 600;
     }
     
     .content h3 {
@@ -247,7 +248,7 @@ function getHTMLTemplate(): string {
     }
     
     .content p {
-      margin: 0.8em 0;
+      margin: 1.4em 0;
       color: var(--text-color);
     }
     
@@ -287,8 +288,8 @@ function getHTMLTemplate(): string {
   border-radius: 8px;
   white-space: pre-wrap;
   word-wrap: break-word;
-  border: 1px solid #334155 !important; /* bordure gris sur les 4 côtés */
-  border-left: 4px solid rgba(0, 0, 0, 0.5) !important; /* ← couleur fond user */
+  border: 8px solid rgba(0, 0, 0, 0.5) !important; /* bordure gris sur les 4 côtés */
+  /*border-left: 8px solid rgba(0, 0, 0, 0.5) !important; /* ← couleur fond user */ */
   margin: 1.2em 0;
 }
 
