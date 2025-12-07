@@ -309,10 +309,11 @@ useEffect(() => {
 }, [isOpen, threads.length]) // ← ENLÈVE initialSelectedIds.length
 
 // Fonction pour obtenir les styles disponibles selon le format
-const getAvailableStyles = (format: 'markdown' | 'pdf' | 'docx') => {
+const getAvailableStyles = (format: 'markdown' | 'pdf' | 'docx' | 'html') => {
   switch (format) {
     case 'markdown':
     case 'docx':
+      case 'html': 
       return ['design', 'sobre']
     case 'pdf':
       return ['design-color', 'design-bw', 'sobre-color', 'sobre-bw']

@@ -1,212 +1,36 @@
-/* DESIGN ULTRA-COMPACT BANDHU PDF */
-:root {
-  --primary-color: #a78bfa;
-  --secondary-color: #60a5fa;
-  --background: #0f172a;
-  --text-color: #e2e8f0;
-  --muted-color: #94a3b8;
-  --border-color: #334155;
-  --user-bubble: rgba(59, 130, 246, 0.1);
-  --ai-bubble: rgba(139, 92, 246, 0.1);
+/* RÈGLES PDF - Respecte le layout du HTML generator */
+@page {
+  size: A4;
+  margin: 0; /* Pas de marge PDF - le HTML gère tout */
+}
+
+/* Centrage et fond blanc */
+html {
+  background: white !important;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', system-ui, sans-serif;
-  background: var(--background);
-  color: var(--text-color);
-  line-height: 1.45;
-  margin: 0;
-  padding: 12px;
-  max-width: 780px;
-  margin: 0 auto;
-  font-size: 0.92em;
+  background: white !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* HEADER SERRE */
-.bandhu-header {
-  text-align: center;
-  margin-bottom: 0.8em;
-  padding-bottom: 0.6em;
-  border-bottom: 1px solid var(--border-color);
+/* Le container reste intact */
+.container {
+  page-break-inside: auto;
 }
 
-.header-top {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.bandhu-logo-small {
-  width: 18px;
-  height: 18px;
-}
-
-.bandhu-title {
-  font-size: 1.6em;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
-  font-weight: 800;
-}
-
-.ombrelien-title {
-  color: var(--primary-color);
-  margin: 3px 0 0;
-  font-size: 0.95em;
-  font-weight: 600;
-}
-
-.sanskrit {
-  color: var(--muted-color);
-  font-size: 0.65em;
-  font-style: italic;
-  margin-top: 1px;
-}
-
-.ombrelien-avatar {
-  width: 70px;
-  height: auto;
-  margin: 8px auto 6px;
-  display: block;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-}
-
-/* MESSAGES ULTRA-COMPACT */
-.message {
-  margin: 0.4em 0;
-  padding: 0.6em;
-  border-radius: 6px;
-  border-left: 3px solid;
+/* Éviter coupures dans les blocs */
+pre {
   page-break-inside: avoid;
 }
 
-.message-user {
-  background: var(--user-bubble);
-  border-left-color: var(--secondary-color);
-  margin-left: 1em;
+h2 {
+  page-break-after: avoid;
 }
 
-.message-ai {
-  background: var(--ai-bubble);
-  border-left-color: var(--primary-color);
-  margin-right: 1em;
-}
-
-.message-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.2em;
-}
-
-.message-author {
-  font-weight: bold;
-  font-size: 0.8em;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.message-user .message-author {
-  color: var(--secondary-color);
-}
-
-.message-ai .message-author {
-  color: var(--primary-color);
-}
-
-.message-author-icon {
-  width: 12px;
-  height: 12px;
-  vertical-align: middle;
-}
-
-.message-time {
-  color: var(--muted-color);
-  font-size: 0.7em;
-}
-
-/* MARKDOWN DENSE */
-h1, h2, h3 {
-  margin-top: 0.8em;
-  margin-bottom: 0.2em;
-}
-
-h1 { 
-  font-size: 1.5em; 
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.1em;
-}
-
-h2 { font-size: 1.2em; }
-h3 { font-size: 1em; }
-
-p {
-  margin: 0.4em 0;
-}
-
-blockquote {
-  border-left: 3px solid var(--primary-color);
-  margin: 0.4em 0;
-  padding: 0.4em 0.8em;
-  background: rgba(167, 139, 250, 0.1);
-  border-radius: 0 3px 3px 0;
-}
-
-code {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.1em 0.3em;
-  border-radius: 2px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.85em;
-}
-
-pre {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.6em;
-  border-radius: 4px;
-  overflow-x: auto;
-  border: 1px solid var(--border-color);
-}
-
-pre code {
-  background: none;
-  padding: 0;
-}
-
-ul, ol {
-  padding-left: 1.5em;
-  margin: 0.6em 0;
-}
-
-li {
-  margin: 0.15em 0;
-}
-
-a {
-  color: var(--secondary-color);
-  text-decoration: none;
-  border-bottom: 1px dotted var(--secondary-color);
-}
-
-hr {
-  border: none;
-  height: 1px;
-  background: var(--border-color);
-  margin: 1em 0;
-}
-
-/* FOOTER */
-.bandhu-footer {
-  margin-top: 1.5em;
-  padding-top: 0.6em;
-  border-top: 1px solid var(--border-color);
-  text-align: center;
-  color: var(--muted-color);
-  font-size: 0.75em;
+/* Forcer couleurs à l'impression */
+* {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }

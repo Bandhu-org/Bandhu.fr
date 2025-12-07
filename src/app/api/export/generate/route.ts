@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
 import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
-import { generateReactPDF } from '@/app/components/pdf/generator'
 import { splitEventsForPDF } from '@/utils/pdf/splitter'
 import JSZip from 'jszip'
 import { generateChatHTML } from '@/utils/exportStyles/html-generator'
+import { convertHTMLToPDF } from '@/utils/pdf/converter'
+import { generateChatHTMLForPDF } from '@/utils/exportStyles/pdf-html-generator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -126,75 +126,100 @@ async function generateMarkdown(events: any[], options: any, style: ExportStyle)
   }
 }
 
-// 📄 GÉNÉRATEUR PDF (React-PDF)
+// 📄 GÉNÉRATEUR PDF (NOUVEAU FLUX HTML → PDF)
 async function generatePDF(
   events: any[], 
   options: any, 
   style: ExportStyle
 ): Promise<{ content: string; pageCount: number; estimatedSize: string }> {
   try {
-    console.log(`📄 Génération PDF avec style: ${style}`)
+    console.log(`📄 Génération PDF via HTML (nouveau flux), style: ${style}`)
     
     // Split en chunks si > 200 messages
     const chunks = splitEventsForPDF(events)
     
     if (chunks.length === 1) {
       // Un seul PDF
-      const result = await generateReactPDF(chunks[0].events, { 
-        ...options, 
-        style 
-      })
+      console.log(`📄 Génération PDF unique (${events.length} messages)`)
+      
+      // 1. Générer notre super HTML
+      const html = await generateChatHTMLForPDF(chunks[0].events, {
+  style,
+  includeTimestamps: options.includeTimestamps || false,
+  title: options.title
+})
+      
+      console.log('✅ HTML généré:', html.length, 'caractères')
+      
+      // 2. Convertir HTML → PDF
+      const pdfBuffer = await convertHTMLToPDF(
+        html, 
+        style as any, // 'design-color', 'design-bw', etc.
+        { includeTimestamps: options.includeTimestamps }
+      )
+      
+      console.log('✅ PDF unique généré:', pdfBuffer.length, 'bytes')
       
       return {
-        content: result.content,
-        pageCount: result.pageCount,
-        estimatedSize: result.estimatedSize
+        content: pdfBuffer.toString('base64'),
+        pageCount: Math.ceil(events.length / 15), // estimation
+        estimatedSize: `${Math.round(pdfBuffer.length / 1024)}KB`
       }
       
     } else {
-  // Multiple PDFs → ZIP
-  console.log(`📦 ${chunks.length} PDFs à générer`)
-  
-  const pdfs = await Promise.all(
-    chunks.map(chunk => {
-      console.log(`🔧 Génération chunk ${chunk.partNumber}/${chunk.totalParts}`)
-      console.log(`📊 Events: ${chunk.events.length}`)
-      return generateReactPDF(chunk.events, {
-        ...options,
-        style,
-        partNumber: chunk.partNumber,
-        totalParts: chunk.totalParts,
-        startIndex: chunk.startIndex,
-        endIndex: chunk.endIndex
+      // Multiple PDFs → ZIP
+      console.log(`📦 ${chunks.length} PDFs à générer`)
+      
+      const pdfs = await Promise.all(
+        chunks.map(async (chunk) => {
+          console.log(`🔧 Génération chunk ${chunk.partNumber}/${chunk.totalParts}`)
+          console.log(`📊 Events: ${chunk.events.length}`)
+          
+          // Générer HTML pour ce chunk
+          const html = await generateChatHTMLForPDF(chunk.events, {
+  style,
+  includeTimestamps: options.includeTimestamps || false,
+  title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
+})
+          
+          // Convertir en PDF
+          const pdfBuffer = await convertHTMLToPDF(
+            html,
+            style as any,
+            { includeTimestamps: options.includeTimestamps }
+          )
+          
+          return {
+            buffer: pdfBuffer,
+            partNumber: chunk.partNumber,
+            totalParts: chunk.totalParts
+          }
+        })
+      )
+      
+      console.log(`✅ ${pdfs.length} PDFs générés`)
+      
+      // Créer ZIP
+      const zip = new JSZip()
+      
+      pdfs.forEach((pdf) => {
+        const filename = `conversation-partie-${pdf.partNumber}-sur-${pdf.totalParts}.pdf`
+        console.log(`📦 Ajout au ZIP: ${filename} (${pdf.buffer.length} bytes)`)
+        zip.file(filename, pdf.buffer)
       })
-    })
-  )
-  
-  console.log(`✅ ${pdfs.length} PDFs générés`)
-  
-  // Créer ZIP
-  const zip = new JSZip()
-  
-  chunks.forEach((chunk, index) => {
-    const filename = `conversation-partie-${chunk.partNumber}-sur-${chunk.totalParts}.pdf`
-    const pdfBuffer = Buffer.from(pdfs[index].content, 'base64')
-    console.log(`📦 Ajout au ZIP: ${filename} (${pdfBuffer.length} bytes)`)
-    zip.file(filename, pdfBuffer)
-  })
-  
-  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
-  console.log(`✅ ZIP généré: ${zipBuffer.length} bytes`)
-  console.log(`🔍 ZIP signature: ${zipBuffer.toString('base64').substring(0, 10)}`)
-  
-  return {
-    content: zipBuffer.toString('base64'),
-    pageCount: pdfs.reduce((sum, pdf) => sum + pdf.pageCount, 0),
-    estimatedSize: `${Math.round(zipBuffer.length / 1024)}KB`
-  }
-}
+      
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+      console.log(`✅ ZIP généré: ${zipBuffer.length} bytes`)
+      
+      return {
+        content: zipBuffer.toString('base64'),
+        pageCount: pdfs.reduce((sum, pdf) => sum + Math.ceil(events.length / chunks.length / 15), 0),
+        estimatedSize: `${Math.round(zipBuffer.length / 1024)}KB`
+      }
+    }
     
   } catch (error) {
-    console.error('❌ Erreur génération PDF (React-PDF):', error)
+    console.error('❌ Erreur génération PDF (nouveau flux):', error)
     throw new Error(`Échec génération PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
 }
