@@ -5,6 +5,7 @@ import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
 import fs from 'fs'
 import path from 'path'
+import { decode } from 'he'
 
 // Configurer marked
 marked.use(
@@ -374,27 +375,34 @@ export async function generateChatHTML(
   console.log('✅ [HTML GENERATOR] Markdown généré:', markdown.length, 'caractères')
   
   // 2. Convertir Markdown → HTML
-  // 2. Convertir Markdown → HTML
 let contentHTML = await marked.parse(markdown) as string
 
-// 1. Ajouter classe language-user aux blocs user
+// 3. Décoder HTML entities dans les code blocks  ← AJOUTE ICI
 contentHTML = contentHTML.replace(
-  /(<h2[^>]*>🔵[\s\S]*?<\/h2>)([\s\S]*?)(<pre[^>]*>)/g,
-  (match, h2Part, middlePart, preTag) => {
-    return h2Part + middlePart + '<pre class="language-user"' + preTag.substring(4)
+  /<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/g,
+  (match, code) => {
+    return match.replace(code, decode(code))
   }
 )
 
-// 2. Nettoyer les éventuels styles inline restants (optionnel)
-contentHTML = contentHTML.replace(/ style="[^"]*"/g, '')
+  // 4. Ajouter classe language-user aux blocs user
+  contentHTML = contentHTML.replace(
+    /(<h2[^>]*>🔵[\s\S]*?<\/h2>)([\s\S]*?)(<pre[^>]*>)/g,
+    (match, h2Part, middlePart, preTag) => {
+      return h2Part + middlePart + '<pre class="language-user"' + preTag.substring(4)
+    }
+  )
+
+  // 5. Nettoyer les éventuels styles inline restants (optionnel)
+  contentHTML = contentHTML.replace(/ style="[^"]*"/g, '')
   
   console.log('✅ [HTML GENERATOR] HTML converti:', contentHTML.length, 'caractères')
   
-  // 3. Encoder les images
+  // 6. Encoder les images
   const logo = encodeImage('public/images/logo-bandhu.png', 'image/png')
   const avatar = encodeImage('public/images/Ombrelien-avatar.svg', 'image/svg+xml')
   
-  // 4. Générer le header
+  // 7. Générer le header
   const totalMessages = events.length
   const userMessages = events.filter(e => e.role === 'user').length
   const aiMessages = events.filter(e => e.role === 'assistant').length
