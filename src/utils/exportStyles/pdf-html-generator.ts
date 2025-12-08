@@ -1,12 +1,12 @@
 import { marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
-import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
 import fs from 'fs'
 import path from 'path'
 import { decode } from 'he'
-import { generateMarkdownForHTML } from './markdown-for-html'
+import { generateMarkdownForHTML } from './markdown-for-html-pdf-color'
+
 
 // Configurer marked
 marked.use(
@@ -95,14 +95,19 @@ function getHTMLTemplateForPDF(): string {
 }
 
 .container {
-  background: var(--background);  /* Fond bleu seulement ici */
+  background: var(--background);
   border-radius: 20px;
-  padding: 40px;  /* ← Réduit (était 60px) */
+  padding: 40px;
   max-width: 42rem;
   width: 100%;
-  margin: 0 auto;  /* ← Plus de margin top/bottom */
+  margin: 0 auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
+
+
 
 /* ========== CONTENT WRAPPER ========== */
 .content-wrapper {
@@ -110,7 +115,12 @@ function getHTMLTemplateForPDF(): string {
   background: var(--background);
   border-radius: 12px;
   border: 2px solid color-mix(in srgb, var(--background) 80%, white);
+
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
+
+
 
 /* ========== CONTENT ========== */
 .content {
@@ -364,16 +374,19 @@ function getHTMLTemplateForPDF(): string {
     }
 
     /* CODE BLOCKS AI - Style VS Code */
-    .content pre:not(.language-user) {
-      background: #1e1e1e;
-      padding: 20px;
-      border-radius: 8px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border: 1px solid #333;
-      margin: 1.2em 0;
-    }
+.content pre:not(.language-user) {
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid #333;
+  margin: 1.2em 0;
 
+  /* 🔥 Anti-sauts de page Puppeteer */
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
     .content pre code {
       background: none;
       padding: 0;
@@ -427,11 +440,27 @@ function getHTMLTemplateForPDF(): string {
     }
     
     .content hr {
-      border: none;
-      height: 2px;
-      background: linear-gradient(to right, transparent, var(--border-color), transparent);
-      margin: 2em 0;
-    }
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--border-color), transparent);
+  margin: 2em 0;
+
+  /* 🔥 EMPÊCHER les sauts de page */
+  page-break-before: avoid !important;
+  page-break-after: avoid !important;
+  break-before: avoid !important;
+  break-after: avoid !important;
+}
+
+/* 🔥 NOUVEAU SEPARATEUR SANS PAGE BREAK */
+.hr-spacer {
+  height: 2px;
+  margin: 2em 0;
+  background: linear-gradient(to right, transparent, var(--border-color), transparent);
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
     
     .content strong {
       color: white;
@@ -447,6 +476,7 @@ function getHTMLTemplateForPDF(): string {
   page-break-inside: avoid;
   page-break-after: avoid;
 }
+
 
 .content pre {
   page-break-inside: avoid;
@@ -475,6 +505,23 @@ function getHTMLTemplateForPDF(): string {
       font-weight: 600;
     }
     
+.content h2,
+.content h3,
+.content pre,
+.content blockquote,
+.content code {
+  page-break-before: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+/* Empêche Chrome de couper dans les containers arrondis */
+.container,
+.content-wrapper {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+
     /* ========== PRINT ========== */
 @media print {
   @page {
@@ -535,7 +582,7 @@ const markdown = await generateMarkdownForHTML(
   // 2. Convertir Markdown → HTML
   let contentHTML = await marked.parse(markdown) as string
 
-  // 2.1 Propager les classes du <code> vers <pre> (user / ai / langages)
+// 2.1 Propager les classes du <code> vers <pre> (user / ai)
 contentHTML = contentHTML.replace(
   /<pre><code class="([^"]*)">/g,
   (match, classes) => {
