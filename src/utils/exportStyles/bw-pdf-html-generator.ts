@@ -1,5 +1,4 @@
 import { marked } from 'marked'
-import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
@@ -7,16 +6,11 @@ import fs from 'fs'
 import path from 'path'
 import { decode } from 'he'
 
-// Configurer marked
-marked.use(
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    highlight(code, lang) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext'
-      return hljs.highlight(code, { language }).value
-    }
-  })
-)
+// Configurer marked SANS highlight
+marked.setOptions({
+  gfm: true,
+  breaks: true
+})
 
 interface Event {
   id: string
@@ -281,15 +275,24 @@ function getHTMLTemplateForPDF_BW(): string {
     }
     
     /* CODE INLINE - Fond blanc, bordure noire */
-    .content code {
-      background: #ffffff;
-      padding: 0.2em 0.5em;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 0.9em;
-      color: #000000;
-      border: 1px solid #000000;
-    }
+    /* Code inline SEULEMENT (pas dans un pre) */
+.content code:not(pre code) {
+  background: #ffffff;
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9em;
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+/* Code dans les blocs → pas de bordure supplémentaire */
+.content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #000000 !important;
+}
     
     /* CODE BLOCKS USER - N&B pur */
 .content pre.language-user {
@@ -316,12 +319,13 @@ function getHTMLTemplateForPDF_BW(): string {
 }
 
     .content pre code {
-      background: none;
-      padding: 0;
-      color: #000000 !important;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
+  background: none;
+  padding: 0;
+  color: #000000 !important;
+  white-space: pre;         /* ← garde les sauts de ligne originaux */
+  overflow-x: auto;         /* ← barre de scroll si trop long */
+  display: block;
+}
 
     /* Syntax Highlighting - TOUT EN NOIR */
     .hljs-keyword,

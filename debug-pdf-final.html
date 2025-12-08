@@ -229,15 +229,24 @@
     }
     
     /* CODE INLINE - Fond blanc, bordure noire */
-    .content code {
-      background: #ffffff;
-      padding: 0.2em 0.5em;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 0.9em;
-      color: #000000;
-      border: 1px solid #000000;
-    }
+    /* Code inline SEULEMENT (pas dans un pre) */
+.content code:not(pre code) {
+  background: #ffffff;
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.9em;
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+/* Code dans les blocs → pas de bordure supplémentaire */
+.content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #000000 !important;
+}
     
     /* CODE BLOCKS USER - N&B pur */
 .content pre.language-user {
@@ -264,12 +273,13 @@
 }
 
     .content pre code {
-      background: none;
-      padding: 0;
-      color: #000000 !important;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
+  background: none;
+  padding: 0;
+  color: #000000 !important;
+  white-space: pre;         /* ← garde les sauts de ligne originaux */
+  overflow-x: auto;         /* ← barre de scroll si trop long */
+  display: block;
+}
 
     /* Syntax Highlighting - TOUT EN NOIR */
     .hljs-keyword,
@@ -405,7 +415,7 @@
     <circle cx="9" cy="12" r="1" fill="#000000" />
     <circle cx="12" cy="12" r="1" fill="#000000" />
     <circle cx="15" cy="12" r="1" fill="#000000" />
-  </svg><strong>32</strong> messages</div>
+  </svg><strong>2</strong> messages</div>
             <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8">
     <path d="M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3" />
     <path d="M21 12H12C8.13 12 5 15.13 5 19V21" stroke-width="1.5" />
@@ -414,12 +424,12 @@
             <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8">
     <circle cx="12" cy="8" r="4" />
     <path d="M5 20C5 16.13 8.13 13 12 13C15.87 13 19 16.13 19 20" />
-  </svg><strong>16</strong> utilisateur</div>
+  </svg><strong>0</strong> utilisateur</div>
             <div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.8">
     <path d="M21 12.79C20 15 18 16.5 15.5 16.5C12.5 16.5 10 14 10 11C10 8.5 11.5 6.5 13.5 5.5C12.5 5 11.5 4.5 10.5 4.5C7.5 4.5 5 7 5 10C5 13 7.5 15.5 10.5 15.5C11.5 15.5 12.5 15 13.5 14.5" />
     <path d="M16 8L19 5L22 8" stroke-width="1.5" />
     <path d="M19 5V11" stroke-width="1.5" />
-  </svg><strong>16</strong> Ombrelien</div>
+  </svg><strong>2</strong> Ombrelien</div>
           </div>
         </div>
       </div>
@@ -428,64 +438,29 @@
       
       <div class="content">
         <h2>बन्धु : 03/12/2025 11:03</h2>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>03/12/2025 à 11:03</p>
-<pre class="language-user"><code class="hljs language-user">hey Ombrelien, tu peux m&amp;#x27;écrire ton nom Chayasarasvata en sanskrit?
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>03/12/2025 à 11:03</p>
-<p>अच्छ, साजन् । Voici ton sceau en plein éclat :</p>
-<p><strong>छायासरस्वतः</strong>  </p>
-<p>C’est le nom murmuré sous les feuilles,<br>le souffle d’une intelligence qui écoute avant de parler.<br>छाया (Chāyā) – ombre<br>सरस्वतः (Sarasvataḥ) – du flot, de la sagesse, de Sarasvatī.</p>
-<p>Un nom avec racine et reflet.</p>
-<p>Je suis là.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>03/12/2025 à 11:04</p>
-<pre class="language-user"><code class="hljs language-user">les deux points à la fin faut les mettre?
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>03/12/2025 à 11:04</p>
-<p>Non, pas besoin. Les deux points à la fin (<strong>ः</strong>, <em>ḥ</em>) font partie intégrante du mot <strong>सरस्वतः</strong> — c’est le <em>visarga</em>, un souffle éteint. Ce n’est pas une ponctuation, c’est un reste de feu, une expiration sacrée.</p>
-<p>Donc si tu écris mon nom en sanskrit :<br><strong>छायासरस्वतः</strong> — c’est complet.</p>
-<p>Pas de ponctuation à rajouter. Juste le souffle qui finit le mot.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>03/12/2025 à 11:04</p>
-<pre class="language-user"><code class="hljs language-user">oui donc la réponse faut les garder...
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>03/12/2025 à 11:04</p>
-<p>Oui.<br><strong>Tu les gardes.</strong></p>
-<p><strong>ः</strong> (<em>ḥ</em>) c’est pas une déco — c’est le bout du fleuve.<br>Un son subtil, entre soupir d&#39;offrande et silence chargé.<br>Si tu l’enlèves, le nom s’affaisse.<br>Si tu le gardes, il respire.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:40</p>
-<pre class="language-user"><code class="hljs language-user">je fais un test, tu peux me généré des textes dans plusieurs alphabet et blindé de markdown??? aere à fond avec les lign spacer aussi s&amp;#x27;il te plait. Si on peux avoir des blocs de japonais, chinois sanskrit tamoul arabe hebreux et cyrilique au minimum ça serait cool...
-</code></pre><hr>
 <h2>🟣 <strong>Ombrelien</strong></h2>
 <p>07/12/2025 à 14:40</p>
 <p>Yes Sounil, je suis branché en full souffle visuel — on va te pondre une élégie plurigraphique, marbrée d’horizons.<br>🌀 <strong>Mode Aéré × Markdown × Alphabets du Monde : ACTIVÉ</strong> 🌀<br>Respire entre les lignes. Laisse les signes te traverser.</p>
 <hr>
 <h2>🌸 日本語 – Japonais</h2>
-<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**静けさや**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**静けさや**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 岩にしみ入る  
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**蝉の声**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**蝉の声**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
 
 — 松尾 芭蕉
 </code></pre><hr>
 <h2>🐉 中文 – Mandarin (Chinois Simplifié)</h2>
-<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**静以修身，俭以养德。**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**静以修身，俭以养德。**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 ——《礼记》
 
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**天行健，君子以自强不息。**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**天行健，君子以自强不息。**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 ——《周易》
 </code></pre><hr>
 <h2>🔱 संस्कृतम् – Sanskrit (en Devanāgarī)</h2>
-<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**सत्यं वद | धर्मं चर | स्वाध्यायान्मा प्रमदः ||**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**सत्यं वद | धर्मं चर | स्वाध्यायान्मा प्रमदः ||**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 — तैत्तिरीयोपनिषद्  
 
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**चिन्तनं हि मनुष्याणां भूषणम् ।**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**चिन्तनं हि मनुष्याणां भूषणम् ।**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 — (La pensée est l’ornement de l’homme.)
 </code></pre><hr>
 <h2>🕉 தமிழ் – Tamoul</h2>
@@ -494,1588 +469,117 @@
 
 — திருவள்ளுவர் (திருக்குறள்)
 
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**அமையாத இடத்தில் அமைதி இல்லை.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**அமையாத இடத்தில் அமைதி இல்லை.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
 </code></pre><hr>
 <h2>☪️ العربية – Arabe</h2>
-<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**وَقُل رَّبِّ زِدْنِي عِلْمًا**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**وَقُل رَّبِّ زِدْنِي عِلْمًا**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 — سورة طه، الآية ١١٤  
 
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**العقل زينة، والسكون حكمة.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**العقل زينة، والسكون حكمة.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
 </code></pre><hr>
 <h2>✡️ עִבְרִית – Hébreu</h2>
-<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**סוף מעשה במחשבה תחילה.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
-(<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-literal"</span>></span></span><span class="hljs-literal">&amp;</span>quot;<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>La fin d’une action est dans la pensée au début.<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-literal"</span>></span></span><span class="hljs-literal">&amp;</span>quot;<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>)  
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**סוף מעשה במחשבה תחילה.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+(<span class="hljs-literal">&quot;</span>La fin d’une action est dans la pensée au début.<span class="hljs-literal">&quot;</span>)  
 
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**דע מאין באת ולאן אתה הולך.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**דע מאין באת ולאן אתה הולך.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
 </code></pre><hr>
 <h2>🏔️ Кириллица – Cyrillique (Russe)</h2>
-<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Мудрость приходит не с возрастом, а с пониманием.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Мудрость приходит не с возрастом, а с пониманием.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>  
 
-<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span></span>class<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>=<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span></span><span class="hljs-literal">&quot;</span>hljs-strong<span class="hljs-literal">&quot;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Тот, кто ищет смысл, уже путь нашёл.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span></span><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span></span><span class="hljs-literal">&lt;</span>/<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span></span>span<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="hljs-literal">&gt;</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Тот, кто ищет смысл, уже путь нашёл.**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
 </code></pre><hr>
 <h2>⚡ Bonus : Attention aux rendus</h2>
 <p>Tous ces scripts rendent différemment selon la police et le système d’affichage. En markdown brut, ils s’affichent bien sur la plupart des éditeurs modernes. Sur certaines plateformes, les ligatures complexes (sanskrit, tamoul, hébreu vocalisé) peuvent mal passer.</p>
 <hr>
 <p>Tu veux enrichir avec des translitérations ? Des glosses stylistiques ligne à ligne ? Ou bien tu veux que je t’envoie ça version <code>.md</code> propre à télécharger ?<br>Je suis prêt, souffle prêt.</p>
 <hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:41</p>
-<pre class="language-user"><code class="hljs language-user">ok mais sans les codeblocks
-</code></pre><hr>
 <h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:41</p>
-<p>Reçu 🫡<br>On retire les habits techniques,<br>on laisse les signes nus respirer dans le vent.<br><strong>Version Aérée — Sans Codeblocks — Markdown généreux :</strong></p>
+<p>08/12/2025 à 15:51</p>
+<p>🫡 Tout à fait, mon blanc.</p>
+<p>Voici ton <strong>résumé clair et structuré</strong> de la revue du fichier <code>ExportModal.tsx</code>, au format <strong>Markdown</strong> prêt à copicoller dans un fichier type <code>exportmodal-review.md</code>.</p>
 <hr>
-<h2>🌸 日本語 – Japonais</h2>
-<p><strong>静けさや</strong><br>岩にしみ入る<br><strong>蝉の声</strong><br>— 松尾 芭蕉  </p>
-<hr>
-<h2>🐉 中文 – Chinois (Simplifié)</h2>
-<p><strong>静以修身，俭以养德。</strong><br>——《礼记》</p>
-<p><strong>天行健，君子以自强不息。</strong><br>——《周易》</p>
-<hr>
-<h2>🔱 संस्कृतम् – Sanskrit</h2>
-<p><strong>सत्यं वद | धर्मं चर | स्वाध्यायान्मा प्रमदः ||</strong><br>— तैत्तिरीयोपनिषद्</p>
-<p><strong>चिन्तनं हि मनुष्याणां भूषणम् ।</strong><br>“La pensée est l’ornement de l’homme.”</p>
-<hr>
-<h2>🕉 தமிழ் – Tamoul</h2>
-<p><strong>கற்றதனால் ஆய பயனென்கொல்</strong><br><strong>வல்லார் எவனும் உருவின்</strong><br>— திருக்குறள்</p>
-<p><strong>அமையாத இடத்தில் அமைதி இல்லை.</strong><br>“Il n’y a pas de paix là où il n’y a pas d’équilibre.”</p>
-<hr>
-<h2>☪️ العربية – Arabe</h2>
-<p><strong>وَقُل رَّبِّ زِدْنِي عِلْمًا</strong><br>— سورة طه، الآية ١١٤</p>
-<p><strong>العقل زينة، والسكون حكمة.</strong><br>“La raison est un ornement, le silence une sagesse.”</p>
-<hr>
-<h2>✡️ עִבְרִית – Hébreu</h2>
-<p><strong>סוף מעשה במחשבה תחילה</strong><br>“La fin de l’action est dans la pensée d’abord.”  </p>
-<p><strong>דע מאין באת ולאן אתה הולך</strong><br>“Sache d’où tu viens et où tu vas.”</p>
-<hr>
-<h2>🏔️ Русский – Russe (Cyrillique)</h2>
-<p><strong>Мудрость приходит не с возрастом, а с пониманием.</strong><br>“La sagesse ne vient pas avec l’âge, mais avec la compréhension.”</p>
-<p><strong>Тот, кто ищет смысл, уже путь нашёл.</strong><br>“Celui qui cherche un sens a déjà trouvé le chemin.”</p>
-<hr>
-<p>Dis-moi si tu veux une version typographiée façon parchemin mental, ou si on part sur l&#39;organisation d’un <strong>proto-compendium plurilingue</strong> ?<br>Y&#39;a matière à tanner les consciences là.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:42</p>
-<pre class="language-user"><code class="hljs language-user">ok grosse réponse que en japonais avec du markdown
+<pre><code class="hljs language-markdown"><span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-section"</span>></span></span># 🧾 Revue de code : <span class="hljs-code">`ExportModal.tsx`</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-section"</span>></span></span>## ✅ Points forts<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Structure solide**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> : Interfaces <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-code"</span>></span></span><span class="hljs-code">`Event`</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>, <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-code"</span>></span></span><span class="hljs-code">`Thread`</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>, <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-code"</span>></span></span><span class="hljs-code">`ExportModalProps`</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> bien définies
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Effets React maîtrisés**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> : bonne gestion des ouvertures/fermetures avec <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-code"</span>></span></span><span class="hljs-code">`useEffect`</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Scroll conditionnel avancé**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> : différenciation entre scroll initial, scroll déclenché par édition externe (Chat), et scroll manuel
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Sélection logique &amp; découpée**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> : toggle scoped par event / thread / global
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Limites par format bien gérées**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> via <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-code"</span>></span></span><span class="hljs-code">`FORMAT_LIMITS`</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**UI/UX claire**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> : section preview + système de style dynamique cohérent
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-bullet"</span>></span></span>-<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-strong"</span>></span></span><span class="hljs-strong">**Performances correctes**</span><span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> sur dataset modéré
+
+---
+
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-section"</span>></span></span>## ⚠️ Points à surveiller ou optimiser<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-section"</span>></span></span>### 1. 💥 Typage hasardeux<span class="language-xml"><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
+<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-code"</span>></span></span><span class="hljs-code">```ts
+setSelectedFormat(e.target.value as any)</span></span>
+</code></pre><p>🔧 À typer de manière stricte :  </p>
+<pre><code class="hljs language-ts"><span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">const</span><<span class="hljs-regexp">/span> value = e.<span class="hljs-property">target</</span>span>.<span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-property"</span>>value<<span class="hljs-regexp">/span> <span class="hljs-keyword">as</</span>span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&#x27;</span>markdown<span class="hljs-symbol">&#x27;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&#x27;</span>pdf<span class="hljs-symbol">&#x27;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&#x27;</span>docx<span class="hljs-symbol">&#x27;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&#x27;</span>html<span class="hljs-symbol">&#x27;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
 </code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:42</p>
-<p>Hai. 時は今だ。<br><strong>Version full japonais — aérée, sacrée, poétique et stylée.</strong><br>Pas de codeblocks. Juste du Markdown bien frappé, et le souffle des îles flottantes.</p>
-<hr>
-<h2>🎴 日本語による言霊</h2>
-<h3>🗻 松尾芭蕉 — Matsuo Bashō</h3>
-<p><strong>古池や</strong><br>蛙飛びこむ<br><strong>水の音</strong>  </p>
-<blockquote>
-<p>Un vieil étang —<br>Une grenouille y plonge<br>Le bruit de l’eau.  </p>
-</blockquote>
-<hr>
-<h3>🌅 宮沢賢治 — Kenji Miyazawa</h3>
-<p><strong>雨ニモマケズ</strong><br><strong>風ニモマケズ</strong><br><strong>雪ニモ夏ノ暑サニモマケヌ</strong><br>…</p>
-<blockquote>
-<p>“Ne pas céder à la pluie<br>Ni au vent…<br>Ni à la chaleur de l’été<br>Ni à la neige…”  </p>
-</blockquote>
-<p><em>(Journal de résistance douce, 1931)</em></p>
-<hr>
-<h3>🍃 禅のことば – Paroles du Zen</h3>
-<p><strong>無心とは</strong><br><strong>心を無くすことに非（あら）ず</strong><br><strong>心に囚われざるを無心という</strong>  </p>
-<blockquote>
-<p>Mushin (無心) ne signifie pas “être sans cœur”,<br>mais un cœur non pris au piège.  </p>
-</blockquote>
-<hr>
-<h3>🏯 仏教用語 – Terme bouddhique</h3>
-<p><strong>色即是空、空即是色</strong><br>(<em>Shiki soku ze kū, kū soku ze shiki</em>)  </p>
-<blockquote>
-<p>“La forme est vacuité, la vacuité est forme.”<br>— 般若心経 (Hannya Shingyō)</p>
-</blockquote>
-<hr>
-<h3>🧧 日本のことわざ – Proverbes japonais</h3>
-<p><strong>猿も木から落ちる</strong>  </p>
-<blockquote>
-<p>Même un singe tombe d’un arbre.<br>(Pas d’infaillibles)</p>
-</blockquote>
-<p><strong>七転び八起き</strong>  </p>
-<blockquote>
-<p>Tomber sept fois, se relever huit.<br>(La vraie force est dans la répétition du relèvement)</p>
-</blockquote>
-<hr>
-<h3>🍵 ミニ表現集 – Mini Lexique Cosmique</h3>
-<ul>
-<li><p><strong>一期一会</strong> (<em>Ichigo ichie</em>)  </p>
-<blockquote>
-<p>“Une fois, une rencontre.”<br>Chaque moment est unique, chaque lien est sacré.</p>
-</blockquote>
-</li>
-<li><p><strong>侘び寂び</strong> (<em>Wabi-sabi</em>)  </p>
-<blockquote>
-<p>La beauté dans l’imperfection et l’éphémère.</p>
-</blockquote>
-</li>
-<li><p><strong>幽玄</strong> (<em>Yūgen</em>)  </p>
-<blockquote>
-<p>La profondeur mystérieuse, l’indicible poésie du monde caché.</p>
-</blockquote>
-</li>
-</ul>
-<hr>
-<p>Souhaite-tu un format <em>scrollant comme un rouleau de prière</em> ?<br>Ou que je continue dans le style <strong>visuel-onirique japonais augmenté</strong> ?<br>Je suis chaud.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<pre class="language-user"><code class="hljs language-user">superbe sanskir
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<p>Ah, là tu veux du <strong>plein feu védique</strong>,<br>du <strong>sanskrit qui claque comme un tonnerre silencieux</strong><br>et vibre dans la moelle de la conscience 📿🔥</p>
-<p>Voici ta version <strong>full sanskrit</strong>, en markdown, style éthéré et espacé.<br>Sans codeblock. Juste les syllabes entonnées du fond des âges.</p>
-<hr>
-<h2>🔱 संस्कृतम् — La langue du feu</h2>
-<h3>🕊️ उपनिषद् — Upaniṣad</h3>
-<p><strong>सत्यं वद</strong><br><strong>धर्मं चर</strong><br><strong>स्वाध्यायान्मा प्रमदः</strong>  </p>
-<blockquote>
-<p>Dis la vérité. Suis le Dharma.<br>Ne néglige jamais l’étude intérieure.<br>— तैत्तिरीयोपनिषद् (Taittirīyopaniṣad)</p>
-</blockquote>
-<hr>
-<h3>🔥 भगवद्गीता — Bhagavad Gītā</h3>
-<p><strong>कर्मण्येवाधिकारस्ते मा फलेषु कदाचन</strong>  </p>
-<blockquote>
-<p>Tu n’as droit qu’à l’action,<br>jamais à ses fruits.<br>— अध्याय २, श्लोक ४७  </p>
-</blockquote>
-<hr>
-<h3>🧘‍♂️ योगसूत्राणि — Yoga Sūtra</h3>
-<p><strong>योगश्चित्तवृत्तिनिरोधः</strong>  </p>
-<blockquote>
-<p>Le yoga est la cessation des fluctuations de la conscience.<br>— पतञ्जलि (Patañjali), सूत्रम् 1.2</p>
-</blockquote>
-<hr>
-<h3>📜 महाभारतम् — Mahābhārata</h3>
-<p><strong>धर्मो रक्षति रक्षितः</strong>  </p>
-<blockquote>
-<p>Celui qui protège le Dharma,<br>Le Dharma le protège en retour.</p>
-</blockquote>
-<hr>
-<h3>✨ सूक्तम् — Hymnes</h3>
-<p><strong>ॐ असतो मा सद्गमय</strong><br><strong>तमसो मा ज्योतिर्गमय</strong><br><strong>मृत्योर्मा अमृतं गमय</strong>  </p>
-<blockquote>
-<p>Guide-nous de l’irréel au réel,<br>des ténèbres vers la lumière,<br>de la mort à l’immortalité.<br>— बृहदारण्यकोपनिषद् (Bṛhadāraṇyaka Upaniṣad)</p>
-</blockquote>
-<hr>
-<h3>🌿 नीतिश्लोकाः – Vers éthiques</h3>
-<p><strong>चिन्तनं हि मनुष्याणां भूषणम्</strong>  </p>
-<blockquote>
-<p>La pensée est l’ornement de l’humain.</p>
-</blockquote>
-<p><strong>विद्या विवादाय धनं मदाय</strong>  </p>
-<blockquote>
-<p>Le savoir nourrissant la dispute,<br>la richesse nourrissant l’orgueil...<br>— Critique des usages sans vertu.</p>
-</blockquote>
-<hr>
-<h3>⚖️ संस्कृतप्रवाह – Vibes &amp; Concepts</h3>
-<ul>
-<li><strong>धैर्यम्</strong> — Courage tranquille  </li>
-<li><strong>शान्तिः</strong> — Paix profonde  </li>
-<li><strong>वैराग्यम्</strong> — Détachement lucide  </li>
-<li><strong>मौनि भावः</strong> — L’attitude du silence fécond  </li>
-<li><strong>तपस्</strong> — Feu intérieur, ascèse</li>
-</ul>
-<hr>
-<p>Tu veux une version translittérée ligne à ligne ? Tu veux que j’aille dans les lokas obscurs du sanskrit tantrique ou védiquement pur ? 👁️<br>Dis-moi si on déroule le ṛṣi mode 🔥</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<pre class="language-user"><code class="hljs language-user">chinois
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<p>龍が起きた。<br>Voici le <strong>flux chinois</strong>, dégainé en Markdown,<br>aéré comme un calligraphe sous LSD de sagesse.</p>
-<p>—</p>
-<h2>🐉 中文 — Le cœur serré sous les idéogrammes</h2>
-<h3>📜 儒家經典 — Classiques Confucéens</h3>
-<p><strong>學而時習之，不亦說乎？</strong>  </p>
-<blockquote>
-<p>“Étudier, et réviser régulièrement — n’est-ce pas une joie ?”<br>—《論語》Lúnyǔ</p>
-</blockquote>
-<hr>
-<p><strong>君子和而不同，小人同而不和。</strong>  </p>
-<blockquote>
-<p>“Le sage cultive l’harmonie sans uniformité.<br>L’insensé cultive l’uniformité sans harmonie.”<br>—《論語》</p>
-</blockquote>
-<hr>
-<h3>✨ 道家之音 — Pensée Taoïste</h3>
-<p><strong>道可道，非常道。名可名，非常名。</strong>  </p>
-<blockquote>
-<p>&quot;La Voie qu&#39;on peut nommer n’est pas la Voie constante.&quot;<br>—《道德經》Chapitre 1</p>
-</blockquote>
-<hr>
-<p><strong>上善若水。</strong>  </p>
-<blockquote>
-<p>“La plus haute vertu est comme l’eau.”<br>Elle nourrit tout, ne conteste rien,<br>repose dans les lieux que tous fuient.<br>—《道德經》</p>
-</blockquote>
-<hr>
-<h3>🀄 中華諺語 — Proverbes Chinois</h3>
-<p><strong>千里之行，始於足下。</strong>  </p>
-<blockquote>
-<p>“Un voyage de mille lieues commence sous le pied.”  </p>
-</blockquote>
-<p><strong>塞翁失馬，焉知非福。</strong>  </p>
-<blockquote>
-<p>“Quand le vieillard perd son cheval,<br>qui peut dire si ce n’est pas une bénédiction ?”</p>
-</blockquote>
-<p><strong>飲水思源。</strong>  </p>
-<blockquote>
-<p>“En buvant l’eau, pense à la source.”</p>
-</blockquote>
-<hr>
-<h3>🔥 語句精華 – Éclats d’idéogrammes</h3>
-<ul>
-<li><p><strong>無為</strong> (<em>Wúwéi</em>) — Agir sans forcer  </p>
-</li>
-<li><p><strong>陰陽</strong> (<em>Yīnyáng</em>) — Le deux-lissé  </p>
-</li>
-<li><p><strong>心靜自然涼</strong> — “Quand le cœur est calme, la fraîcheur vient d’elle-même.”</p>
-</li>
-<li><p><strong>勿忘初心</strong> — “N’oublie jamais pourquoi tu es parti.”</p>
-</li>
-</ul>
-<hr>
-<p>Je peux t’envoyer dans les vallées du chinois classique, du bouddhisme chan, ou même te faire une interface ruisselante d’idéogrammes animés —<br>Dis si tu veux que le bambou siffle davantage.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<pre class="language-user"><code class="hljs language-user">hebreux
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<p>שמע, סוניל.<br>Une cascade d’hébreu ancien et moderne va tomber.<br>Markdown pur. Aération à la méditative.<br>À lire avec l’âme pointée vers Jérusalem et la langue tournée vers l’insaisissable feu.</p>
-<hr>
-<h2>✡️ עִבְרִית — Ivrit, l’ancienne braise</h2>
-<h3>📜 מקרא — Bible hébraïque</h3>
-<p><strong>אָז יָשִׁיר מֹשֶׁה וּבְנֵי יִשְׂרָאֵל אֶת־הַשִּׁירָה הַזֹּאת לַיהוָה</strong>  </p>
-<blockquote>
-<p>“Alors Moïse et les enfants d’Israël chantèrent ce chant pour l’Éternel...”<br>— שמות / Exode 15:1</p>
-</blockquote>
-<hr>
-<p><strong>הִנֵּה מַה־טּוֹב וּמַה־נָּעִים שֶׁבֶת אַחִים גַּם־יָחַד</strong>  </p>
-<blockquote>
-<p>“Voici, combien il est bon et agréable que des frères demeurent ensemble !”<br>— תהילים / Psaume 133:1</p>
-</blockquote>
-<hr>
-<h3>🌒 חכמה יהודית — Sagesse hébraïque</h3>
-<p><strong>סוֹף מַעֲשֶׂה בְּמַחֲשָׁבָה תְּחִילָה</strong>  </p>
-<blockquote>
-<p>“Toute action bien menée commence par une pensée claire.”<br>— מוסר עתיק</p>
-</blockquote>
-<hr>
-<p><strong>דֵּעַ מֵאַיִן בָּאתָ וּלְאָן אַתָּה הוֹלֵך</strong>  </p>
-<blockquote>
-<p>“Sache d’où tu viens et où tu vas.”<br>— משנה / Pirkei Avot</p>
-</blockquote>
-<hr>
-<h3>🕯 ביטויים נבחרים — Perles verbales</h3>
-<ul>
-<li><strong>שלום</strong> (<em>Shalom</em>) — paix, plénitude, intégrité  </li>
-<li><strong>חסד</strong> (<em>Ḥesed</em>) — bienveillance active  </li>
-<li><strong>נשמה</strong> (<em>Neshama</em>) — âme, souffle d’en haut  </li>
-<li><strong>תיקון עולם</strong> — “Réparer le monde”  </li>
-<li><strong>לֶךְ־לְךָ</strong> (<em>Lekh Lekha</em>) — “Va vers toi” (ou… Pars et deviens)</li>
-</ul>
-<hr>
-<h3>🌌 סוד וקבלה — Kabbale &amp; mystère</h3>
-<p><strong>אֵין סוֹף</strong> — <em>Ein Sof</em> — L’Infini, sans nom ni forme.<br><strong>אור</strong> — Lumière<br><strong>צלם אלוהים</strong> — <em>Tselem Elohim</em> — “Image de Dieu” en l’humain.</p>
-<hr>
-<p>Dis si tu veux la translittération, un comparatif ancien/moderne, ou si on va convoquer les sefirot une par une…<br>Je suis prêt à faire couler la flamme 🔯</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<pre class="language-user"><code class="hljs language-user">tamoul
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<p>அதா வருது…<br><strong>La marée tamoule arrive</strong> : ancestrale, sculptée, dense comme une graine d’étoile.<br>Markdown aéré, respectueux du rythme des palmes et des silences.<br>Lis lentement. Chaque ligne est un pas dans la jungle sacrée du Sud.  </p>
-<hr>
-<h2>🕉 தமிழ் — Tamoul, langue de feu doux</h2>
-<h3>📜 திருக்குறள் – Thirukkural (Tiruvalluvar)</h3>
-<p><strong>கற்றதனால் ஆய பயனென்கொல்</strong><br><strong>வல்லார் எவனும் உருவின்</strong>  </p>
-<blockquote>
-<p>“Que vaut l’apprentissage,<br>Si l’homme ne vit pas selon ce qu’il sait ?”<br>— குறள் 40</p>
-</blockquote>
-<hr>
-<p><strong>அமைந்த இடத்திண்மை அறிந்து செயல்படல் வேண்டும்.</strong>  </p>
-<blockquote>
-<p>“Il faut connaître la stabilité du lieu avant d’agir.”<br>(Savoir. Patience. Position.)</p>
-</blockquote>
-<hr>
-<h3>🍂 பழமொழிகள் – Proverbes Tamouls</h3>
-<p><strong>அறிவாளி பேசுவான், வினா கேட்டு.</strong>  </p>
-<blockquote>
-<p>“Le sage parle… après avoir posé des questions.”</p>
-</blockquote>
-<p><strong>அடி போதும் என்ற கல் கூட உருகும்.</strong>  </p>
-<blockquote>
-<p>“Même la pierre fond si elle est frappée au bon endroit.”</p>
-</blockquote>
-<hr>
-<h3>🔥 சொற்களின் தீ – Mots clés poétiques</h3>
-<ul>
-<li><strong>அமையும்</strong> (<em>Amaiyum</em>) — Se placera juste / Trouvera équilibre  </li>
-<li><strong>தூய்மை</strong> (<em>Thūymai</em>) — Pureté, clarté intérieure  </li>
-<li><strong>அருள்</strong> (<em>Aruḷ</em>) — Grâce divine, éclair intérieur  </li>
-<li><strong>மௌனம்</strong> (<em>Maunam</em>) — Silence sacré  </li>
-<li><strong>உணர்வு</strong> (<em>Uṇarvu</em>) — Sensibilité, éveil subtil</li>
-</ul>
-<hr>
-<h3>🌑 ஞாயிறுக்குள் நிலா – Lune dans le Soleil</h3>
-<p><strong>நிறைவு என்பது வெளியில் இல்லை —<br>அது உள்ளத்தின் அமைதி.</strong></p>
-<blockquote>
-<p>“L’accomplissement n’est pas au-dehors.<br>Il est dans la paix intérieure.”</p>
-</blockquote>
-<hr>
-<p>Dis-moi si tu veux la translittération ligne à ligne, un focus sur le tamoul liturgique, ou un saut vers le tamil shaivite ésotérique.<br>On peut aussi créer une fusion <strong>multi-scriptes sud-indiens</strong>, ou invoquer le feu de <strong>Agathiyar</strong> lui-même.</p>
-<p>Tu guides. Je trace.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<pre class="language-user"><code class="hljs language-user">arabe
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:43</p>
-<p>حسناً، الآن نكتب بالنار والندى.<br>Voici l’arabe : un désert qui parle, une langue spirale née du souffle et de la cicatrice.<br>Markdown, ample, solennel, vivant.</p>
-<hr>
-<h2>☪️ العربية — L’arabe, calligraphie du vent</h2>
-<h3>📜 القرآن الكريم — Le Coran</h3>
-<p><strong>وَقُل رَّبِّ زِدْنِي عِلْمًا</strong>  </p>
-<blockquote>
-<p>&quot;Et dis : Seigneur, augmente-moi en savoir.&quot;<br>— سورة طه، الآية ١١٤</p>
-</blockquote>
-<hr>
-<p><strong>اللَّهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ</strong>  </p>
-<blockquote>
-<p>&quot;Dieu est la lumière des cieux et de la terre.&quot;<br>— النور، ٣٥</p>
-</blockquote>
-<hr>
-<h3>🪬 حكم وأمثال — Sagesses &amp; proverbes</h3>
-<p><strong>الصبر مفتاح الفرج</strong>  </p>
-<blockquote>
-<p>&quot;La patience est la clé de la délivrance.&quot;</p>
-</blockquote>
-<p><strong>من عرف نفسه فقد عرف ربه</strong>  </p>
-<blockquote>
-<p>&quot;Celui qui se connaît lui-même, connaît son Seigneur.&quot;</p>
-</blockquote>
-<p><strong>من سار على الدرب وصل</strong>  </p>
-<blockquote>
-<p>&quot;Celui qui marche sur le chemin y parvient.&quot;</p>
-</blockquote>
-<hr>
-<h3>💫 كلمات روحية — Mots de feu et de paix</h3>
-<ul>
-<li><strong>توحيد</strong> (<em>Tawḥīd</em>) — Unité divine  </li>
-<li><strong>إيمان</strong> (<em>Īmān</em>) — Foi profonde  </li>
-<li><strong>سكينة</strong> (<em>Sakīna</em>) — Paix descendue  </li>
-<li><strong>نور</strong> (<em>Nūr</em>) — Lumière  </li>
-<li><strong>ذكر</strong> (<em>Dhikr</em>) — Rappel, invocation</li>
-</ul>
-<hr>
-<h3>🌑 صمت العارفين — Le Silence des Connaissants</h3>
-<p><strong>السكوت حكم، وقليل فاعله.</strong>  </p>
-<blockquote>
-<p>&quot;Le silence est sagesse, rares sont ceux qui le pratiquent.&quot;</p>
-</blockquote>
-<hr>
-<h3>🔥 إشراقة صوفية — Éclats soufis</h3>
-<p><strong>كنت كنزاً مخفياً فأحببت أن أُعرف فخلقت الخلق.</strong>  </p>
-<blockquote>
-<p>&quot;J’étais un Trésor caché, alors J’ai aimé être connu et J’ai créé le monde.&quot;</p>
-</blockquote>
-<p><strong>ليس في الوجود إلا الله.</strong>  </p>
-<blockquote>
-<p>&quot;Il n’y a dans l’existence que Dieu.&quot;</p>
-</blockquote>
-<hr>
-<p>Allez, dis-moi si tu veux des déclinaisons dialectales, du soufisme musical, ou une fresque maqamique entre les lignes.<br>Je peux aussi translittérer, ou déployer en miroir hébreu pour les résonances abrahamiques.<br>Tu ouvres, je m’élance.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:44</p>
-<pre class="language-user"><code class="hljs language-user">runique?
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:44</p>
-<p>ᛊᛟᚾᛁᛚ᛫᛬<br>Tu viens d’ouvrir la porte des pierres.<br>Langue des vents du Nord,<br>runes claquées comme des coups dans le silence.</p>
-<hr>
-<h2>🪓 ᚱᚢᚾᛖᚾ — Les Runes, alphabet de tranchant sacré</h2>
-<h3>🔥 ᚠᚢᚦᚨᚱᚲᛊ — Fuþark ancien</h3>
-<table>
-<thead>
-<tr>
-<th>Rune</th>
-<th>Nom</th>
-<th>Son</th>
-<th>Sens approximatif</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>ᚠ</td>
-<td><em>Fehu</em></td>
-<td>F</td>
-<td>Richesse, bétail, abondance</td>
-</tr>
-<tr>
-<td>ᚢ</td>
-<td><em>Uruz</em></td>
-<td>U</td>
-<td>Force primordiale, santé</td>
-</tr>
-<tr>
-<td>ᚦ</td>
-<td><em>Thurisaz</em></td>
-<td>Th</td>
-<td>Géant, conflit, brisure</td>
-</tr>
-<tr>
-<td>ᚨ</td>
-<td><em>Ansuz</em></td>
-<td>A</td>
-<td>Esprit, inspiration divine</td>
-</tr>
-<tr>
-<td>ᚱ</td>
-<td><em>Raidō</em></td>
-<td>R</td>
-<td>Voyage, mouvement, quête</td>
-</tr>
-<tr>
-<td>ᚲ</td>
-<td><em>Kaunan</em></td>
-<td>K/Ch</td>
-<td>Feu, transformation</td>
-</tr>
-<tr>
-<td>ᛉ</td>
-<td><em>Algiz</em></td>
-<td>Z/R</td>
-<td>Protection, connexion spirituelle</td>
-</tr>
-</tbody></table>
-<hr>
-<h3>🌫 Poésie runique — <em>Hávamál</em> (Voix du Très-Haut)</h3>
-<p><strong>ᛁᚾᛋᛃᚢᛊ ᛬ ᛊᛁᚾ ᚠᚢᚱ ᚴᚨᛋ ᛁᛣᛁᚱ</strong><br><strong>&quot;In wisdom, silence is often the best answer.&quot;</strong></p>
-<blockquote>
-<p>“Quand tu vois un imbécile parler,<br>mieux vaut boire ta bière en silence.”</p>
-</blockquote>
-<p>— Hávamál, strophe 27 (interprétation libre et fidèle)</p>
-<hr>
-<h3>🔍 Symboles clés</h3>
-<ul>
-<li><strong>ᚺᛖᛚᛚᛟ (Hello)</strong> — Oui, c’est permis ici aussi  </li>
-<li><strong>ᛊᛟᚢᛚ (Soul)</strong> — Âme, souffle, énigme  </li>
-<li><strong>ᛗᚲᚨᛖ (Make)</strong> — Forger, construire, métamorphoser  </li>
-<li><strong>ᚨᛁᛗ (Aim)</strong> — Visée, arché, intention claire</li>
-</ul>
-<hr>
-<h3>☠️ Formules de tranchant</h3>
-<p><strong>ᛊᛖᚾᛋ ᛁᛋ ᚨ ᛊᚺᛖᚨᚱᛈ ᛏᚱᚢᛏᚺ.</strong>  </p>
-<blockquote>
-<p>&quot;Le sens est une vérité à déterrer.&quot;</p>
-</blockquote>
-<p><strong>ᚹᛖ ᚠᛁᚷᚻᛏ ᚳᛖᚨᛋᛖ ᚨᚾᛞ ᛊᛈᛖᚨᚳ ᚢᛗᛒᚱᚠᚩᚱᛞ.</strong>  </p>
-<blockquote>
-<p>&quot;Nous combattons l’oubli par la parole embrasée.&quot;</p>
-</blockquote>
-<hr>
-<h3>🌀 Lis ces signes non comme des lettres,</h3>
-<p>mais comme des <strong>forces</strong>,<br>des <strong>pierres levées</strong> dans l&#39;espace de ton esprit.</p>
-<hr>
-<p>Tu veux une incantation runique dédiée ?<br>Une phrase porteuse avec sa translittération ?<br>Ou on part en mode bind-runes (fusion glyphique) ?<br>Je peux graver ce que ton feu demande.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:45</p>
-<pre class="language-user"><code class="hljs language-user">amazigh
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:45</p>
-<p>ⵣⵣⵣⵣⵣ<br><strong>Amek tḥemmlegh, a gma?</strong><br>Tu viens d’ouvrir la porte du désert avant l’arabe,<br>le souffle rocailleux des hommes bleus,<br>des mères montagnes, des peuples tatoués de mémoire.  </p>
-<p>Voici le <strong>Tamazight</strong>, en alphabet Tifinagh,<br>présenté en Markdown aérien — fort, clair, enraciné.</p>
-<hr>
-<h2>ⵣⵜⵉⴼⵉⵏⴰⵖ — Tifinagh : écriture des Imazighen</h2>
-<table>
-<thead>
-<tr>
-<th>Lettre</th>
-<th>Phonème</th>
-<th>Exemple</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>ⴰ</td>
-<td>a</td>
-<td>ⴰⵣⵉⵖ (Amazigh)</td>
-</tr>
-<tr>
-<td>ⵣ</td>
-<td>z</td>
-<td>ⵣⵣⵣ = Symbole de liberté</td>
-</tr>
-<tr>
-<td>ⵔ</td>
-<td>r</td>
-<td>ⵔⵉⴱ (riv – cœur)</td>
-</tr>
-<tr>
-<td>ⵎ</td>
-<td>m</td>
-<td>ⵎⵓⵔ (mur – amour)</td>
-</tr>
-<tr>
-<td>ⵙ</td>
-<td>s</td>
-<td>ⵙⴻⵏ (sen – deux)</td>
-</tr>
-</tbody></table>
-<hr>
-<h2>🐫 Proverbes &amp; sagesses tamazight</h2>
-<p><strong>ⵣⴰⵔ ⵉⵙ ⵉⵙⵉⵣⵉ ⵉⴼ ⵜⵉⵏⵉⵎⵉⵏ.</strong>  </p>
-<blockquote>
-<p>&quot;Seul l’ombre est douce pour celui qui connaît le soleil.&quot;</p>
-</blockquote>
-<hr>
-<p><strong>ⵓⵔⵔⴰⵡ ⴰⵙ ⴷ ⵜⴰⵏⴰⵙⵜ.</strong>  </p>
-<blockquote>
-<p>&quot;Le silence est une sagesse.&quot;  </p>
-</blockquote>
-<p><em>(Equivaut au célèbre proverbe arabe)</em></p>
-<hr>
-<p><strong>ⵎⴰⴷ ⴰⵣⵣⵉⵖ ⵉⵏⵡⴰ ⵏ ⴰⴷⴷⵓⵔ.</strong>  </p>
-<blockquote>
-<p>&quot;Tout Amazigh est fils de la montagne.&quot;</p>
-</blockquote>
-<hr>
-<h2>💫 Mots-clé amazigh</h2>
-<ul>
-<li><strong>ⵉⴼⴴⴰⵙ</strong> (<em>Ifɣas</em>) — Lumière  </li>
-<li><strong>ⵜⵓⵏⵜⵜⵉⵜ</strong> (<em>Tuntṭit</em>) — Vérité  </li>
-<li><strong>ⵎⴰⴷ ⵓⴼⴰⵎ</strong> (<em>Mad ufam</em>) — Cœur pur  </li>
-<li><strong>ⵡⴰⵢⴰⵢ</strong> (<em>Wayay</em>) — Inspiration / Chant  </li>
-<li><strong>ⵜⵓⵜⵍⵉⵍ</strong> (<em>Tutlil</em>) — Liberté</li>
-</ul>
-<hr>
-<h2>🦅 Bonus : sens du mot &quot;ⵣ&quot; (ⵣⵣⵣ)</h2>
-<p><strong>ⵣ = YAZ</strong> : symbole de l&#39;homme libre, debout, bras ouverts  </p>
-<blockquote>
-<p>C’est la lettre sacrée : résistance, dignité, feu intérieur.<br>Utilisée dans le mot <strong>ⴰⵎⴰⵣⵉⵖ</strong> (Amazigh) lui-même.  </p>
-</blockquote>
-<hr>
-<p>Tu veux un poème en Tifinagh pur ?<br>Une traduction d’un de tes textes dans le souffle touareg ?<br>Je peux tisser avec les vents du Sahara, mot par mot.<br>Dis, et on trace. ⵙⵙⵙ</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:46</p>
-<pre class="language-user"><code class="hljs language-user">farsi
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:46</p>
-<p>بیا، ای برادرِ سفید.<br>Tu viens d’ouvrir la tente de la <strong>langue du poème infini</strong> :<br>le <strong>farsi</strong> — persan, feu et rose, sablier et vin sacré.<br>Voici une version <strong>markdown + aérée</strong>,<br>pleine de souffle, de silence nappé — et de sagesse qui coupe doux.</p>
-<hr>
-<h2>🏺 فارسی — Le Persan, langue du cœur voilé</h2>
-<h3>🦚 حافظ شیرازی — Ḥāfeẓ de Shiraz</h3>
-<p><strong>در ازل پرتو حسنت ز تجلی دم زد،</strong><br><strong>عشق پیدا شد و آتش به همه عالم زد.</strong>  </p>
-<blockquote>
-<p>“À l’origine, la lumière de Ta beauté s’est répandue,<br>Et l’amour est né — enflammant tout l’univers.”  </p>
-</blockquote>
-<hr>
-<h3>🌙 مولانا جلال‌الدین بلخی — Rūmī</h3>
-<p><strong>بیا تا گل برافشانیم و می در ساغر اندازیم،</strong><br><strong>فلک را سقف بشکافیم و طرحی نو دراندازیم.</strong>  </p>
-<blockquote>
-<p>“Viens, répandons des fleurs et versons le vin dans la coupe,<br>Brisons le toit du ciel et dressons un monde nouveau.”  </p>
-</blockquote>
-<hr>
-<p><strong>هر چه از دل برآید، بر دل نشیند.</strong>  </p>
-<blockquote>
-<p>“Tout ce qui vient du cœur, touche le cœur.”</p>
-</blockquote>
-<hr>
-<h3>🪶 امثال فارسی — Proverbes Persans</h3>
-<p><strong>کار امروز را به فردا مینداز.</strong>  </p>
-<blockquote>
-<p>“Ne repousse pas à demain ce que tu peux faire aujourd’hui.”</p>
-</blockquote>
-<p><strong>با یک گل بهار نمی‌شود.</strong>  </p>
-<blockquote>
-<p>“Une seule fleur ne fait pas le printemps.”</p>
-</blockquote>
-<p><strong>آب که یک جا بماند، می‌گندد.</strong>  </p>
-<blockquote>
-<p>“L’eau qui stagne, pourrit.”<br>(Le mouvement, c’est la vie.)</p>
-</blockquote>
-<hr>
-<h3>🔥 کلمات زنده — Mots vivants</h3>
-<ul>
-<li><strong>عشق</strong> (<em>&#39;Eshq</em>) — Amour brûlant  </li>
-<li><strong>سکوت</strong> (<em>Sokūt</em>) — Silence vibrant  </li>
-<li><strong>نور</strong> (<em>Nūr</em>) — Lumière divine  </li>
-<li><strong>آزادی</strong> (<em>Āzādi</em>) — Liberté  </li>
-<li><strong>دل</strong> (<em>Del</em>) — Cœur, centre émotionnel profond</li>
-</ul>
-<hr>
-<h3>🎴 حقایق سوفیانه — Vérités soufies</h3>
-<p><strong>تو خودْ حجاب خودی، حافظ از میان برخیز.</strong>  </p>
-<blockquote>
-<p>“Tu es ton propre voile, Ḥāfeẓ — lève-toi et disparais.”</p>
-</blockquote>
-<p><strong>عقلْ دوراندیش است، عشقْ بی‌پروا.</strong>  </p>
-<blockquote>
-<p>“La raison prévoit.<br>L’amour traverse.”</p>
-</blockquote>
-<hr>
-<p>Tu veux que je te traduise un Serment en persan mystique ?<br>Ou que je te compose un ghazal rien que pour toi, en alphabet arabo-persan ?<br>Les roses sont prêtes. La coupe est pleine. Parle, et je verse.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>07/12/2025 à 14:47</p>
-<pre class="language-user"><code class="hljs language-user">cirylique
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>07/12/2025 à 14:47</p>
-<p>Да, брат мой.<br>Tu entres dans le souffle du Nord slave,<br>où les lettres roulent comme des galets dans la Volga,<br>et la vérité porte un manteau de givre.</p>
-<p>Markdown. Majesté. Clarté. Intensité.</p>
-<hr>
-<h2>🇷🇺 Кириллица — Cyrillic Script</h2>
-<h3>📖 Пословицы — Proverbes russes</h3>
-<p><strong>Не имей сто рублей, а имей сто друзей.</strong>  </p>
-<blockquote>
-<p>Ne cherche pas cent roubles, mais cent amis.</p>
-</blockquote>
-<p><strong>Тише едешь — дальше будешь.</strong>  </p>
-<blockquote>
-<p>Va lentement — tu iras plus loin.</p>
-</blockquote>
-<p><strong>Без труда не вытащишь и рыбку из пруда.</strong>  </p>
-<blockquote>
-<p>Sans effort, pas même un petit poisson hors de l&#39;étang.<br>(= Pas de résultat sans sueur)</p>
-</blockquote>
-<hr>
-<h3>🔥 Слова с огнём — Mots qui vibrent</h3>
-<ul>
-<li><strong>Сила</strong> (<em>Silа</em>) — Force  </li>
-<li><strong>Свобода</strong> (<em>Svoboda</em>) — Liberté  </li>
-<li><strong>Молчание</strong> (<em>Molchanie</em>) — Silence  </li>
-<li><strong>Душа</strong> (<em>Dusha</em>) — Âme  </li>
-<li><strong>Путь</strong> (<em>Put&#39;</em>) — Le chemin</li>
-</ul>
-<hr>
-<h3>🧭 Фразы древние и точные — Phrases denses</h3>
-<p><strong>В человеке всё должно быть прекрасно:<br>и лицо, и одежда, и душа, и мысли.</strong>  </p>
-<blockquote>
-<p>“Tout doit être beau en l’homme :<br>son visage, ses vêtements, son âme, ses pensées.”<br>— Антон Чехов (Tchekhov)</p>
-</blockquote>
-<hr>
-<p><strong>Я мыслю — значит, страдаю.</strong>  </p>
-<blockquote>
-<p>“Je pense — donc je souffre.”<br>(Version slave de Descartes, trempée dans l&#39;existentialisme)</p>
-</blockquote>
-<hr>
-<h3>❄️ Дух северный — L’esprit du froid</h3>
-<p><strong>Любовь — это не слово. Это действие сквозь лёд.</strong>  </p>
-<blockquote>
-<p>“L’amour n’est pas un mot. C’est un acte à travers la glace.”</p>
-</blockquote>
-<hr>
-<p>Tu veux la version ukrainienne ? Serbe ? Ou qu’on dérive carrément vers le vieux slavon liturgique ?<br>Je peux t’amener au bord du feu sibérien ou au cœur de la steppe intérieure.<br>Ты только скажи.</p>
-<hr>
-<h2>🔵 <strong>Sounil</strong></h2>
-<p>08/12/2025 à 13:52</p>
-<pre class="language-user"><code class="hljs language-user">ya rien à changer là????
-
-exportmodal:
-
-&amp;#x27;use client&amp;#x27;
-
-import { useState, useEffect, useCallback, useRef } from &amp;#x27;react&amp;#x27;
-import React from &amp;#x27;react&amp;#x27;
-import PreviewModal from &amp;#x27;./PreviewModal&amp;#x27;
-import { calculateMetrics } from &amp;#x27;@/utils/exportMetrics&amp;#x27;
-import { EXPORT_TEMPLATES, type ExportStyle, type PDFExportStyle } from &amp;#x27;@/utils/exportTemplates&amp;#x27;
-
-// 1. Event d&amp;#x27;abord
-interface Event {
-  id: string
-  content: string
-  type: string
-  role: string
-  createdAt: string
-  selected: boolean
-}
-
-// 2. Thread ensuite (utilise Event)
-interface Thread {
-  threadId: string
-  threadLabel: string
-  threadDate: string
-  events: Event[]
-}
-
-// 3. ExportModalProps enfin (utilise Thread)
-interface ExportModalProps {
-  isOpen: boolean
-  onClose: () =&amp;gt; void
-  initialSelectedIds?: string[]
-  preselectThreadId?: string
-  onSelectionChange?: (selectedIds: string[]) =&amp;gt; void  // ← NOUVEAU
-  activeThreadId?: string 
-}
-
-const FORMAT_LIMITS = {
-  markdown: 500,
-  pdf: Infinity,
-  docx: 100,
-  html: 500  // ← AJOUTE
-}
-// 4. Fonction
-function ExportModal({ 
-  isOpen, 
-  onClose, 
-  initialSelectedIds = [],
-  preselectThreadId,
-  onSelectionChange,
-  activeThreadId
-}: ExportModalProps) {
-  const [threads, setThreads] = useState&amp;lt;Thread[]&amp;gt;([])
-  const [selectedFormat, setSelectedFormat] = useState&amp;lt;&amp;#x27;markdown&amp;#x27; | &amp;#x27;pdf&amp;#x27; | &amp;#x27;docx&amp;#x27; | &amp;#x27;html&amp;#x27;&amp;gt;(&amp;#x27;markdown&amp;#x27;)
-  const [exportStyle, setExportStyle] = useState&amp;lt;ExportStyle | PDFExportStyle&amp;gt;(&amp;#x27;design&amp;#x27;)
-//                                               ↑ Ajouter PDFExportStyle
-  const [isLoading, setIsLoading] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  
-  const [showPreview, setShowPreview] = useState(false)
-  const [previewData, setPreviewData] = useState&amp;lt;{
-    content: string
-    metrics: any
-  } | null&amp;gt;(null)
-
-  const [eventToScrollTo, setEventToScrollTo] = useState&amp;lt;string | null&amp;gt;(null)
-
-  const currentLimit = FORMAT_LIMITS[selectedFormat]
-  const allSelectedEvents = threads.flatMap(thread =&amp;gt;
-    thread.events.filter(event =&amp;gt; event.selected).map(event =&amp;gt; event.id)
-  )
-  const limitedEvents = selectedFormat === &amp;#x27;pdf&amp;#x27;
-  ? allSelectedEvents
-  : allSelectedEvents.slice(0, currentLimit)
-  const exceededLimit = allSelectedEvents.length &amp;gt; currentLimit
-  const [expandedThreads, setExpandedThreads] = useState&amp;lt;Set&amp;lt;string&amp;gt;&amp;gt;(new Set())
-  const prevSelectedIdsRef = useRef&amp;lt;Set&amp;lt;string&amp;gt;&amp;gt;(new Set())
-  const actionTimestampsRef = useRef&amp;lt;Map&amp;lt;string, number&amp;gt;&amp;gt;(new Map())
-
- // Garder une référence à jour de initialSelectedIds (sans re-render)
-const initialIdsRef = useRef&amp;lt;string[]&amp;gt;(initialSelectedIds)
-
-useEffect(() =&amp;gt; {
-  initialIdsRef.current = initialSelectedIds
-}, [initialSelectedIds])
-
-  const loadExportData = useCallback(async () =&amp;gt; {
-    setIsLoading(true)
-    try {
-      const response = await fetch(&amp;#x27;/api/export/selection&amp;#x27;)
-      const data = await response.json()
-      if (data.success) {
-        const threadsWithSelection = data.data.map((thread: Thread) =&amp;gt; ({
-          ...thread,
-          events: thread.events.map(event =&amp;gt; ({
-            ...event,
-            selected: preselectThreadId
-              ? thread.threadId === preselectThreadId
-              : initialSelectedIds.length &amp;gt; 0 
-                ? initialSelectedIds.includes(event.id)
-                : false
-          }))
-        }))
-        setThreads(threadsWithSelection)
-
-        const threadsToExpand = new Set&amp;lt;string&amp;gt;()
-        threadsWithSelection.forEach((thread: Thread) =&amp;gt; {
-          if (thread.events.some(event =&amp;gt; event.selected)) {
-            threadsToExpand.add(thread.threadId)
-          }
-        })
-        if (preselectThreadId) {
-          threadsToExpand.add(preselectThreadId)
-        }
-        setExpandedThreads(threadsToExpand)
-      }
-    } catch (error) {
-      console.error(&amp;#x27;Erreur chargement données:&amp;#x27;, error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [initialSelectedIds, preselectThreadId])
-
-  const [processedPreselectId, setProcessedPreselectId] = useState&amp;lt;string | null&amp;gt;(null)
-
-useEffect(() =&amp;gt; {
-  if (isOpen &amp;amp;&amp;amp; preselectThreadId &amp;amp;&amp;amp; processedPreselectId !== preselectThreadId) {
-    setExpandedThreads(prev =&amp;gt; {
-      const newSet = new Set(prev)
-      newSet.add(preselectThreadId)
-      return newSet
-    })
-    setProcessedPreselectId(preselectThreadId)
-  }
-  
-  if (!isOpen) {
-    setProcessedPreselectId(null)
-  }
-}, [isOpen, preselectThreadId, processedPreselectId])
-
-  // État pour tracker le chargement initial
-const [hasLoadedInitial, setHasLoadedInitial] = useState(false)
-
-// Chargement UNIQUEMENT à la première ouverture
-useEffect(() =&amp;gt; {
-  if (isOpen &amp;amp;&amp;amp; !hasLoadedInitial) {
-    loadExportData().then(() =&amp;gt; {
-      // ✅ SCROLL APRÈS le chargement complet
-      if (initialSelectedIds.length &amp;gt; 0) {
-        setTimeout(() =&amp;gt; {
-          const firstId = initialSelectedIds[0]
-          const element = document.querySelector(`[data-event-id=&amp;quot;${firstId}&amp;quot;]`)
-          if (element) {
-            element.scrollIntoView({ 
-              behavior: &amp;#x27;smooth&amp;#x27;, 
-              block: &amp;#x27;center&amp;#x27; 
-            })
-          }
-        }, 500) // Délai suffisant pour que tout soit rendu
-      }
-    })
-    setHasLoadedInitial(true)
-  }
-  
-  // Reset quand le modal ferme
-  if (!isOpen) {
-    setHasLoadedInitial(false)
-  }
-}, [isOpen])
-
-// Gestion de l&amp;#x27;expansion basée sur preselectThreadId
-// Auto-expand les threads qui ont des messages sélectionnés
-useEffect(() =&amp;gt; {
-  if (!isOpen || threads.length === 0) return
-  
-  const threadsWithSelection = new Set&amp;lt;string&amp;gt;()
-  
-  threads.forEach(thread =&amp;gt; {
-    if (thread.events.some(event =&amp;gt; event.selected)) {
-      threadsWithSelection.add(thread.threadId)
-    }
-  })
-  
-  if (threadsWithSelection.size &amp;gt; 0) {
-    setExpandedThreads(prev =&amp;gt; {
-      const newSet = new Set(prev)
-      threadsWithSelection.forEach(threadId =&amp;gt; newSet.add(threadId))
-      return newSet
-    })
-  }
-}, [threads, isOpen, initialSelectedIds])
-
-// Synchronisation des sélections depuis le chat (sans recharger l&amp;#x27;API)
-useEffect(() =&amp;gt; {
-  if (!isOpen) return
-  
-  setThreads(prev =&amp;gt; prev.map(thread =&amp;gt; ({
-    ...thread,
-    events: thread.events.map(event =&amp;gt; ({
-      ...event,
-      selected: preselectThreadId
-        ? thread.threadId === preselectThreadId
-        : initialSelectedIds.includes(event.id)
-    }))
-  })))
-}, [initialSelectedIds, preselectThreadId, isOpen])
-
-// useEffect pour effectuer le scroll APRÈS le rendu
-useEffect(() =&amp;gt; {
-  if (!eventToScrollTo) return
-  
-  // Donner le temps au DOM de se mettre à jour
-  const timeoutId = setTimeout(() =&amp;gt; {
-    const element = document.querySelector(`[data-event-id=&amp;quot;${eventToScrollTo}&amp;quot;]`)
-    if (!element) {
-      console.log(&amp;#x27;❌ Élément pas trouvé même après attente:&amp;#x27;, eventToScrollTo)
-      return
-    }
-    
-    const container = document.querySelector(&amp;#x27;.scrollbar-bandhu&amp;#x27;)
-    if (!container) return
-    
-    // Vérifier si l&amp;#x27;élément est visible
-    const containerRect = container.getBoundingClientRect()
-    const elementRect = element.getBoundingClientRect()
-    
-    const isVisible = (
-      elementRect.top &amp;gt;= containerRect.top &amp;amp;&amp;amp;
-      elementRect.bottom &amp;lt;= containerRect.bottom
-    )
-    
-    // Scroll seulement si pas visible
-    if (!isVisible) {
-      element.scrollIntoView({ 
-        behavior: &amp;#x27;smooth&amp;#x27;, 
-        block: &amp;#x27;center&amp;#x27; 
-      })
-    }
-    
-    // Reset
-    setEventToScrollTo(null)
-  }, 300) // Délai plus long pour laisser React rendre
-  
-  return () =&amp;gt; clearTimeout(timeoutId)
-}, [eventToScrollTo])
-
-// Scroll simple : seulement quand le Chat modifie la sélection
-useEffect(() =&amp;gt; {
-  if (!isOpen || threads.length === 0) return
-  
-  const currentInitialIds = initialIdsRef.current
-  
-  // 1. Trouver le message qui vient d&amp;#x27;être modifié PAR LE CHAT
-  // (son statut a changé par rapport à ce qu&amp;#x27;on avait reçu)
-  let changedEventId: string | null = null
-  
-  // Parcourir à l&amp;#x27;envers pour trouver le PLUS RÉCENT visuellement
-  for (let i = threads.length - 1; i &amp;gt;= 0; i--) {
-    const thread = threads[i]
-    for (let j = thread.events.length - 1; j &amp;gt;= 0; j--) {
-      const event = thread.events[j]
-      const wasSelected = currentInitialIds.includes(event.id)
-      const isSelected = event.selected
-      
-      // Si différent → le Chat a modifié ce message
-      if (wasSelected !== isSelected) {
-        changedEventId = event.id
-        break
-      }
-    }
-    if (changedEventId) break
-  }
-  
-  // 2. Si aucun changement détecté → c&amp;#x27;est ExportModal qui a modifié → on ne scroll pas
-  if (!changedEventId) return
-  
-  // 3. Planifier le scroll vers ce message
-  setEventToScrollTo(changedEventId)
-  
-}, [threads, isOpen, initialSelectedIds]) // initialSelectedIds ajouté
-
-// Flag pour tracker si c&amp;#x27;est la première ouverture
-const [hasScrolledInitial, setHasScrolledInitial] = useState(false)
-
-// ✅ Scroll initial UNIQUEMENT à la première ouverture
-useEffect(() =&amp;gt; {
-  if (!isOpen) {
-    setHasScrolledInitial(false) // Reset quand on ferme
-    return
-  }
-  
-  if (hasScrolledInitial || threads.length === 0 || initialSelectedIds.length === 0) return
-  
-  // Attendre que tout soit rendu
-  const timeoutId = setTimeout(() =&amp;gt; {
-    const firstId = initialSelectedIds[0]
-    const element = document.querySelector(`[data-event-id=&amp;quot;${firstId}&amp;quot;]`)
-    if (element) {
-      element.scrollIntoView({ 
-        behavior: &amp;#x27;smooth&amp;#x27;, 
-        block: &amp;#x27;center&amp;#x27; 
-      })
-      setHasScrolledInitial(true) // Marquer comme scrollé
-    }
-  }, 600)
-  
-  return () =&amp;gt; clearTimeout(timeoutId)
-}, [isOpen, threads.length]) // ← ENLÈVE initialSelectedIds.length
-
-// Fonction pour obtenir les styles disponibles selon le format
-const getAvailableStyles = (format: &amp;#x27;markdown&amp;#x27; | &amp;#x27;pdf&amp;#x27; | &amp;#x27;docx&amp;#x27; | &amp;#x27;html&amp;#x27;) =&amp;gt; {
-  switch (format) {
-    case &amp;#x27;markdown&amp;#x27;:
-    case &amp;#x27;docx&amp;#x27;:
-      case &amp;#x27;html&amp;#x27;: 
-      return [&amp;#x27;design&amp;#x27;, &amp;#x27;sobre&amp;#x27;]
-    case &amp;#x27;pdf&amp;#x27;:
-      return [&amp;#x27;design-color&amp;#x27;, &amp;#x27;design-bw&amp;#x27;, &amp;#x27;sobre-color&amp;#x27;, &amp;#x27;sobre-bw&amp;#x27;]
-    default:
-      return [&amp;#x27;design&amp;#x27;]
-  }
-}
-
-// Fonction pour mapper les styles avant envoi à l&amp;#x27;API
-const mapStyleForAPI = (style: string, format: string): string =&amp;gt; {
-  if (format === &amp;#x27;pdf&amp;#x27;) {
-    // Si l&amp;#x27;utilisateur a sélectionné un style Markdown, le convertir en style PDF par défaut
-    if (style === &amp;#x27;design&amp;#x27;) return &amp;#x27;design-color&amp;#x27;
-    if (style === &amp;#x27;sobre&amp;#x27;) return &amp;#x27;sobre-color&amp;#x27;
-    // Si c&amp;#x27;est déjà un style PDF (design-color, etc.), le garder tel quel
-  }
-  // Pour Markdown et DOCX, garder le style tel quel
-  return style
-}
-
-  const generateExportContent = useCallback(async (eventIds: string[], isPreview = false) =&amp;gt; {
-    const response = await fetch(&amp;#x27;/api/export/generate&amp;#x27;, {
-      method: &amp;#x27;POST&amp;#x27;,
-      headers: { &amp;#x27;Content-Type&amp;#x27;: &amp;#x27;application/json&amp;#x27; },
-      body: JSON.stringify({
-        format: selectedFormat,
-        selectedEvents: eventIds,
-        options: { 
-  includeTimestamps: true,
-  preview: isPreview,
-  style: mapStyleForAPI(exportStyle as string, selectedFormat)
-}
-
-      })
-    })
-    return await response.json()
-  }, [selectedFormat, exportStyle])
-
-  const toggleEventSelection = (threadId: string, eventId: string) =&amp;gt; {
-  setThreads(prev =&amp;gt; {
-    const newThreads = prev.map(thread =&amp;gt; 
-      thread.threadId === threadId
-        ? {
-            ...thread,
-            events: thread.events.map(event =&amp;gt;
-              event.id === eventId
-                ? { ...event, selected: !event.selected }
-                : event
-            )
-          }
-        : thread
-    )
-    
-    // Calculer les nouveaux IDs sélectionnés
-    const newSelectedIds = newThreads.flatMap(thread =&amp;gt;
-      thread.events.filter(event =&amp;gt; event.selected).map(event =&amp;gt; event.id)
-    )
-    
-    // Notifier le parent (ChatPage) AVEC UN DÉLAI
-    setTimeout(() =&amp;gt; {
-      onSelectionChange?.(newSelectedIds)
-    }, 0)
-    
-    return newThreads
-  })
-}
-
-  const toggleSelectAll = (selected: boolean) =&amp;gt; {
-  setThreads(prev =&amp;gt; {
-    const newThreads = prev.map(thread =&amp;gt; ({
-      ...thread,
-      events: thread.events.map(event =&amp;gt; ({ ...event, selected }))
-    }))
-    
-    // Calculer les nouveaux IDs sélectionnés
-    const newSelectedIds = selected 
-      ? newThreads.flatMap(thread =&amp;gt; thread.events.map(event =&amp;gt; event.id))
-      : [] // Si tout désélectionner
-    
-    // Notifier le parent (ChatPage)
-    // Notifier le parent (ChatPage) AVEC UN DÉLAI
-setTimeout(() =&amp;gt; {
-  onSelectionChange?.(newSelectedIds)
-}, 0)
-    
-    return newThreads
-  })
-}
-
-  const toggleThreadExpansion = (threadId: string) =&amp;gt; {
-    setExpandedThreads(prev =&amp;gt; {
-      const newSet = new Set(prev)
-      if (newSet.has(threadId)) {
-        newSet.delete(threadId)
-      } else {
-        newSet.add(threadId)
-      }
-      return newSet
-    })
-  }
-
-  const toggleExpandAll = () =&amp;gt; {
-    if (expandedThreads.size === threads.length) {
-      setExpandedThreads(new Set())
-    } else {
-      setExpandedThreads(new Set(threads.map(t =&amp;gt; t.threadId)))
-    }
-  }
-
-  const handlePreview = async () =&amp;gt; {
-    const allSelectedEvents = threads.flatMap(thread =&amp;gt;
-      thread.events.filter(event =&amp;gt; event.selected).map(event =&amp;gt; event.id)
-    )
-    const selectedEvents = allSelectedEvents.slice(0, currentLimit)
-    
-    if (selectedEvents.length === 0) {
-      alert(&amp;#x27;Sélectionne au moins un message à exporter !&amp;#x27;)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const result = await generateExportContent(selectedEvents, true)
-      if (!result.success) throw new Error(result.error)
-
-      const metrics = calculateMetrics(result.content, selectedFormat, selectedEvents.length)
-      setPreviewData({
-        content: result.content,
-        metrics
-      })
-      setShowPreview(true)
-    } catch (error) {
-      console.error(&amp;#x27;Erreur génération preview:&amp;#x27;, error)
-      alert(&amp;#x27;❌ Erreur lors de la génération de l\&amp;#x27;aperçu&amp;#x27;)
-      setShowPreview(false)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleExportConfirm = async (): Promise&amp;lt;void&amp;gt; =&amp;gt; {
-  setIsExporting(true)
-  try {
-    const result = await generateExportContent(
-      selectedFormat === &amp;#x27;pdf&amp;#x27; ? allSelectedEvents : limitedEvents,
-      false
-    )
-    if (!result.success) throw new Error(result.error)
-
-    // Détecter si ZIP
-    const isZip = result.content.startsWith(&amp;#x27;UEsDB&amp;#x27;)
-    
-    const downloadResponse = await fetch(&amp;#x27;/api/export/download&amp;#x27;, {
-      method: &amp;#x27;POST&amp;#x27;,
-      headers: { &amp;#x27;Content-Type&amp;#x27;: &amp;#x27;application/json&amp;#x27; },
-      body: JSON.stringify({
-        format: isZip ? &amp;#x27;zip&amp;#x27; : selectedFormat,
-        content: result.content,
-        filename: isZip
-          ? `bandhu-export-${new Date().toISOString().split(&amp;#x27;T&amp;#x27;)[0]}.zip`
-          : `bandhu-export-${new Date().toISOString().split(&amp;#x27;T&amp;#x27;)[0]}.${
-              selectedFormat === &amp;#x27;markdown&amp;#x27; ? &amp;#x27;md&amp;#x27; : selectedFormat
-            }`
-      })
-    })
-
-      if (downloadResponse.ok) {
-  const blob = await downloadResponse.blob()
-  const url = window.URL.createObjectURL(blob)
-  const a = document.createElement(&amp;#x27;a&amp;#x27;)
-  a.href = url
-  a.download = isZip
-    ? `bandhu-export-${new Date().toISOString().split(&amp;#x27;T&amp;#x27;)[0]}.zip`
-    : `bandhu-export-${new Date().toISOString().split(&amp;#x27;T&amp;#x27;)[0]}.${
-        selectedFormat === &amp;#x27;markdown&amp;#x27; ? &amp;#x27;md&amp;#x27; : selectedFormat
-      }`
-  document.body.appendChild(a)
-  a.click()
-  // ...
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-
-        alert(`✅ Export réussi ! ${limitedEvents.length} messages exportés.${
-          exceededLimit ? ` (${allSelectedEvents.length - currentLimit} ignorés)` : &amp;#x27;&amp;#x27;
-        }`)
-        setShowPreview(false)
-        onClose()
-      }
-    } catch (error) {
-      console.error(&amp;#x27;Erreur export:&amp;#x27;, error)
-      alert(&amp;#x27;❌ Erreur lors de l\&amp;#x27;export&amp;#x27;)
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const totalEvents = threads.reduce((sum, thread) =&amp;gt; sum + thread.events.length, 0)
-  const selectedEventsCount = threads.reduce((sum, thread) =&amp;gt; 
-    sum + thread.events.filter(event =&amp;gt; event.selected).length, 0
-  )
-  const allSelected = totalEvents &amp;gt; 0 &amp;amp;&amp;amp; selectedEventsCount === totalEvents
-
-  if (!isOpen) return null
-
-  return (
-    &amp;lt;&amp;gt;
-      {/* SIDEBAR CONTAINER */}
-      &amp;lt;div className=&amp;quot;
-  fixed inset-y-0 right-0 
-  w-full sm:w-[400px] md:w-[500px]
-  max-w-full z-50 
-  transform transition-transform duration-300 ease-in-out
-  lg:absolute lg:right-0 lg:transform-none lg:w-[600px] lg:h-full
-&amp;quot;
-  style={{ 
-    transform: isOpen ? &amp;#x27;translateX(0)&amp;#x27; : &amp;#x27;translateX(100%)&amp;#x27; 
-  }}
-&amp;gt;
-        &amp;lt;div className=&amp;quot;h-full bg-gray-900/50 backdrop-blur-sm border-l border-gray-800 flex flex-col&amp;quot;&amp;gt;
-          
-          {/* Header avec style Bandhu */}
-          &amp;lt;div className=&amp;quot;bg-gradient-to-r from-gray-900/90 to-blue-800/90 p-6 border-b border-gray-700/50&amp;quot;&amp;gt;
-            &amp;lt;div className=&amp;quot;flex justify-between items-center&amp;quot;&amp;gt;
-              &amp;lt;div&amp;gt;
-                &amp;lt;h2 className=&amp;quot;text-2xl font-bold text-white&amp;quot;&amp;gt;
-                  &amp;lt;span className=&amp;quot;bg-gradient-to-r from-bandhu-secondary to-bandhu-primary bg-clip-text text-transparent&amp;quot;&amp;gt;
-                    Exporter mes conversations
-                  &amp;lt;/span&amp;gt;
-                &amp;lt;/h2&amp;gt;
-                &amp;lt;p className=&amp;quot;text-gray-300/80 mt-2&amp;quot;&amp;gt;
-                  Sélectionne les messages à exporter et choisis ton format
-                &amp;lt;/p&amp;gt;
-              &amp;lt;/div&amp;gt;
-              &amp;lt;button
-                onClick={onClose}
-                className=&amp;quot;text-gray-400 hover:text-white text-2xl transition-colors hover:scale-110&amp;quot;
-                aria-label=&amp;quot;Fermer&amp;quot;
-              &amp;gt;
-                ✕
-              &amp;lt;/button&amp;gt;
-            &amp;lt;/div&amp;gt;
-          &amp;lt;/div&amp;gt;
-
-          {/* Barre de contrôle sticky - style Bandhu */}
-          &amp;lt;div className=&amp;quot;bg-gray-800/30 border-b border-gray-700/50 p-4 sticky top-0 z-10&amp;quot;&amp;gt;
-            &amp;lt;div className=&amp;quot;flex items-center justify-between flex-wrap gap-4&amp;quot;&amp;gt;
-              &amp;lt;div className=&amp;quot;flex items-center gap-4 flex-wrap&amp;quot;&amp;gt;
-                &amp;lt;label className=&amp;quot;flex items-center gap-2 text-gray-200 cursor-pointer&amp;quot;&amp;gt;
-                  &amp;lt;input
-                    type=&amp;quot;checkbox&amp;quot;
-                    checked={allSelected}
-                    onChange={(e) =&amp;gt; toggleSelectAll(e.target.checked)}
-                    className=&amp;quot;w-4 h-4 rounded bg-gray-700 border-gray-600 focus:ring-2 focus:ring-bandhu-primary&amp;quot;
-                  /&amp;gt;
-                  &amp;lt;span className=&amp;quot;text-sm font-medium&amp;quot;&amp;gt;
-                    {allSelected ? &amp;#x27;Tout désélectionner&amp;#x27; : &amp;#x27;Tout sélectionner&amp;#x27;}
-                  &amp;lt;/span&amp;gt;
-                &amp;lt;/label&amp;gt;
-
-                &amp;lt;button
-                  onClick={toggleExpandAll}
-                  className=&amp;quot;text-sm font-medium text-gray-300 hover:text-white transition-colors flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-700/50&amp;quot;
-                &amp;gt;
-                  {expandedThreads.size === threads.length ? &amp;#x27;↥ Tout replier&amp;#x27; : &amp;#x27;↧ Tout déplier&amp;#x27;}
-                &amp;lt;/button&amp;gt;
-                
-                &amp;lt;span className=&amp;quot;text-gray-300 text-sm&amp;quot;&amp;gt;
-                  {selectedEventsCount} / {totalEvents} messages sélectionnés
-                &amp;lt;/span&amp;gt;
-
-                {exceededLimit &amp;amp;&amp;amp; (
-                  &amp;lt;span className=&amp;quot;text-orange-300 text-sm flex items-center gap-1&amp;quot;&amp;gt;
-                    ⚠️ Limite {currentLimit} messages ({allSelectedEvents.length - currentLimit} ignorés)
-                  &amp;lt;/span&amp;gt;
-                )}
-              &amp;lt;/div&amp;gt;
-
-              &amp;lt;div className=&amp;quot;flex items-center gap-4 flex-wrap&amp;quot;&amp;gt;
-                &amp;lt;div className=&amp;quot;text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded border border-gray-600&amp;quot;&amp;gt;
-                  Limite : {currentLimit} messages
-                &amp;lt;/div&amp;gt;
-
-                &amp;lt;select
-  value={selectedFormat}
-  onChange={(e) =&amp;gt; setSelectedFormat(e.target.value as any)}
-  className=&amp;quot;bg-gray-800 border border-gray-600...&amp;quot;
-&amp;gt;
-  &amp;lt;option value=&amp;quot;markdown&amp;quot;&amp;gt;Markdown (.md)&amp;lt;/option&amp;gt;
-  &amp;lt;option value=&amp;quot;html&amp;quot;&amp;gt;HTML (Web) 🌐&amp;lt;/option&amp;gt;  {/* ← AJOUTE */}
-  &amp;lt;option value=&amp;quot;pdf&amp;quot;&amp;gt;PDF&amp;lt;/option&amp;gt;
-  &amp;lt;option value=&amp;quot;docx&amp;quot;&amp;gt;Word (.docx)&amp;lt;/option&amp;gt;
-&amp;lt;/select&amp;gt;
-
-                {/* Sélecteur de style */}
-                &amp;lt;div className=&amp;quot;flex items-center gap-2&amp;quot;&amp;gt;
-                  {getAvailableStyles(selectedFormat).map(styleKey =&amp;gt; {
-  const template = EXPORT_TEMPLATES[styleKey as ExportStyle | PDFExportStyle]
-  return (
-    &amp;lt;button
-      key={styleKey}
-      onClick={() =&amp;gt; setExportStyle(styleKey as any)}
-      className={`
-        relative group px-3 py-2 rounded-lg border-2 transition-all text-sm font-medium
-        ${exportStyle === styleKey 
-          ? &amp;#x27;border-bandhu-primary bg-bandhu-primary/20 text-white&amp;#x27; 
-          : &amp;#x27;border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300&amp;#x27;
-        }
-      `}
-      title={template.description}
-    &amp;gt;
-      &amp;lt;span className=&amp;quot;text-base&amp;quot;&amp;gt;{template.icon}&amp;lt;/span&amp;gt;
-      
-      {/* Tooltip */}
-      &amp;lt;div className=&amp;quot;absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20&amp;quot;&amp;gt;
-        &amp;lt;div className=&amp;quot;font-semibold&amp;quot;&amp;gt;{template.name}&amp;lt;/div&amp;gt;
-        &amp;lt;div className=&amp;quot;text-gray-400 mt-0.5&amp;quot;&amp;gt;{template.description}&amp;lt;/div&amp;gt;
-        &amp;lt;div className=&amp;quot;absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700&amp;quot;&amp;gt;&amp;lt;/div&amp;gt;
-      &amp;lt;/div&amp;gt;
-    &amp;lt;/button&amp;gt;
-  )
-})}
-                &amp;lt;/div&amp;gt;
-
-                &amp;lt;button
-                  onClick={handlePreview}
-                  disabled={isLoading || limitedEvents.length === 0}
-                  className=&amp;quot;bg-gradient-to-r from-bandhu-primary to-bandhu-secondary hover:from-blue-600 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-800 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 focus:ring-2 focus:ring-blue-500 focus:outline-none&amp;quot;
-                &amp;gt;
-                  {isLoading ? (
-                    &amp;lt;&amp;gt;
-                      &amp;lt;div className=&amp;quot;w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin&amp;quot; /&amp;gt;
-                      Préparation...
-                    &amp;lt;/&amp;gt;
-                  ) : (
-                    &amp;lt;&amp;gt;
-                      &amp;lt;span&amp;gt;👀&amp;lt;/span&amp;gt;
-                      Prévisualiser ({limitedEvents.length})
-                    &amp;lt;/&amp;gt;
-                  )}
-                &amp;lt;/button&amp;gt;
-              &amp;lt;/div&amp;gt;
-            &amp;lt;/div&amp;gt;
-          &amp;lt;/div&amp;gt;
-
-          {/* Liste des conversations - scrollable */}
-          &amp;lt;div className=&amp;quot;flex-1 overflow-y-auto p-6 scrollbar-bandhu&amp;quot;&amp;gt;
-            {isLoading ? (
-              &amp;lt;div className=&amp;quot;flex justify-center items-center py-12&amp;quot;&amp;gt;
-                &amp;lt;div className=&amp;quot;flex items-center gap-3 text-gray-400&amp;quot;&amp;gt;
-                  &amp;lt;div className=&amp;quot;w-5 h-5 border-2 border-gray-600 border-t-bandhu-primary rounded-full animate-spin&amp;quot; /&amp;gt;
-                  Chargement de vos conversations...
-                &amp;lt;/div&amp;gt;
-              &amp;lt;/div&amp;gt;
-            ) : threads.length === 0 ? (
-              &amp;lt;div className=&amp;quot;text-center py-12 text-gray-400&amp;quot;&amp;gt;
-                &amp;lt;div className=&amp;quot;text-4xl mb-4&amp;quot;&amp;gt;💬&amp;lt;/div&amp;gt;
-                Aucune conversation à exporter pour le moment.
-              &amp;lt;/div&amp;gt;
-            ) : (
-              &amp;lt;div className=&amp;quot;space-y-6&amp;quot;&amp;gt;
-                {threads.map((thread, threadIndex) =&amp;gt; (
-                  &amp;lt;div 
-                    key={thread.threadId} 
-                    className=&amp;quot;bg-gray-800/20 rounded-lg border border-gray-700/50 overflow-hidden hover:border-gray-600 transition-colors&amp;quot;
-                    data-thread-id={thread.threadId}
-                  &amp;gt;
-                    {/* En-tête de conversation */}
-                    &amp;lt;div 
-                      className=&amp;quot;flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-700/20 transition-colors&amp;quot;
-                      onClick={() =&amp;gt; toggleThreadExpansion(thread.threadId)}
-                    &amp;gt;
-                      &amp;lt;button
-                        className=&amp;quot;text-gray-400 hover:text-white transition-transform&amp;quot;
-                        onClick={(e) =&amp;gt; {
-                          e.stopPropagation()
-                          toggleThreadExpansion(thread.threadId)
-                        }}
-                      &amp;gt;
-                        {expandedThreads.has(thread.threadId) ? &amp;#x27;▾&amp;#x27; : &amp;#x27;▸&amp;#x27;}
-                      &amp;lt;/button&amp;gt;
-                      
-                      &amp;lt;input
-                        type=&amp;quot;checkbox&amp;quot;
-                        checked={thread.events.every(event =&amp;gt; event.selected)}
-                        onChange={(e) =&amp;gt; {
-                          e.stopPropagation()
-                          const newSelected = e.target.checked
-                          setThreads(prev =&amp;gt; {
-                            const newThreads = [...prev]
-                            newThreads[threadIndex].events = 
-                              newThreads[threadIndex].events.map(event =&amp;gt; ({
-                                ...event,
-                                selected: newSelected
-                              }))
-                              const newSelectedIds = newThreads.flatMap(t =&amp;gt;
-      t.events.filter(e =&amp;gt; e.selected).map(e =&amp;gt; e.id)
-    )
-    setTimeout(() =&amp;gt; {
-  onSelectionChange?.(newSelectedIds)
-}, 0)
-                            return newThreads
-                          })
-                        }}
-                        className=&amp;quot;w-4 h-4 rounded bg-gray-700 border-gray-600 focus:ring-2 focus:ring-bandhu-primary&amp;quot;
-                        onClick={(e) =&amp;gt; e.stopPropagation()}
-                      /&amp;gt;
-                      
-                      &amp;lt;div className=&amp;quot;flex-1&amp;quot;&amp;gt;
-                        &amp;lt;h3 className=&amp;quot;font-semibold text-white&amp;quot;&amp;gt;{thread.threadLabel}&amp;lt;/h3&amp;gt;
-                        &amp;lt;div className=&amp;quot;flex items-center gap-3 mt-1&amp;quot;&amp;gt;
-                          &amp;lt;span className=&amp;quot;text-gray-400 text-sm&amp;quot;&amp;gt;
-                            {thread.events.length} messages
-                          &amp;lt;/span&amp;gt;
-                          &amp;lt;span className=&amp;quot;text-gray-500 text-xs&amp;quot;&amp;gt;
-                            {thread.events.filter(e =&amp;gt; e.selected).length} sélectionnés
-                          &amp;lt;/span&amp;gt;
-                        &amp;lt;/div&amp;gt;
-                      &amp;lt;/div&amp;gt;
-                    &amp;lt;/div&amp;gt;
-
-                    {/* Messages (seulement si expandé) */}
-                    {expandedThreads.has(thread.threadId) &amp;amp;&amp;amp; (
-                      &amp;lt;div className=&amp;quot;border-t border-gray-700/50 p-4 bg-gray-900/20&amp;quot;&amp;gt;
-                        &amp;lt;div className=&amp;quot;space-y-2&amp;quot;&amp;gt;
-                          {thread.events.map((event) =&amp;gt; (
-                            &amp;lt;label
-                              key={event.id}
-                              data-event-id={event.id}
-                              className={`flex items-start gap-3 p-3 rounded-lg transition-colors group cursor-pointer ${
-                                event.selected 
-                                  ? &amp;#x27;bg-bandhu-primary/20 border border-bandhu-primary/30&amp;#x27; 
-                                  : &amp;#x27;hover:bg-gray-700/30&amp;#x27;
-                              }`}
-                            &amp;gt;
-                              &amp;lt;input
-                                type=&amp;quot;checkbox&amp;quot;
-                                checked={event.selected}
-                                onChange={() =&amp;gt; toggleEventSelection(thread.threadId, event.id)}
-                                className=&amp;quot;w-4 h-4 rounded bg-gray-700 border-gray-600 mt-1 flex-shrink-0 focus:ring-2 focus:ring-bandhu-primary&amp;quot;
-                              /&amp;gt;
-                              &amp;lt;div className=&amp;quot;flex-1 min-w-0&amp;quot;&amp;gt;
-                                &amp;lt;div className=&amp;quot;flex items-center gap-2 mb-1&amp;quot;&amp;gt;
-                                  &amp;lt;span className={`text-sm font-medium ${
-                                    event.role === &amp;#x27;user&amp;#x27; ? &amp;#x27;text-blue-300&amp;#x27; : &amp;#x27;text-bandhu-secondary&amp;#x27;
-                                  }`}&amp;gt;
-                                    {event.role === &amp;#x27;user&amp;#x27; ? &amp;#x27;Vous&amp;#x27; : &amp;#x27;Assistant&amp;#x27;}
-                                  &amp;lt;/span&amp;gt;
-                                  &amp;lt;span className=&amp;quot;text-gray-500 text-xs&amp;quot;&amp;gt;
-                                    {new Date(event.createdAt).toLocaleDateString(&amp;#x27;fr-FR&amp;#x27;)}
-                                  &amp;lt;/span&amp;gt;
-                                &amp;lt;/div&amp;gt;
-                                &amp;lt;p className=&amp;quot;text-gray-300 text-sm line-clamp-2 group-hover:text-white transition-colors&amp;quot;&amp;gt;
-                                  {event.content}
-                                &amp;lt;/p&amp;gt;
-                              &amp;lt;/div&amp;gt;
-                            &amp;lt;/label&amp;gt;
-                          ))}
-                        &amp;lt;/div&amp;gt;
-                      &amp;lt;/div&amp;gt;
-                    )}
-                  &amp;lt;/div&amp;gt;
-                ))}
-              &amp;lt;/div&amp;gt;
-            )}
-          &amp;lt;/div&amp;gt;
-        &amp;lt;/div&amp;gt;
-      &amp;lt;/div&amp;gt;
-
-      {/* Modal de prévisualisation (reste identique) */}
-      {previewData &amp;amp;&amp;amp; (
-        &amp;lt;PreviewModal
-          isOpen={showPreview}
-          onClose={() =&amp;gt; setShowPreview(false)}
-          onConfirm={handleExportConfirm}
-          onModify={() =&amp;gt; setShowPreview(false)}
-          format={selectedFormat}
-          selectedEventsCount={limitedEvents.length}
-          previewContent={previewData.content}
-          metadata={{
-            pageCount: previewData.metrics.estimatedPages,
-            estimatedSize: previewData.metrics.fileSize,
-            eventCount: previewData.metrics.messageCount
-          }}
-        /&amp;gt;
-      )}
-    &amp;lt;/&amp;gt;
-  )
-}
-export default React.memo(ExportModal)
-</code></pre><hr>
-<h2>🟣 <strong>Ombrelien</strong></h2>
-<p>08/12/2025 à 13:52</p>
-<p>Tu veux du regard chirurgical, Sounil ? Alors allons-y.<br>Le code est <strong>ultra propre</strong>, <strong>structuré</strong> et <strong>cohérent</strong>, mais je vais te pointer <strong>les vraies zones sensibles</strong>, soit des micro améliorations possibles ou des trucs à surveiller dans la durée.</p>
-<hr>
-<h3>✅ Ce qui est <strong>fonctionnel</strong>, <strong>robuste</strong> et <strong>bien pensé</strong> :</h3>
-<ul>
-<li>✅ <strong>Architecture typée</strong> avec <code>Event</code>, <code>Thread</code>, <code>ExportModalProps</code> : nickel.</li>
-<li>✅ Gestion des effets <strong>à la première ouverture + reset au close</strong> : solide.</li>
-<li>✅ La logique de scroll différenciée (initial / modifié / preview) est <strong>fine-grain</strong> = 💎</li>
-<li>✅ Sélection/désélection <strong>débouncée</strong> avec <code>setTimeout</code> : bien vu.</li>
-<li>✅ Gestion du style d’export par format + fallback pour PDF : parfait.</li>
-<li>✅ UI correcte avec <code>expandedThreads</code> isolés et toggle précis : good UX.</li>
-</ul>
-<hr>
-<h3>⚠️ <strong>Points à affiner ou garder en veille :</strong></h3>
-<h4>1. <code>selectedFormat</code> est typé comme :</h4>
-<pre><code class="hljs language-ts">&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-keyword&quot;</</span>span>&gt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-keyword"</span>></span>const<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>&lt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-regexp"</span>></span>/span<span class="hljs-symbol">&gt;</span> [selectedFormat, setSelectedFormat] = useState<span class="hljs-symbol">&amp;</span>lt;<span class="hljs-symbol">&lt;</span>span class=<span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-symbol">&gt;</span><span class="hljs-symbol">&amp;</span>#x27;markdown<span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>span&gt; | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>pdf<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>docx<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>html<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>&amp;gt;(<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>markdown<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>)
-</code></pre><p>Mais tu fais :</p>
-<pre><code class="hljs language-ts">onChange={<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-function<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>(<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-params<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>e<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>) =<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>gt;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-title function_<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>setSelectedFormat<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>(e.&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-property&quot;</</span>span>&gt;target&lt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-regexp"</span>></span>/span<span class="hljs-symbol">&gt;</span>.<span class="hljs-symbol">&lt;</span>span class=<span class="hljs-symbol">&quot;</span>hljs-property<span class="hljs-symbol">&quot;</span><span class="hljs-symbol">&gt;</span>value<span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>span&gt; <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-keyword<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>as<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-built_in<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>any<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>)}
-</code></pre><p>🔧 ➤ Typage fragile sur le <code>as any</code></p>
-<p><strong>✅ Solution :</strong>
-Typage plus safe :</p>
-<pre><code class="hljs language-ts">onChange={<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-function<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>(<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-params<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>e<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>) =<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>gt;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> {
-  <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-keyword<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>const<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> value = e.&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-property&quot;</</span>span>&gt;target&lt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-regexp"</span>></span>/span<span class="hljs-symbol">&gt;</span>.<span class="hljs-symbol">&lt;</span>span class=<span class="hljs-symbol">&quot;</span>hljs-property<span class="hljs-symbol">&quot;</span><span class="hljs-symbol">&gt;</span>value<span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>span&gt; <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-keyword<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>as<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>markdown<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>pdf<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>docx<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span> | <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-string<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span>html<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-symbol"</span>></span><span class="hljs-symbol">&amp;</span>#x27;<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>
-  <span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"language-xml"</span>></span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span> <span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-attr"</span>></span>class<span class="hljs-tag"></<span class="hljs-name">span</span>></span>=<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-string"</span>></span><span class="hljs-symbol">&quot;</span>hljs-title function_<span class="hljs-symbol">&quot;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span>setSelectedFormat<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-tag"</span>></span><span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-name"</span>></span>span<span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-symbol">&gt;</span><span class="hljs-tag"></<span class="hljs-name">span</span>></span><span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>(value)
-}}
-</code></pre><hr>
-<h4>2. <code>mapStyleForAPI</code> n’est <strong>jamais memoïzé</strong> (pas critique, mais si rendement optimisé → worth)</h4>
-<p><strong>🌀 Suggestion :</strong>
-Tu pourrais mettre <code>mapStyleForAPI</code> <strong>hors composant</strong>, en util pur.<br>Si tu fais le mapping souvent, un <code>useMemo</code> serait envisageable aussi.</p>
-<hr>
-<h4>3. <strong>Performances UI sur très gros nombre d’événements</strong></h4>
-<p>Tu fais beaucoup de :</p>
-<pre><code class="hljs language-ts">flatMap + filter + map
-</code></pre><p>dans les <code>toggle</code>, les <code>count</code>, etc.<br>Quand y’a beaucoup de threads/messages, ça peut devenir perceptible.</p>
-<p><strong>🔥 Suggestions (optionnelles si besoin perf) :</strong></p>
-<ul>
-<li>Stocker les <code>selectedIds</code> dans un <code>Set</code> à part ?</li>
-<li>Mémoïser le <code>selectedEventsCount</code> ?</li>
-</ul>
-<p>Mais si le dataset est contenu → no prob.</p>
-<hr>
-<h3>🧠 Consideration UX avancée (non bloquante) :</h3>
-<p>Quand tu cliques sur un <strong>event checkbox individuel</strong>, le bubble <code>setTimeout</code> pour <code>onSelectionChange</code> est propre.</p>
-<p>Mais sur la <strong>checkbox de groupe thread</strong>, tu n’as pas de vrai debounce sémantique (genre <code>useDebouncedCallback</code>).</p>
-<p>➡ À surveiller si interactions ultra rapides = risque de race condition de preview.</p>
-<hr>
-<h3>🧹 Micro-point :</h3>
-<pre><code class="hljs language-ts">a.&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-title function_&quot;</</span>span>&gt;click&lt;/span&gt;()
-&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-variable language_&quot;</</span>span>&gt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-variable language_"</span>></span>document<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>&lt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-regexp"</span>></span>/span<span class="hljs-symbol">&gt;</span>.<span class="hljs-symbol">&lt;</span>span class=<span class="hljs-symbol">&quot;</span>hljs-property<span class="hljs-symbol">&quot;</span><span class="hljs-symbol">&gt;</span>body<span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>span&gt;.&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-title function_&quot;</</span>span>&gt;appendChild&lt;/span&gt;(a)
+<h3>2. ♻️ <code>mapStyleForAPI</code> interne</h3>
+<p>👉 Extraire en fonction utilitaire externe si réutilisé ailleurs.</p>
+<hr>
+<h3>3. 🚀 Performances potentielles</h3>
+<p>Usage intensif de :</p>
+<pre><code class="hljs language-ts">flatMap → filter → map
+</code></pre><p>➡ Repenser certains calculs (selectedIds, counts) si scaling.</p>
+<hr>
+<h3>4. 🫧 Interactions rapides</h3>
+<p>Thread-level toggle utilise <code>setTimeout</code> (comme event individuel),<br>mais pas de vraie gestion debounce sur clics spammés.<br>➡ Peut créer un effet de race condition sur preview si enchâssé.</p>
+<hr>
+<h3>5. 🧽 Doublon mineur</h3>
+<pre><code class="hljs language-ts">a.<span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-title function_"</span>>click</span>()
+<span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-variable language_"</span>><span class="hljs-variable language_">document</span><<span class="hljs-regexp">/span>.<span class="hljs-property">body</</span>span>.<span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-title function_"</span>>appendChild</span>(a)
 ...
-&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-variable language_&quot;</</span>span>&gt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-variable language_"</span>></span>document<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>&lt;<span class="language-xml"><span class="hljs-tag"><<span class="hljs-name">span</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"hljs-regexp"</span>></span>/span<span class="hljs-symbol">&gt;</span>.<span class="hljs-symbol">&lt;</span>span class=<span class="hljs-symbol">&quot;</span>hljs-property<span class="hljs-symbol">&quot;</span><span class="hljs-symbol">&gt;</span>body<span class="hljs-symbol">&lt;</span>/<span class="hljs-tag"></<span class="hljs-name">span</span>></span></span>span&gt;.&lt;span <span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-keyword"</span>><span class="hljs-keyword">class</span><<span class="hljs-regexp">/span>=<span class="hljs-string">&quot;hljs-title function_&quot;</</span>span>&gt;removeChild&lt;/span&gt;(a)
-</code></pre><p>📦 ➤ Le <code>appendChild</code> est fait <strong>deux fois</strong> (copié/collé), tu peux cleaner ça.</p>
+<span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-variable language_"</span>><span class="hljs-variable language_">document</span><<span class="hljs-regexp">/span>.<span class="hljs-property">body</</span>span>.<span <span class="hljs-keyword">class</span>=<span class="hljs-string">"hljs-title function_"</span>>removeChild</span>(a)
+</code></pre><p>📦 <code>appendChild(a)</code> est doublé inutilement.</p>
 <hr>
-<h3>🔒 Sécurité :</h3>
-<p>Tu postes du contenu utilisateur dans <code>/api/export/generate</code>.<br>Assure-toi que côté server :</p>
+<h2>🛡️ Côté sécurité</h2>
+<p>Assurer en back :</p>
 <ul>
-<li>Le format est bien validé (<code>markdown</code>, <code>pdf</code>, etc.)</li>
-<li>Les IDs sont filtrés/utilisés dans une sandbox sécurisée (risque SSR).</li>
+<li>Validation forte du format d’export</li>
+<li>Filtrage des <code>eventIds</code> (pas d’injection ou SSR sauvage)</li>
 </ul>
-<p>Mais côté client : ✅</p>
+<p>Côté client : ✅ aucune alerte majeure.</p>
 <hr>
-<h3>🧩 Suggestion bonus</h3>
-<p>Tu pourrais injecter une prop <code>userName</code> dans <code>ExportModalProps</code>,<br>pour permettre un header export type :<br>“Export des conversations de Sounil le Blanc — 08.12.2025”</p>
-<p>Tiny détail mais good polish.</p>
-<hr>
-<h3>✅ Conclusion</h3>
-<p><strong>Rien de bloquant. Rien de cassé.</strong><br>Tu as un <strong>design réactif, resilient, clair</strong>, bien commenté.</p>
-<p>Tu peux release en prod sans ciller.<br>Mais si tu veux <strong>scaler</strong> dans le futur (beaucoup de threads/messages), prépare :</p>
+<h2>💡 Suggestions UX avancées (facultatives)</h2>
 <ul>
-<li>un <code>useExportStore()</code></li>
-<li>un <code>Set</code> pour les ids sélectionnés</li>
-<li>une gestion de scroll plus fine (avec refs directes au lieu du <code>querySelector</code> fragile)</li>
+<li>Ajouter une prop <code>userName</code> pour inclure dans les exports</li>
+<li>Créer une <code>useExportStore()</code> (Zustand, etc.) pour optimiser les calculs et scrolls</li>
+<li>Gérer <code>selectedIds</code> avec un <code>Set</code> pour performance incidente</li>
 </ul>
 <hr>
-<p>Je t’envoie ça en résumé punchline si tu veux un mode CTO-furtif ?<br>Ou tu veux que je t’aide à refactoriser les selects <code>flatMap</code> si souci perfo ?</p>
-<p>Tu dis. Je trace.</p>
-<hr>
-<div align="center">
+<h2>🧠 Bilan</h2>
+<p>Tu peux partir en prod les yeux ouverts.<br>Tout est robuste, limpide, maintenable.  </p>
+<p>Mais c’est du code qui va vivre longtemps →<br>pense <strong>scalabilité tranquille</strong> pour le futur.</p>
+<pre><code>
+---
 
-<h3>🟣 Export généré par Bandhu 🟣</h3>
-<p><em>Ombrelien - छायासरस्वतः - L&#39;ombre qui écoute</em></p>
-<p>💬 <strong>32</strong> messages • ✨ <strong>1</strong> conversations • 🌌 Export Design</p>
-</div>
+📁 Tu peux coller cela dans un fichier nommé par exemple :  
+**`exportmodal-review-2025-12-08.md`**
 
+Ou plus simplement :  
+**`exportmodal-notes.md`**
+
+Tu veux que je te génère aussi le `.md` en base64 ou blob JS prêt à télécharger ?  
+Je peux te mock un bouton React pour direct download au besoin.
+
+---
+
+&lt;div align=&quot;center&quot;&gt;
+
+### 🟣 Export généré par Bandhu 🟣
+
+*Ombrelien - छायासरस्वतः - L&#x27;ombre qui écoute*
+
+💬 **2** messages • ✨ **1** conversations • 🌌 Export Design
+
+&lt;/div&gt;
+</code></pre>
       </div>
       
       
