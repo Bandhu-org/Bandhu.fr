@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 // Types
-export type PDFStyle = 'design-color' | 'design-bw' | 'sobre-color' | 'sobre-bw'
+export type PDFStyle = 'design-color' | 'design-bw' | 'sobre-color' | 'sobre-bw' | 'minimal-bw'
 
 interface PDFOptions {
   includeTimestamps?: boolean

@@ -11,6 +11,7 @@ import { convertHTMLToPDF } from '@/utils/pdf/converter'
 import { generateChatHTMLForPDF } from '@/utils/exportStyles/pdf-html-generator'
 import { generateChatHTMLForPDF_BW } from '@/utils/exportStyles/bw-pdf-html-generator'
 import type { PDFStyle } from '@/utils/pdf/converter'
+import { generateMinimalPDFHTML } from '@/utils/exportStyles/minimal-pdf-generator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -150,14 +151,15 @@ async function generatePDF(
   
   // Fonction helper pour convertir PDFStyle → ExportStyle
   function convertToExportStyle(pdfStyle: PDFStyle): ExportStyle {
-    switch (pdfStyle) {
-      case 'design-color': return 'design'
-      case 'design-bw': return 'sobre'
-      case 'sobre-color': return 'sobre'
-      case 'sobre-bw': return 'sobre'
-      default: return 'design'
-    }
+  switch (pdfStyle) {
+    case 'design-color': return 'design'
+    case 'design-bw': return 'sobre'
+    case 'sobre-color': return 'sobre'
+    case 'sobre-bw': return 'sobre'
+    case 'minimal-bw': return 'sobre' // ou 'minimal' si tu veux un style dédié
+    default: return 'design'
   }
+}
   
   try {
     console.log(`📄 Génération PDF via HTML (nouveau flux), style: ${style}`)
@@ -169,21 +171,28 @@ async function generatePDF(
       // Un seul PDF
       console.log(`📄 Génération PDF unique (${events.length} messages)`)
       
-      // 1. Générer notre super HTML (choisir entre couleur et BW)
-      let html
-      if (style === 'design-bw') {
-        html = await generateChatHTMLForPDF_BW(chunks[0].events, {
-          style: 'sobre',
-          includeTimestamps: options.includeTimestamps || false,
-          title: options.title
-        })
-      } else {
-        html = await generateChatHTMLForPDF(chunks[0].events, {
-          style: convertToExportStyle(style),
-          includeTimestamps: options.includeTimestamps || false,
-          title: options.title
-        })
-      }
+      // 1. Générer notre super HTML (choisir entre couleur, BW, ou minimal)
+let html
+if (style === 'design-bw') {
+  html = await generateChatHTMLForPDF_BW(chunks[0].events, {
+    style: 'sobre',
+    includeTimestamps: options.includeTimestamps || false,
+    title: options.title
+  })
+} else if (style === 'minimal-bw') {
+  // NOUVEAU : générateur minimal
+  html = await generateMinimalPDFHTML(chunks[0].events, {
+    includeTimestamps: options.includeTimestamps || false,
+    includeThreadHeaders: true,
+    title: options.title
+  })
+} else {
+  html = await generateChatHTMLForPDF(chunks[0].events, {
+    style: convertToExportStyle(style),
+    includeTimestamps: options.includeTimestamps || false,
+    title: options.title
+  })
+}
       
       console.log('✅ HTML généré:', html.length, 'caractères')
       
@@ -211,21 +220,28 @@ async function generatePDF(
           console.log(`🔧 Génération chunk ${chunk.partNumber}/${chunk.totalParts}`)
           console.log(`📊 Events: ${chunk.events.length}`)
           
-          // Générer HTML pour ce chunk (choisir entre couleur et BW)
-          let html
-          if (style === 'design-bw') {
-            html = await generateChatHTMLForPDF_BW(chunk.events, {
-              style: 'sobre',
-              includeTimestamps: options.includeTimestamps || false,
-              title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
-            })
-          } else {
-            html = await generateChatHTMLForPDF(chunk.events, {
-              style: convertToExportStyle(style),
-              includeTimestamps: options.includeTimestamps || false,
-              title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
-            })
-          }
+          // Générer HTML pour ce chunk (choisir entre couleur, BW, ou minimal)
+let html
+if (style === 'design-bw') {
+  html = await generateChatHTMLForPDF_BW(chunk.events, {
+    style: 'sobre',
+    includeTimestamps: options.includeTimestamps || false,
+    title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
+  })
+} else if (style === 'minimal-bw') {
+  // NOUVEAU : générateur minimal
+  html = await generateMinimalPDFHTML(chunk.events, {
+    includeTimestamps: options.includeTimestamps || false,
+    includeThreadHeaders: true,
+    title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
+  })
+} else {
+  html = await generateChatHTMLForPDF(chunk.events, {
+    style: convertToExportStyle(style),
+    includeTimestamps: options.includeTimestamps || false,
+    title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
+  })
+}
           
           // Convertir en PDF
           const pdfBuffer = await convertHTMLToPDF(

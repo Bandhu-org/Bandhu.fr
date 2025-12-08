@@ -317,7 +317,7 @@ const getAvailableStyles = (format: 'markdown' | 'pdf' | 'docx' | 'html') => {
     case 'html':
       return ['design']  // ← 1 option pour l'instant
     case 'pdf':
-      return ['design-color', 'design-bw', 'minimal']  // ← 3 options PDF !
+       return ['design-color', 'design-bw', 'minimal-bw']  // ← minimal-bw au lieu de minimal
     case 'docx':
       return ['design']  // ← 1 option
     default:
@@ -327,10 +327,11 @@ const getAvailableStyles = (format: 'markdown' | 'pdf' | 'docx' | 'html') => {
 
 
 const mapStyleForAPI = (style: string, format: string): string => {
-  // Pour PDF, convertir 'minimal' en 'design-bw'
+  // Pour PDF, convertir 'minimal-bw' en 'minimal-bw' (même nom)
   if (format === 'pdf') {
-    if (style === 'minimal') return 'design-bw'  // Minimal = Noir & Blanc
-    // Les autres styles PDF restent inchangés
+    // Les styles PDF sont déjà les bons pour l'API
+    // design-color, design-bw, minimal-bw
+    return style
   }
   
   // Pour HTML, pour l'on garde 'design'
@@ -622,15 +623,15 @@ setTimeout(() => {
                   {getAvailableStyles(selectedFormat).map(styleKey => {
   // Gérer le cas où le template n'existe pas encore
   const template = (EXPORT_TEMPLATES as any)[styleKey] || {
-    name: styleKey === 'minimal' ? 'Minimaliste' : 
-           styleKey === 'design-color' ? 'Design (Couleur)' :
-           styleKey === 'design-bw' ? 'Design (Noir & Blanc)' : styleKey,
-    icon: styleKey === 'minimal' ? '📝' : 
-          styleKey === 'design-bw' ? '⚫' : '🎨',
-    description: styleKey === 'minimal' ? 'Version texte compacte' :
-                 styleKey === 'design-bw' ? 'PDF en noir et blanc pour impression' :
-                 'Style par défaut'
-  }
+  name: styleKey === 'minimal-bw' ? 'Minimaliste (N&B)' : 
+         styleKey === 'design-color' ? 'Design (Couleur)' :
+         styleKey === 'design-bw' ? 'Design (Noir & Blanc)' : styleKey,
+  icon: styleKey === 'minimal-bw' ? '📄' : 
+        styleKey === 'design-bw' ? '⚫' : '🎨',
+  description: styleKey === 'minimal-bw' ? 'Version texte compacte, optimisée impression' :
+               styleKey === 'design-bw' ? 'PDF en noir et blanc pour impression' :
+               'Style par défaut'
+}
   
   return (
     <button
