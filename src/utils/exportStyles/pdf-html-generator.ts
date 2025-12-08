@@ -6,12 +6,18 @@ import type { ExportStyle } from '@/utils/exportTemplates'
 import fs from 'fs'
 import path from 'path'
 import { decode } from 'he'
+import { generateMarkdownForHTML } from './markdown-for-html'
 
 // Configurer marked
 marked.use(
   markedHighlight({
     langPrefix: 'hljs language-',
     highlight(code, lang) {
+      const noHighlight = ['markdown', 'md', 'text', 'plaintext', 'txt', '', 'ai', 'user']
+      if (noHighlight.includes(lang)) {
+        return code   // ← pas de spans hljs, juste le texte brut
+      }
+
       const language = hljs.getLanguage(lang) ? lang : 'plaintext'
       return hljs.highlight(code, { language }).value
     }
@@ -514,12 +520,11 @@ export async function generateChatHTMLForPDF(
   console.log('🔍 [HTML GENERATOR PDF] Génération HTML pour', events.length, 'events')
   
   // 1. Générer le Markdown
-  const markdown = await generateStyledMarkdown(
-  events, 
-  'design',  // ← FORCE 'design' (on gère le style dans le template HTML)
+
+const markdown = await generateMarkdownForHTML(
+  events,
   {
-    includeTimestamps: options.includeTimestamps || false,
-    preview: false
+    includeTimestamps: options.includeTimestamps || false
   }
 )
   
@@ -530,11 +535,14 @@ export async function generateChatHTMLForPDF(
   // 2. Convertir Markdown → HTML
   let contentHTML = await marked.parse(markdown) as string
 
-  // 2.1 Supprimer le header Markdown généré
-  contentHTML = contentHTML.replace(
-    /<hr>\s*<h1[^>]*>🌌 BANDHU EXPORT<\/h1>[\s\S]*?<hr>\s*<h3>Export du[\s\S]*?<\/ul>\s*<hr>\s*/i,
-    ''
-  )
+  // 2.1 Propager les classes du <code> vers <pre> (user / ai / langages)
+contentHTML = contentHTML.replace(
+  /<pre><code class="([^"]*)">/g,
+  (match, classes) => {
+    return `<pre class="${classes}"><code class="${classes}">`
+  }
+)
+
 
   // 2.2 Nettoyer sauts de ligne
   contentHTML = contentHTML.replace(/\n\s*\n\s*\n/g, '\n\n')
@@ -546,16 +554,6 @@ export async function generateChatHTMLForPDF(
       return match.replace(code, decode(code))
     }
   )
-
-  // 4. Ajouter classe language-user aux blocs user
-  contentHTML = contentHTML.replace(
-    /(<h2[^>]*>🔵[\s\S]*?<\/h2>)([\s\S]*?)(<pre[^>]*>)/g,
-    (match, h2Part, middlePart, preTag) => {
-      return h2Part + middlePart + '<pre class="language-user"' + preTag.substring(4)
-    }
-  )
-
-  
 
   // 5. Nettoyer styles inline
   contentHTML = contentHTML.replace(/ style="[^"]*"/g, '')

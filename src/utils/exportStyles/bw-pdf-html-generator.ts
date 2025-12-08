@@ -1,16 +1,33 @@
 import { marked } from 'marked'
-import hljs from 'highlight.js'
 import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
 import fs from 'fs'
 import path from 'path'
 import { decode } from 'he'
+import { generateMarkdownForHTML } from './markdown-for-html'
 
-// Configurer marked SANS highlight
-marked.setOptions({
-  gfm: true,
-  breaks: true
-})
+export async function renderMarkdownBW(md: string) {
+  const decoded = decode(md);
+
+  // Renderer custom Marked v15
+  const renderer = {
+    code(codeNode: any) {
+      return `<pre><code>${codeNode.text}</code></pre>`;
+    }
+  };
+
+  marked.use({ renderer });
+
+  // <-- IMPORTANT : marked.parse() est async
+  const html = await marked.parse(decoded);
+
+  // Nettoyage anti-span
+  const cleanHtml = html
+    .replace(/<span[^>]*>/g, "")
+    .replace(/<\/span>/g, "");
+
+  return cleanHtml;
+}
 
 interface Event {
   id: string
@@ -454,44 +471,41 @@ export async function generateChatHTMLForPDF_BW(
   console.log('🔍 [HTML GENERATOR PDF BW] Génération HTML pour', events.length, 'events')
   
   // 1. Générer le Markdown en DESIGN (pas sobre)
-  const markdown = await generateStyledMarkdown(
-    events, 
-    'design',  // ← FORCE 'design' comme dans le code couleur
-    {
-      includeTimestamps: options.includeTimestamps || false,
-      preview: false
-    }
-  )
+  const markdown = await generateMarkdownForHTML(
+  events,
+  {
+    includeTimestamps: options.includeTimestamps || false
+  }
+)
+  console.log('🔍 [BW] Extrait markdown:', markdown.substring(0, 1000))
+
   
   console.log('✅ [HTML GENERATOR PDF BW] Markdown généré:', markdown.length, 'caractères')
 
   const conversationCount = new Set(events.map(e => e.threadId)).size
   
   // 2. Convertir Markdown → HTML
+  
   let contentHTML = await marked.parse(markdown) as string
+console.log('🔍 [BW] HTML après marked (premier 1000 chars):', contentHTML.substring(0, 1000))
 
-  // 2.1 Supprimer le header Markdown généré (COMME DANS LE CODE COULEUR)
-  contentHTML = contentHTML.replace(
-    /<hr>\s*<h1[^>]*>🌌 BANDHU EXPORT<\/h1>[\s\S]*?<hr>\s*<h3>Export du[\s\S]*?<\/ul>\s*<hr>\s*/i,
-    ''
-  )
+// 2.1 Propager les classes du <code> vers <pre> (user / ai / langages)
+contentHTML = contentHTML.replace(
+  /<pre><code class="([^"]*)">/g,
+  (match, classes) => {
+    return `<pre class="${classes}"><code class="${classes}">`
+  }
+)
 
   // 2.2 Nettoyer sauts de ligne
   contentHTML = contentHTML.replace(/\n\s*\n\s*\n/g, '\n\n')
 
   // 3. Décoder HTML entities dans les code blocks
+  
   contentHTML = contentHTML.replace(
     /<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/g,
     (match, code) => {
       return match.replace(code, decode(code))
-    }
-  )
-
-  // 4. Ajouter classe language-user aux blocs user
-  contentHTML = contentHTML.replace(
-    /(<h2[^>]*>🔵[\s\S]*?<\/h2>)([\s\S]*?)(<pre[^>]*>)/g,
-    (match, h2Part, middlePart, preTag) => {
-      return h2Part + middlePart + '<pre class="language-user"' + preTag.substring(4)
     }
   )
 
