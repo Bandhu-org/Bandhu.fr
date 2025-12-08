@@ -95,6 +95,9 @@ function getHTMLTemplateForPDF_BW(): string {
       margin: 0;
       font-size: 15px;
       min-height: 100vh;
+      /* 🔥 NOUVEAU : Forcer tout en niveaux de gris */
+      filter: grayscale(100%) !important;
+  -webkit-filter: grayscale(100%) !important;
     }
 
     .container {
