@@ -113,10 +113,10 @@ function getHTMLTemplateForPDF(): string {
     
     /* ========== HEADER ========== */
     .header {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-bottom: 2px solid var(--border-color);
-    }
+  margin-top: 0;      /* ← DE 3rem À 0 */
+  padding-top: 1rem;  /* ← Tu peux réduire aussi si tu veux */
+  border-bottom: 2px solid var(--border-color);
+}
 
     /* Ligne 1 : Logo + Bandhu avec barre en dessous */
     .header-top {
@@ -532,7 +532,7 @@ export async function generateChatHTMLForPDF(
 
   // 2.1 Supprimer le header Markdown généré
   contentHTML = contentHTML.replace(
-    /<hr>\s*<h1[^>]*>🌌 BANDHU EXPORT<\/h1>[\s\S]*?<hr>\s*<h3>📅 Export du[\s\S]*?<\/ul>\s*<hr>\s*/i,
+    /<hr>\s*<h1[^>]*>🌌 BANDHU EXPORT<\/h1>[\s\S]*?<hr>\s*<h3>Export du[\s\S]*?<\/ul>\s*<hr>\s*/i,
     ''
   )
 

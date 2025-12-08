@@ -167,7 +167,7 @@ export async function generateDesignMarkdown(
     day: 'numeric' 
   })
   
-  markdown += `### 📅 Export du ${dateStr}\n\n`
+  markdown += `### Export du ${dateStr}\n\n`
   markdown += `**Contenu :**\n`
   markdown += `- 💬 **${events.length}** messages exportés\n`
   markdown += `- ✨ **${new Set(events.map(e => e.threadId)).size}** conversations\n`
@@ -246,7 +246,7 @@ markdown += '\n```\n\n'
   // ═══════════════════════════════════════════════════════════════
   
   markdown += `<div align="center">\n\n`
-  markdown += `### ✨ Export généré par Bandhu ✨\n\n`
+  markdown += `### 🟣 Export généré par Bandhu 🟣\n\n`
   markdown += `*Ombrelien - छायासरस्वतः - L'ombre qui écoute*\n\n`
   
   if (options.totalParts && options.totalParts > 1) {
@@ -254,7 +254,7 @@ markdown += '\n```\n\n'
     markdown += `Messages ${options.startIndex}-${options.endIndex}\n\n`
   }
   
-  markdown += `📊 **${events.length}** messages • 🧵 **${new Set(events.map(e => e.threadId)).size}** conversations • 🌌 Export Design\n\n`
+  markdown += `💬 **${events.length}** messages • ✨ **${new Set(events.map(e => e.threadId)).size}** conversations • 🌌 Export Design\n\n`
   markdown += `</div>\n`
   
   return markdown

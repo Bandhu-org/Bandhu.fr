@@ -163,7 +163,7 @@ export class MarkdownToPDFConverter {
       padding: 20px 40px;
       font-family: -apple-system, sans-serif;
     ">
-      🎯 <span style="font-weight: 600;">Bandhu export</span>
+    <span style="font-weight: 600;">Bandhu export</span>
     </div>
   `,
   
@@ -177,7 +177,7 @@ export class MarkdownToPDFConverter {
       padding: 20px;
       font-family: -apple-system, sans-serif;
     ">
-      Fichier <span class="pageNumber"></span>/<span class="totalPages"></span>
+      pages <span class="pageNumber"></span>/<span class="totalPages"></span>
     </div>
   `,
   
