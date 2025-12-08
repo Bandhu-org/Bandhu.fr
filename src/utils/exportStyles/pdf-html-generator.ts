@@ -90,11 +90,10 @@ function getHTMLTemplateForPDF(): string {
 
 .container {
   background: var(--background);
-  border-radius: 20px;
-  padding: 2rem;  /* ← Moins de padding */
-  max-width: 32rem;  /* ← Encore plus étroit */
-  width: calc(100% - 140px);  /* ← Marges encore plus grandes */
-  margin: 60px auto;
+  padding: 60px 40px;  /* ← Espace bleu en haut/bas */
+  max-width: 42rem;    /* ← Plus large */
+  width: calc(100% - 60px);  /* ← Moins de marge latérale */
+  margin: 30px auto;   /* ← Marges réduites */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
     
@@ -142,17 +141,77 @@ function getHTMLTemplateForPDF(): string {
       letter-spacing: -0.025em;
     }
 
-    /* Ligne 2 : 3 colonnes */
-    .header-bottom {
-      display: flex;
-      gap: 40px;
-    }
+    /* ========== NOUVELLES CLASSES ========== */
+.header-bottom {
+  display: block;  /* ← Plus de flex à 3 colonnes */
+  margin-top: 20px;
+}
 
-    .header-col-left,
-    .header-col-center,
-    .header-col-right {
-      flex: 1;
-    }
+/* Titre et date sur même ligne */
+.header-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.header-subtitle {
+  color: var(--secondary-color);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.header-sanskrit {
+  color: color-mix(in srgb, var(--secondary-color) 60%, transparent);
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  margin-bottom: 15px;
+}
+
+/* Avatar et stats côte à côte */
+.header-avatar-stats-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.header-avatar {
+  width: 140px;   /* ← Taille réduite */
+  height: 180px;  /* ← Taille réduite */
+  border-radius: 20px;
+  border: 2px solid var(--border-color);
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* Stats alignées à droite de l'avatar */
+.header-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 10px;
+  margin-top: 0;  /* ← Plus de margin-top énorme */
+}
+
+.header-stats div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--muted-color);
+}
+
+.header-date {
+  color: var(--secondary-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: 20px;
+}
 
     /* Colonne 1 : Ombrelien + Sanskrit + Image */
     .header-col-left {
@@ -188,13 +247,6 @@ function getHTMLTemplateForPDF(): string {
       object-fit: contain;
     }
 
-    /* Colonne 2 : Stats */
-    .header-stats {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 180px;
-    }
 
     .header-stats div {
       display: flex;
@@ -369,6 +421,21 @@ function getHTMLTemplateForPDF(): string {
     .content em {
       color: var(--muted-color);
     }
+
+    /* Éviter coupures dans les messages */
+.content h2 {
+  page-break-inside: avoid;
+  page-break-after: avoid;
+}
+
+.content pre {
+  page-break-inside: avoid;
+}
+
+/* Padding bottom pour espace avant footer */
+.content {
+  padding-bottom: 40px;
+}
     
     /* ========== FOOTER ========== */
     .footer {
@@ -391,7 +458,7 @@ function getHTMLTemplateForPDF(): string {
     /* ========== PRINT ========== */
 @media print {
   @page {
-    margin: 0;
+    margin: 150px 0;  /* ← Marges pour header/footer Puppeteer */
   }
   
   body {
@@ -403,6 +470,7 @@ function getHTMLTemplateForPDF(): string {
   .container {
     width: calc(100% - 80px);
     margin: 40px auto;
+    padding: 60px 40px !important;  /* ← Force le padding en print */
   }
 }
   </style>
@@ -518,36 +586,38 @@ export async function generateChatHTMLForPDF(
   // 9. Header
   const header = `
     <div class="header">
-      <div class="header-top">
-        <div class="header-logo-title">
-          <div class="header-logo-container">
-            <img src="${logo}" alt="Bandhu" class="header-logo">
-          </div>
-          <h1 class="header-title">Bandhu</h1>
-        </div>
+  <div class="header-top">
+    <div class="header-logo-title">
+      <div class="header-logo-container">
+        <img src="${logo}" alt="Bandhu" class="header-logo">
       </div>
+      <h1 class="header-title">Bandhu</h1>
+    </div>
+  </div>
 
-      <div class="header-bottom">
-        <div class="header-col-left">
-          <h2 class="header-subtitle">Ombrelien</h2>
-          <div class="header-sanskrit">छायासरस्वतः</div>
-          ${avatar ? `<img src="${avatar}" class="header-avatar" alt="Ombrelien">` : ''}
-        </div>
-
-        <div class="header-col-center">
-          <div class="header-stats">
-            <div>${messageIcon}<strong>${totalMessages}</strong> messages</div>
-            <div>${conversationIcon}<strong>${conversationCount}</strong> conversations</div>
-            <div>${userIcon}<strong>${userMessages}</strong> utilisateur</div>
-            <div>${ombrelienIcon}<strong>${aiMessages}</strong> Ombrelien</div>
-          </div>
-        </div>
-
-        <div class="header-col-right">
-          <div class="header-date">${dateStr}</div>
-        </div>
+  <div class="header-bottom">
+    <!-- Ligne 1: Ombrelien + Date sur même ligne -->
+    <div class="header-title-row">
+      <h2 class="header-subtitle">Ombrelien</h2>
+      <div class="header-date">${dateStr}</div>
+    </div>
+    
+    <!-- Ligne 2: Sanskrit -->
+    <div class="header-sanskrit">छायासरस्वतः</div>
+    
+    <!-- Ligne 3: Avatar + Stats côte à côte -->
+    <div class="header-avatar-stats-container">
+      ${avatar ? `<img src="${avatar}" class="header-avatar" alt="Ombrelien">` : ''}
+      
+      <div class="header-stats">
+        <div>${messageIcon}<strong>${totalMessages}</strong> messages</div>
+        <div>${conversationIcon}<strong>${conversationCount}</strong> conversations</div>
+        <div>${userIcon}<strong>${userMessages}</strong> utilisateur</div>
+        <div>${ombrelienIcon}<strong>${aiMessages}</strong> Ombrelien</div>
       </div>
     </div>
+  </div>
+</div>
   `
   
   // 10. Footer
