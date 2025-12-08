@@ -342,7 +342,17 @@ function getHTMLTemplateForPDF(): string {
     .content p {
       margin: 1.4em 0;
       color: var(--text-color);
-    }
+     page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  orphans: 3; /* au moins 3 lignes en bas de page */
+  widows: 3;  /* au moins 3 lignes en haut de page */
+}
+
+/* Garder les paragraphes consécutifs ensemble */
+.content p + p {
+  page-break-before: avoid !important;
+  break-before: avoid !important;
+}
     
     .content blockquote {
       border-left: 4px solid var(--secondary-color);
@@ -574,13 +584,13 @@ const markdown = await generateMarkdownForHTML(
     includeTimestamps: options.includeTimestamps || false
   }
 )
-  
-  console.log('✅ [HTML GENERATOR PDF] Markdown généré:', markdown.length, 'caractères')
 
-  const conversationCount = new Set(events.map(e => e.threadId)).size
-  
-  // 2. Convertir Markdown → HTML
-  let contentHTML = await marked.parse(markdown) as string
+console.log('✅ [HTML GENERATOR PDF] Markdown généré:', markdown.length, 'caractères')
+
+const conversationCount = new Set(events.map(e => e.threadId)).size
+
+// 2. Convertir Markdown → HTML
+let contentHTML = await marked.parse(markdown) as string
 
 // 2.1 Propager les classes du <code> vers <pre> (user / ai)
 contentHTML = contentHTML.replace(
@@ -593,6 +603,16 @@ contentHTML = contentHTML.replace(
 
   // 2.2 Nettoyer sauts de ligne
   contentHTML = contentHTML.replace(/\n\s*\n\s*\n/g, '\n\n')
+
+  // 2.3 Supprimer les hr-spacer mal placés (dans les blocs code)
+contentHTML = contentHTML.replace(
+  /<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/g,
+  (match, codeContent) => {
+    // Supprimer les <div class="hr-spacer"></div> à l'intérieur
+    const cleaned = codeContent.replace(/<div class="hr-spacer"><\/div>\n?/g, '~~~\n')
+    return match.replace(codeContent, cleaned)
+  }
+)
 
   // 3. Décoder HTML entities dans les code blocks
   contentHTML = contentHTML.replace(

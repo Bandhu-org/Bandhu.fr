@@ -398,10 +398,13 @@ const formatNames: Record<'markdown' | 'pdf' | 'docx' | 'html', string> = {
                                 )
                               },
                               pre: ({ children, ...props }: any) => (
-                                <pre className="bg-gray-950 p-4 rounded-lg overflow-x-auto my-4 border border-gray-700" {...props}>
-                                  {children}
-                                </pre>
-                              ),
+  <pre 
+    className="bg-gray-950 p-4 rounded-lg overflow-x-hidden my-4 border border-gray-700 whitespace-pre-wrap break-words" 
+    {...props}
+  >
+    {children}
+  </pre>
+),
                               blockquote: ({ children, ...props }: any) => (
                                 <blockquote className="border-l-4 border-bandhu-primary pl-4 italic text-gray-300 my-4" {...props}>
                                   {children}
