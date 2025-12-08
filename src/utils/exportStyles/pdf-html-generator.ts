@@ -555,6 +555,8 @@ export async function generateChatHTMLForPDF(
     }
   )
 
+  
+
   // 5. Nettoyer styles inline
   contentHTML = contentHTML.replace(/ style="[^"]*"/g, '')
   
