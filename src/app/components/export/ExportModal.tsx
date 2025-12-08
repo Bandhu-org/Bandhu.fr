@@ -51,7 +51,7 @@ function ExportModal({
 }: ExportModalProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [selectedFormat, setSelectedFormat] = useState<'markdown' | 'pdf' | 'docx' | 'html'>('markdown')
-  const [exportStyle, setExportStyle] = useState<ExportStyle | PDFExportStyle>('design')
+  const [exportStyle, setExportStyle] = useState<ExportStyle | PDFExportStyle | 'minimal'>('design')
 //                                               ↑ Ajouter PDFExportStyle
   const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -309,28 +309,36 @@ useEffect(() => {
 }, [isOpen, threads.length]) // ← ENLÈVE initialSelectedIds.length
 
 // Fonction pour obtenir les styles disponibles selon le format
+
 const getAvailableStyles = (format: 'markdown' | 'pdf' | 'docx' | 'html') => {
   switch (format) {
     case 'markdown':
-    case 'docx':
-      case 'html': 
-      return ['design', 'sobre']
+      return ['design', 'sobre']  // ← 2 options
+    case 'html':
+      return ['design']  // ← 1 option pour l'instant
     case 'pdf':
-      return ['design-color', 'design-bw', 'sobre-color', 'sobre-bw']
+      return ['design-color', 'design-bw', 'minimal']  // ← 3 options PDF !
+    case 'docx':
+      return ['design']  // ← 1 option
     default:
       return ['design']
   }
 }
 
-// Fonction pour mapper les styles avant envoi à l'API
+
 const mapStyleForAPI = (style: string, format: string): string => {
+  // Pour PDF, convertir 'minimal' en 'design-bw'
   if (format === 'pdf') {
-    // Si l'utilisateur a sélectionné un style Markdown, le convertir en style PDF par défaut
-    if (style === 'design') return 'design-color'
-    if (style === 'sobre') return 'sobre-color'
-    // Si c'est déjà un style PDF (design-color, etc.), le garder tel quel
+    if (style === 'minimal') return 'design-bw'  // Minimal = Noir & Blanc
+    // Les autres styles PDF restent inchangés
   }
-  // Pour Markdown et DOCX, garder le style tel quel
+  
+  // Pour HTML, pour l'on garde 'design'
+  if (format === 'html') {
+    return 'design'  // Une seule option pour l'instant
+  }
+  
+  // Pour Markdown et DOCX, garder tel quel
   return style
 }
 
@@ -612,7 +620,18 @@ setTimeout(() => {
                 {/* Sélecteur de style */}
                 <div className="flex items-center gap-2">
                   {getAvailableStyles(selectedFormat).map(styleKey => {
-  const template = EXPORT_TEMPLATES[styleKey as ExportStyle | PDFExportStyle]
+  // Gérer le cas où le template n'existe pas encore
+  const template = (EXPORT_TEMPLATES as any)[styleKey] || {
+    name: styleKey === 'minimal' ? 'Minimaliste' : 
+           styleKey === 'design-color' ? 'Design (Couleur)' :
+           styleKey === 'design-bw' ? 'Design (Noir & Blanc)' : styleKey,
+    icon: styleKey === 'minimal' ? '📝' : 
+          styleKey === 'design-bw' ? '⚫' : '🎨',
+    description: styleKey === 'minimal' ? 'Version texte compacte' :
+                 styleKey === 'design-bw' ? 'PDF en noir et blanc pour impression' :
+                 'Style par défaut'
+  }
+  
   return (
     <button
       key={styleKey}

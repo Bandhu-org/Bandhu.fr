@@ -9,6 +9,8 @@ import JSZip from 'jszip'
 import { generateChatHTML } from '@/utils/exportStyles/html-generator'
 import { convertHTMLToPDF } from '@/utils/pdf/converter'
 import { generateChatHTMLForPDF } from '@/utils/exportStyles/pdf-html-generator'
+import { generateChatHTMLForPDF_BW } from '@/utils/exportStyles/bw-pdf-html-generator'
+import type { PDFStyle } from '@/utils/pdf/converter'
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { format, selectedEvents, options = {} } = body
-    const style: ExportStyle = options.style || 'design-color'
+    const style: PDFStyle = (options.style as PDFStyle) || 'design-color'
 
     console.log('🔄 Génération demandée:', { 
       format, 
@@ -63,8 +65,21 @@ export async function POST(request: NextRequest) {
     let result
     switch (format) {
   case 'markdown':
-    result = await generateMarkdown(events, options, style)
-    break
+  // Convertir PDFStyle en ExportStyle
+  let markdownStyle: ExportStyle
+  
+  if (style === 'design-bw') {
+    markdownStyle = 'sobre'  // BW → sobre
+  } else if (style === 'design-color') {
+    markdownStyle = 'design'  // design-color → design
+  } else if (style === 'sobre-color' || style === 'sobre-bw') {
+    markdownStyle = 'sobre'   // sobre-* → sobre
+  } else {
+    markdownStyle = 'design'  // fallback
+  }
+  
+  result = await generateMarkdown(events, options, markdownStyle)
+  break
   case 'pdf':
     result = await generatePDF(events, options, style)
     break
@@ -130,8 +145,20 @@ async function generateMarkdown(events: any[], options: any, style: ExportStyle)
 async function generatePDF(
   events: any[], 
   options: any, 
-  style: ExportStyle
+  style: PDFStyle
 ): Promise<{ content: string; pageCount: number; estimatedSize: string }> {
+  
+  // Fonction helper pour convertir PDFStyle → ExportStyle
+  function convertToExportStyle(pdfStyle: PDFStyle): ExportStyle {
+    switch (pdfStyle) {
+      case 'design-color': return 'design'
+      case 'design-bw': return 'sobre'
+      case 'sobre-color': return 'sobre'
+      case 'sobre-bw': return 'sobre'
+      default: return 'design'
+    }
+  }
+  
   try {
     console.log(`📄 Génération PDF via HTML (nouveau flux), style: ${style}`)
     
@@ -142,19 +169,28 @@ async function generatePDF(
       // Un seul PDF
       console.log(`📄 Génération PDF unique (${events.length} messages)`)
       
-      // 1. Générer notre super HTML
-      const html = await generateChatHTMLForPDF(chunks[0].events, {
-  style,
-  includeTimestamps: options.includeTimestamps || false,
-  title: options.title
-})
+      // 1. Générer notre super HTML (choisir entre couleur et BW)
+      let html
+      if (style === 'design-bw') {
+        html = await generateChatHTMLForPDF_BW(chunks[0].events, {
+          style: 'sobre',
+          includeTimestamps: options.includeTimestamps || false,
+          title: options.title
+        })
+      } else {
+        html = await generateChatHTMLForPDF(chunks[0].events, {
+          style: convertToExportStyle(style),
+          includeTimestamps: options.includeTimestamps || false,
+          title: options.title
+        })
+      }
       
       console.log('✅ HTML généré:', html.length, 'caractères')
       
       // 2. Convertir HTML → PDF
       const pdfBuffer = await convertHTMLToPDF(
         html, 
-        style as any, // 'design-color', 'design-bw', etc.
+        style as any,
         { includeTimestamps: options.includeTimestamps }
       )
       
@@ -162,7 +198,7 @@ async function generatePDF(
       
       return {
         content: pdfBuffer.toString('base64'),
-        pageCount: Math.ceil(events.length / 15), // estimation
+        pageCount: Math.ceil(events.length / 15),
         estimatedSize: `${Math.round(pdfBuffer.length / 1024)}KB`
       }
       
@@ -175,12 +211,21 @@ async function generatePDF(
           console.log(`🔧 Génération chunk ${chunk.partNumber}/${chunk.totalParts}`)
           console.log(`📊 Events: ${chunk.events.length}`)
           
-          // Générer HTML pour ce chunk
-          const html = await generateChatHTMLForPDF(chunk.events, {
-  style,
-  includeTimestamps: options.includeTimestamps || false,
-  title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
-})
+          // Générer HTML pour ce chunk (choisir entre couleur et BW)
+          let html
+          if (style === 'design-bw') {
+            html = await generateChatHTMLForPDF_BW(chunk.events, {
+              style: 'sobre',
+              includeTimestamps: options.includeTimestamps || false,
+              title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
+            })
+          } else {
+            html = await generateChatHTMLForPDF(chunk.events, {
+              style: convertToExportStyle(style),
+              includeTimestamps: options.includeTimestamps || false,
+              title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
+            })
+          }
           
           // Convertir en PDF
           const pdfBuffer = await convertHTMLToPDF(

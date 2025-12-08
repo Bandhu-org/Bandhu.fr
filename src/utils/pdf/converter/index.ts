@@ -42,7 +42,6 @@ export class MarkdownToPDFConverter {
     try {
       console.log('🔍 [PDF CONVERTER] Début conversion (legacy), style:', style)
       
-      // Charger le template base.html (legacy)
       const templatePath = path.join(
         process.cwd(),
         'src',
@@ -54,7 +53,6 @@ export class MarkdownToPDFConverter {
       )
       let template = fs.readFileSync(templatePath, 'utf-8')
       
-      // Injecter le style CSS
       try {
         const stylePath = path.join(
           process.cwd(),
@@ -76,17 +74,14 @@ export class MarkdownToPDFConverter {
         console.warn('⚠️ Style CSS non chargé:', styleError)
       }
       
-      // Injecter le contenu Markdown (placeholder existant)
       template = template.replace(
         '<!-- Le contenu Markdown converti en HTML sera injecté ici -->',
         markdown
       )
       
-      // Debug
       const debugPath = path.join(process.cwd(), 'debug-pdf-legacy.html')
       fs.writeFileSync(debugPath, template)
       
-      // Générer PDF
       await page.setContent(template, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
@@ -126,15 +121,11 @@ export class MarkdownToPDFConverter {
     try {
       console.log('🔍 [PDF CONVERTER] Génération PDF depuis HTML complet...')
       
-      // Le HTML de pdf-html-generator.ts contient déjà TOUT le CSS nécessaire
-      // On ne charge PAS design-color.css pour éviter d'écraser les styles
-      
-      // Debug -rintBackground: true, margin: { top: '2px', // ← JUSTE pour le header texte right: '40px', bottom: '2px', // ← JUSTE pour le footer texte left: '40px' }, displayHeaderFooter: true, // ← CHANGÉ: true pour avoir header/footer headerTemplate: <div style=" width: 100%; font-size: 10px; // ← 10px seulement color: #6b7280; text-align: left; padding: 6px 40px; // ← 6px min font-family: -apple-system, sans-serif; line-height: 1; margin: 0; "> 🎯 <span style="font-weight: 600;">Bandhu export</span> </div> , footerTemplate: <div style=" width: 100%; font-size: 9px; // ← 9px micro color: #6b7280; text-align: center; padding: 6px; // ← 6px min font-family: -apple-system, sans-serif; line-height: 1; margin: 0; "> Page <span class="pageNumber"></span>/<span HTML tel quel sans modification
+      // Debug
       const debugPath = path.join(process.cwd(), 'debug-pdf-final.html')
       fs.writeFileSync(debugPath, fullHtml)
       console.log('💾 [DEBUG] HTML final sauvegardé:', debugPath)
       
-      // Générer PDF
       await page.setContent(fullHtml, {
         waitUntil: 'domcontentloaded',
         timeout: 30000
@@ -143,46 +134,45 @@ export class MarkdownToPDFConverter {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       const pdfBytes = await page.pdf({
-  format: 'A4',
-  printBackground: true,
-  margin: { 
-    top: '100px',     // ← AJOUTE: espace pour header
-    right: '40px',
-    bottom: '100px',  // ← AJOUTE: espace pour footer
-    left: '40px'
-  },
-  displayHeaderFooter: true,  // ← CHANGÉ: de false à true
-  
-  // ↓ AJOUTER CE BLOC headerTemplate ↓
-  headerTemplate: `
-    <div style="
-      width: 100%;
-      font-size: 12px;
-      color: #6b7280;
-      text-align: left;
-      padding: 20px 40px;
-      font-family: -apple-system, sans-serif;
-    ">
-    <span style="font-weight: 600;">Bandhu export</span>
-    </div>
-  `,
-  
-  // ↓ AJOUTER CE BLOC footerTemplate ↓
-  footerTemplate: `
-    <div style="
-      width: 100%;
-      font-size: 11px;
-      color: #6b7280;
-      text-align: center;
-      padding: 20px;
-      font-family: -apple-system, sans-serif;
-    ">
-      pages <span class="pageNumber"></span>/<span class="totalPages"></span>
-    </div>
-  `,
-  
-  preferCSSPageSize: true
-})
+        format: 'A4',
+        printBackground: true,
+        margin: { 
+          top: '100px',
+          right: '40px',
+          bottom: '100px',
+          left: '40px'
+        },
+        displayHeaderFooter: true,
+        headerTemplate: `
+          <div style="
+            width: 100%;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: left;
+            padding: 20px 40px;
+            font-family: -apple-system, sans-serif;
+          ">
+            <span style="font-weight: 600;">Bandhu export</span>
+          </div>
+        `,
+        footerTemplate: `
+          <div style="
+            width: 100%;
+            font-size: 11px;
+            color: #6b7280;
+            text-align: center;
+            padding: 20px;
+            font-family: -apple-system, sans-serif;
+          ">
+            ${options.fileNumber && options.totalFiles 
+              ? `Fichier ${options.fileNumber}/${options.totalFiles} • ` 
+              : ''
+            }
+            Page <span class="pageNumber"></span>/<span class="totalPages"></span>
+          </div>
+        `,
+        preferCSSPageSize: true
+      })
       
       console.log('✅ [PDF CONVERTER] PDF généré:', pdfBytes.length, 'bytes')
       return Buffer.from(pdfBytes)
