@@ -164,8 +164,8 @@ async function generatePDF(
   try {
     console.log(`📄 Génération PDF via HTML (nouveau flux), style: ${style}`)
     
-    // Split en chunks si > 200 messages
-    const chunks = splitEventsForPDF(events)
+    // Split adaptatif selon le style
+const chunks = splitEventsForPDF(events, style)
     
     if (chunks.length === 1) {
       // Un seul PDF
