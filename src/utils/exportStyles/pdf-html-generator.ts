@@ -79,22 +79,36 @@ function getHTMLTemplateForPDF(): string {
     
     body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: white;
+  background: white;  /* Fond blanc partout */
   color: var(--text-color);
   line-height: 1.5;
-  padding: 0;
+  padding: 30px;  /* ← Cadre blanc autour de tout */
   margin: 0;
   font-size: 15px;
   min-height: 100vh;
 }
 
 .container {
-  background: var(--background);
-  padding: 60px 40px;  /* ← Espace bleu en haut/bas */
-  max-width: 42rem;    /* ← Plus large */
-  width: calc(100% - 60px);  /* ← Moins de marge latérale */
-  margin: 30px auto;   /* ← Marges réduites */
+  background: var(--background);  /* Fond bleu seulement ici */
+  border-radius: 20px;
+  padding: 40px;  /* ← Réduit (était 60px) */
+  max-width: 42rem;
+  width: 100%;
+  margin: 0 auto;  /* ← Plus de margin top/bottom */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== CONTENT WRAPPER ========== */
+.content-wrapper {
+  padding: 30px;
+  background: var(--background);
+  border-radius: 12px;
+  border: 2px solid color-mix(in srgb, var(--background) 80%, white);
+}
+
+/* ========== CONTENT ========== */
+.content {
+  line-height: 1.8;
 }
     
     /* ========== HEADER ========== */
@@ -458,7 +472,7 @@ function getHTMLTemplateForPDF(): string {
     /* ========== PRINT ========== */
 @media print {
   @page {
-    margin: 150px 0;  /* ← Marges pour header/footer Puppeteer */
+    margin: 90px 0;  /* ← Marges pour header/footer Puppeteer */
   }
   
   body {
@@ -473,17 +487,20 @@ function getHTMLTemplateForPDF(): string {
     padding: 60px 40px !important;  /* ← Force le padding en print */
   }
 }
+
   </style>
 </head>
 <body>
   <div class="container">
-    {{HEADER}}
-    
-    <div class="content">
-      {{CONTENT}}
+    <div class="content-wrapper">
+      {{HEADER}}
+      
+      <div class="content">
+        {{CONTENT}}
+      </div>
+      
+      {{FOOTER}}
     </div>
-    
-    {{FOOTER}}
   </div>
 </body>
 </html>`
