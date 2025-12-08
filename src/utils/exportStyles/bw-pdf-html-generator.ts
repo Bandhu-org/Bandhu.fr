@@ -87,20 +87,22 @@ function getHTMLTemplateForPDF_BW(): string {
     }
 
     .container {
-      background: var(--background);
-      border-radius: 20px;
-      padding: 40px;
-      max-width: 42rem;
-      width: 100%;
-      margin: 0 auto;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      border: 2px solid #e5e5e5;
-    }
+  background: var(--background);
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 42rem;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); /* ← OMBRE COMME COULEUR (plus douce) */
+  /* border: 2px solid #e5e5e5; ← SUPPRIMÉ */
+}
 
     .content-wrapper {
-      padding: 0;
-      background: transparent;
-    }
+  padding: 30px;
+  background: var(--background);
+  border-radius: 12px;
+  border: 2px solid #e0e0e0; /* ← gris clair au lieu de color-mix */
+}
 
     /* ========== HEADER ========== */
     .header {
@@ -127,11 +129,11 @@ function getHTMLTemplateForPDF_BW(): string {
     }
 
     .header-logo {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      filter: grayscale(100%) contrast(1.2);
-    }
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(100%);  /* ← SUPPRIMER contrast(1.2) */
+}
 
     .header-title {
       font-size: 1.875rem;
@@ -177,14 +179,14 @@ function getHTMLTemplateForPDF_BW(): string {
     }
 
     .header-avatar {
-      width: 140px;
-      height: 180px;
-      border-radius: 20px;
-      border: 2px solid var(--border-color);
-      object-fit: contain;
-      flex-shrink: 0;
-      filter: grayscale(100%) contrast(1.1);
-    }
+  width: 180px;    /* ← Rétablir la largeur couleur */
+  height: 240px;   /* ← Rétablir la hauteur couleur */
+  border-radius: 20px;
+  border: 2px solid var(--border-color);
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: grayscale(100%);
+}
 
     .header-stats {
       display: flex;
@@ -289,29 +291,29 @@ function getHTMLTemplateForPDF_BW(): string {
       border: 1px solid #000000;
     }
     
-    /* CODE BLOCKS USER - Fond blanc, bordure noire */
-    .content pre.language-user {
-      background: #ffffff !important;
-      padding: 16px;
-      border-radius: 8px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border: 2px solid #000000 !important;
-      margin: 1.2em 0;
-      page-break-inside: avoid;
-    }
+    /* CODE BLOCKS USER - N&B pur */
+.content pre.language-user {
+  background: #ffffff !important;
+  padding: 16px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid #000000 !important;
+  margin: 1.2em 0;
+  page-break-inside: avoid;
+}
 
-    /* CODE BLOCKS AI - Fond blanc, bordure noire */
-    .content pre:not(.language-user) {
-      background: #ffffff !important;
-      padding: 20px;
-      border-radius: 8px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border: 2px solid #000000 !important;
-      margin: 1.2em 0;
-      page-break-inside: avoid;
-    }
+/* CODE BLOCKS AI - N&B pur */
+.content pre:not(.language-user) {
+  background: #ffffff !important;
+  padding: 20px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid #000000 !important;
+  margin: 1.2em 0;
+  page-break-inside: avoid;
+}
 
     .content pre code {
       background: none;
