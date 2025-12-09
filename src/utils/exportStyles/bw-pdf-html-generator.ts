@@ -328,19 +328,24 @@ function getHTMLTemplateForPDF_BW(): string {
   background: #ffffff !important;
   padding: 20px;
   border-radius: 8px;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre-wrap;    /* ← WRAP autorisé */
+  word-wrap: break-word;    /* ← Casse les mots longs */
+  overflow-wrap: break-word; /* ← Standard moderne */
   border: 1px solid #000000 !important;
   margin: 1.2em 0;
+  max-width: 100%;          /* ← Ne dépasse pas du conteneur */
+  overflow: auto;           /* ← Scroll si nécessaire */
 }
 
-    .content pre code {
+.content pre code {
   background: none;
   padding: 0;
   color: #000000 !important;
-  white-space: pre;         /* ← garde les sauts de ligne originaux */
-  overflow-x: auto;         /* ← barre de scroll si trop long */
+  white-space: pre-wrap;    /* ← WRAP ici aussi */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   display: block;
+  max-width: 100%;          /* ← Important */
 }
 
     /* Syntax Highlighting - TOUT EN NOIR */

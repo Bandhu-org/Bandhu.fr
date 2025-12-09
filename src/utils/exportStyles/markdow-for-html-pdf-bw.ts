@@ -1,5 +1,5 @@
-// Markdown Generator for HTML/PDF exports
-// Version MINIMAL - No header/footer, all content in code blocks
+// Markdown Generator for HTML/PDF exports - BW VERSION
+// Version MINIMAL - AI content in normal markdown (not code blocks)
 
 interface Event {
   id: string
@@ -17,11 +17,6 @@ interface GeneratorOptions {
   includeTimestamps?: boolean
 }
 
-/**
- * Generate minimal markdown for HTML/PDF exports
- * - No header/footer
- * - All AI content in code blocks to prevent unwanted parsing
- */
 export async function generateMarkdownForHTML_BW(
   events: Event[], 
   options: GeneratorOptions = {}
@@ -34,8 +29,7 @@ export async function generateMarkdownForHTML_BW(
     // Nouvelle section pour chaque thread
     if (event.threadId !== currentThreadId) {
       if (currentThreadId !== null) {
-        markdown += '\n<div class="hr-spacer"></div>\n\n'
-
+        markdown += '\n---\n\n'  // Séparateur simple
       }
       
       markdown += `## ${event.thread.label}\n\n`
@@ -58,9 +52,8 @@ export async function generateMarkdownForHTML_BW(
         cleanContent = event.content.replace(/^\[.+?\]\n/, '')
       }
       
-      // Header user
-      markdown += `### 🔵 ${displayName}\n\n`
-
+      // Header user (peut-être changer 🔵 en ○ pour N&B)
+      markdown += `### ○ ${displayName}\n\n`
       
       // Timestamp
       if (options.includeTimestamps && displayTime) {
@@ -69,30 +62,28 @@ export async function generateMarkdownForHTML_BW(
         markdown += `${dateStr} à ${displayTime}\n\n`
       }
       
-      // CONTENU EN BLOC CODE USER
+      // CONTENU EN BLOC CODE USER (gardé)
       markdown += '```user\n'
       markdown += cleanContent
       markdown += '\n```\n\n'
       
-        } else {
-  // ====== OMBRELIEN OPTIMISÉ POUR BW ======
-  markdown += `### 🟣 Ombrelien\n\n`
+    } else {
+      // ====== OMBRELIEN - MARKDOWN NORMAL ======
+      markdown += `### ● Ombrelien\n\n`  // Symbole N&B
 
-  if (options.includeTimestamps) {
-    const date = new Date(event.createdAt)
-    const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    markdown += `${dateStr} à ${timeStr}\n\n`
-  }
+      if (options.includeTimestamps) {
+        const date = new Date(event.createdAt)
+        const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        markdown += `${dateStr} à ${timeStr}\n\n`
+      }
 
-  // TOUT EN BLOC CODE POUR PERFORMANCE BW
-  markdown += '```ai\n'
-  markdown += event.content
-  markdown += '\n```\n\n'
-  }
-  
-  markdown += '\n<div class="hr-spacer"></div>\n\n'
-})
+      // MARKDOWN NORMAL (pas de code block) - comme l'ancienne version
+      markdown += event.content + '\n\n'
+    }
+    
+    markdown += '---\n\n'
+  })
 
-return markdown
+  return markdown
 }
