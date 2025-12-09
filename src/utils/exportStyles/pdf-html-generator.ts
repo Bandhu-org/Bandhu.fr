@@ -102,9 +102,6 @@ function getHTMLTemplateForPDF(): string {
   width: 100%;
   margin: 0 auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
 }
 
 
@@ -115,9 +112,6 @@ function getHTMLTemplateForPDF(): string {
   background: var(--background);
   border-radius: 12px;
   border: 2px solid color-mix(in srgb, var(--background) 80%, white);
-
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
 }
 
 
@@ -342,18 +336,8 @@ function getHTMLTemplateForPDF(): string {
     .content p {
       margin: 1.4em 0;
       color: var(--text-color);
-     page-break-inside: avoid !important;
-  break-inside: avoid !important;
-  orphans: 3; /* au moins 3 lignes en bas de page */
-  widows: 3;  /* au moins 3 lignes en haut de page */
 }
 
-/* Garder les paragraphes consécutifs ensemble */
-.content p + p {
-  page-break-before: avoid !important;
-  break-before: avoid !important;
-}
-    
     .content blockquote {
       border-left: 4px solid var(--secondary-color);
       padding: 0.8em 1.2em;
@@ -392,11 +376,8 @@ function getHTMLTemplateForPDF(): string {
   word-wrap: break-word;
   border: 1px solid #333;
   margin: 1.2em 0;
+  }
 
-  /* 🔥 Anti-sauts de page Puppeteer */
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-}
     .content pre code {
       background: none;
       padding: 0;
@@ -454,12 +435,6 @@ function getHTMLTemplateForPDF(): string {
   height: 2px;
   background: linear-gradient(to right, transparent, var(--border-color), transparent);
   margin: 2em 0;
-
-  /* 🔥 EMPÊCHER les sauts de page */
-  page-break-before: avoid !important;
-  page-break-after: avoid !important;
-  break-before: avoid !important;
-  break-after: avoid !important;
 }
 
 /* 🔥 NOUVEAU SEPARATEUR SANS PAGE BREAK */
@@ -467,10 +442,12 @@ function getHTMLTemplateForPDF(): string {
   height: 2px;
   margin: 2em 0;
   background: linear-gradient(to right, transparent, var(--border-color), transparent);
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
 }
 
+/* Padding bottom pour espace avant footer */
+.content {
+  padding-bottom: 40px;
+}
     
     .content strong {
       color: white;
@@ -480,17 +457,6 @@ function getHTMLTemplateForPDF(): string {
     .content em {
       color: var(--muted-color);
     }
-
-    /* Éviter coupures dans les messages */
-.content h2 {
-  page-break-inside: avoid;
-  page-break-after: avoid;
-}
-
-
-.content pre {
-  page-break-inside: avoid;
-}
 
 /* Padding bottom pour espace avant footer */
 .content {
@@ -514,23 +480,25 @@ function getHTMLTemplateForPDF(): string {
       -webkit-text-fill-color: transparent;
       font-weight: 600;
     }
-    
-.content h2,
-.content h3,
-.content pre,
-.content blockquote,
-.content code {
-  page-break-before: avoid !important;
-  page-break-inside: avoid !important;
-}
 
-/* Empêche Chrome de couper dans les containers arrondis */
-.container,
-.content-wrapper {
+    /* ========== RÈGLES MINIMALES POUR PDF ========== */
+/* 1. Ne jamais couper dans un bloc code */
+.content pre {
+  page-break-inside: avoid !important;
   break-inside: avoid !important;
-  page-break-inside: avoid !important;
 }
 
+/* 2. Éviter les paragraphes d'une seule ligne */
+.content p {
+  orphans: 2;
+  widows: 2;
+}
+
+/* 3. Garder les h3 avec au moins une ligne suivante */
+.content h3 {
+  page-break-after: avoid !important;
+  break-after: avoid !important;
+}
 
     /* ========== PRINT ========== */
 @media print {

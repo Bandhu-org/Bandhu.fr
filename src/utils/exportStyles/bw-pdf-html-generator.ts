@@ -264,8 +264,6 @@ function getHTMLTemplateForPDF_BW(): string {
       margin: 1.3rem 0 0.6rem;
       color: #000000;
       font-weight: 600;
-      page-break-inside: avoid;
-      page-break-after: avoid;
     }
     
     /* Emojis en niveaux de gris */
@@ -286,7 +284,7 @@ function getHTMLTemplateForPDF_BW(): string {
     
     /* BLOCKQUOTE - Fond blanc, bordure noire */
     .content blockquote {
-      border-left: 4px solid #000000;
+      border-left: 1px solid #666666;
       padding: 0.8em 1.2em;
       margin: 1em 0;
       background: #ffffff;
@@ -323,7 +321,6 @@ function getHTMLTemplateForPDF_BW(): string {
   word-wrap: break-word;
   border: 1px solid #000000 !important;
   margin: 1.2em 0;
-  page-break-inside: avoid;
 }
 
 /* CODE BLOCKS AI - N&B pur */
@@ -335,7 +332,6 @@ function getHTMLTemplateForPDF_BW(): string {
   word-wrap: break-word;
   border: 1px solid #000000 !important;
   margin: 1.2em 0;
-  page-break-inside: avoid;
 }
 
     .content pre code {
@@ -427,6 +423,23 @@ function getHTMLTemplateForPDF_BW(): string {
       color: #000000;
       font-weight: 600;
     }
+
+    /* ========== RÈGLES MINIMALES POUR PDF BW ========== */
+/* Laisser Puppeteer couper naturellement, avec quelques garde-fous */
+
+/* 1. Ne jamais couper dans un bloc code */
+.content pre {
+  page-break-inside: avoid !important;
+}
+
+/* 2. Éviter les paragraphes d'une seule ligne */
+.content p {
+  orphans: 2;
+  widows: 2;
+}
+
+/* 3. Pas d'autres règles page-break-* */
+/* Puppeteer décidera du reste */
     
     /* ========== PRINT ========== */
     @media print {
