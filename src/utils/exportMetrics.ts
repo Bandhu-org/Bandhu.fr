@@ -12,29 +12,34 @@ export interface ExportMetrics {
 // Configuration des métriques par format
 const FORMAT_METRICS = {
   pdf: {
-    charsPerPage: 1800, // PDF a généralement moins de texte par page
-    sizeMultiplier: 1.2 // PDF prend plus de place
+    charsPerPage: 1800,
+    sizeMultiplier: 1.2
   },
   docx: {
     charsPerPage: 2000,
-    sizeMultiplier: 1.1 // DOCX a du métadata
+    sizeMultiplier: 1.1
   },
   markdown: {
-    charsPerPage: 2500, // Markdown est plus dense
-    sizeMultiplier: 1.0 // Format le plus léger
+    charsPerPage: 2500,
+    sizeMultiplier: 1.0
+  },
+  html: {  // ← AJOUTÉ
+    charsPerPage: 2500,
+    sizeMultiplier: 1.0
   }
 } as const;
 
 // Facteurs de lecture selon le format
 const READING_SPEED = {
-  pdf: 180, // PDF se lit plus lentement
+  pdf: 180,
   docx: 200,
-  markdown: 220 // Markdown se lit plus vite
+  markdown: 220,
+  html: 220  // ← AJOUTÉ
 } as const;
 
 export const calculateMetrics = (
   content: string, 
-  format: 'pdf' | 'docx' | 'markdown',
+  format: 'pdf' | 'docx' | 'markdown' | 'html',  // ← AJOUTÉ 'html'
   messageCount: number
 ): ExportMetrics => {
   // Comptages de base
@@ -71,7 +76,7 @@ const countWords = (text: string): number => {
   
   // Version compatible ES5 - supprime la ponctuation
   const cleanText = text
-    .replace(/[^\w\u00C0-\u017F\s-]/g, ' ') // Support étendu pour caractères accentués
+    .replace(/[^\w\u00C0-\u017F\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   
@@ -117,14 +122,14 @@ const formatFileSize = (bytes: number): string => {
 // Fonction utilitaire pour obtenir des métriques rapides (pour l'UI)
 export const getQuickMetrics = (
   selectedEventsCount: number,
-  format: 'pdf' | 'docx' | 'markdown'
+  format: 'pdf' | 'docx' | 'markdown' | 'html'  // ← AJOUTÉ 'html'
 ): Pick<ExportMetrics, 'estimatedPages' | 'estimatedTime'> => {
   // Estimation basée sur le nombre de messages (moyenne 150 caractères/message)
   const estimatedChars = selectedEventsCount * 150;
   const formatConfig = FORMAT_METRICS[format];
   
   const estimatedPages = Math.max(1, Math.ceil(estimatedChars / formatConfig.charsPerPage));
-  const estimatedWords = Math.ceil(estimatedChars / 5); // ~5 caractères/mot
+  const estimatedWords = Math.ceil(estimatedChars / 5);
   const readingSpeed = READING_SPEED[format];
   const readingTimeMinutes = Math.max(1, Math.ceil(estimatedWords / readingSpeed));
   

@@ -10,7 +10,7 @@ interface PreviewModalProps {
   onClose: () => void
   onConfirm: () => void
   onModify: () => void
-  format: 'markdown' | 'pdf' | 'docx'
+  format: 'markdown' | 'pdf' | 'docx' | 'html'  // ← AJOUTE 'html'
   selectedEventsCount: number
   previewContent: string
   metadata: {
@@ -51,12 +51,15 @@ const PdfDocxPreview = ({ content, format, metadata }: {
   }
 
   useEffect(() => {
-    // Pour DOCX, on affiche directement le fallback (pas d'iframe)
-    if (format === 'docx') {
-      setShowFallback(true)
-      setIsLoading(false)
-      return
-    }
+  // Détecter si c'est un ZIP (multi-PDF)
+  const isZip = content.startsWith('UEsDB') // Signature ZIP
+  
+  // Pour DOCX ou ZIP, afficher le fallback
+  if (format === 'docx' || isZip) {
+    setShowFallback(true)
+    setIsLoading(false)
+    return
+  }
 
     // Pour PDF, essayer de créer l'aperçu
     if (format === 'pdf' && content) {
@@ -108,8 +111,13 @@ const PdfDocxPreview = ({ content, format, metadata }: {
           <div className="text-center text-yellow-400 mb-4">
             <div className="text-2xl mb-2">{format === 'docx' ? '📋' : '📄'}</div>
             <div className="text-sm font-medium">
-              {format === 'docx' ? 'Aperçu DOCX non disponible' : `Aperçu ${format.toUpperCase()} limité`}
-            </div>
+  {content.startsWith('UEsDB') 
+    ? `Export multi-fichiers (${Math.ceil(metadata.eventCount / 200)} PDFs en ZIP)`
+    : format === 'docx' 
+      ? 'Aperçu DOCX non disponible' 
+      : `Aperçu ${format.toUpperCase()} limité`
+  }
+</div>
             <div className="text-xs text-gray-400 mt-1">
               {format === 'docx' 
                 ? "Les documents Word ne peuvent pas être prévisualisés dans le navigateur"
@@ -246,17 +254,19 @@ export default function PreviewModal({
 
   if (!isOpen) return null
 
-  const formatIcons = {
-    markdown: '📝',
-    pdf: '📄', 
-    docx: '📋'
-  }
+  const formatIcons: Record<'markdown' | 'pdf' | 'docx' | 'html', string> = {
+  markdown: '📝',
+  pdf: '📄', 
+  docx: '📋',
+  html: '🌐'
+}
 
-  const formatNames = {
-    markdown: 'Markdown',
-    pdf: 'PDF',
-    docx: 'Word Document'
-  }
+const formatNames: Record<'markdown' | 'pdf' | 'docx' | 'html', string> = {
+  markdown: 'Markdown',
+  pdf: 'PDF',
+  docx: 'Word Document',
+  html: 'HTML Web'
+}
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] p-4 backdrop-blur-sm">
@@ -314,7 +324,7 @@ export default function PreviewModal({
           {activeTab === 'preview' ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm text-gray-400 bg-gray-700/30 rounded-lg p-3">
-                <span className="text-lg">{formatIcons[format]}</span>
+                <span className="text-lg">{formatIcons[format as keyof typeof formatIcons] || '📄'}</span>
                 <span>Format: <strong className="text-white">{formatNames[format]}</strong></span>
                 <span className="text-gray-600">•</span>
                 <span>{metadata.eventCount} messages sélectionnés</span>
@@ -388,10 +398,13 @@ export default function PreviewModal({
                                 )
                               },
                               pre: ({ children, ...props }: any) => (
-                                <pre className="bg-gray-950 p-4 rounded-lg overflow-x-auto my-4 border border-gray-700" {...props}>
-                                  {children}
-                                </pre>
-                              ),
+  <pre 
+    className="bg-gray-950 p-4 rounded-lg overflow-x-hidden my-4 border border-gray-700 whitespace-pre-wrap break-words" 
+    {...props}
+  >
+    {children}
+  </pre>
+),
                               blockquote: ({ children, ...props }: any) => (
                                 <blockquote className="border-l-4 border-bandhu-primary pl-4 italic text-gray-300 my-4" {...props}>
                                   {children}

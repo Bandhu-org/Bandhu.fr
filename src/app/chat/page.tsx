@@ -998,14 +998,7 @@ const renderThreadCard = (thread: Thread) => {
         sizes="20px"
       />
       </div>
-    <span className="text-3xl font-bold 
-  bg-gradient-to-r 
-  from-bandhu-secondary 
-  to-bandhu-primary 
-  [background-size:200%]
-  bg-clip-text 
-  text-transparent 
-  tracking-tight">
+    <span className="text-3xl font-bold tracking-tight bandhu-gradient-text">
   Bandhu
 </span>
 </div>

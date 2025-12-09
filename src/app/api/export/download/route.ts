@@ -61,6 +61,13 @@ export async function POST(request: NextRequest) {
         finalFilename = filename || `conversations-${new Date().toISOString().split('T')[0]}.${fileExtension}`
         break
 
+        case 'html':
+  fileContent = content  // Déjà en string
+  contentType = 'text/html; charset=utf-8'
+  fileExtension = 'html'
+  finalFilename = filename || `conversation-${new Date().toISOString().split('T')[0]}.html`
+  break
+
       default:
         return new Response(JSON.stringify({
           success: false,

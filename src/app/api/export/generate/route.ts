@@ -1,10 +1,15 @@
 import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
 import { generateStyledMarkdown } from '@/utils/exportStyles'
 import type { ExportStyle } from '@/utils/exportTemplates'
+import { generateChatHTML } from '@/utils/exportStyles/html-generator'
+import { convertHTMLToPDF } from '@/utils/pdf/converter'
+import { generateChatHTMLForPDF } from '@/utils/exportStyles/pdf-html-generator'
+import { generateChatHTMLForPDF_BW } from '@/utils/exportStyles/bw-pdf-html-generator'
+import type { PDFStyle } from '@/utils/pdf/converter'
+import { generateMinimalPDFHTML } from '@/utils/exportStyles/minimal-pdf-generator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { format, selectedEvents, options = {} } = body
-    const style: ExportStyle = options.style || 'epic-color' // Style par défaut
+    const style: PDFStyle = (options.style as PDFStyle) || 'design-color'
 
     console.log('🔄 Génération demandée:', { 
       format, 
@@ -31,20 +36,20 @@ export async function POST(request: NextRequest) {
       }), { status: 400 })
     }
 
-    // Récupérer les events sélectionnés avec leurs threads (OPTIMISÉ)
-    const events = await prisma.event.findMany({
-      where: {
-        id: { in: selectedEvents.slice(0, 100) }, // Limiter ici aussi
-        user: { email: session.user.email }
-      },
-      include: {
-        thread: {
-          select: { id: true, label: true } // Seulement les champs nécessaires
-        }
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 100 // Double sécurité
-    })
+    // Récupérer les events sélectionnés (LIMITÉ À 100)
+const events = await prisma.event.findMany({
+  where: {
+    id: { in: selectedEvents.slice(0, 100) }, // Limite à 100 IDs
+    user: { email: session.user.email }
+  },
+  include: {
+    thread: {
+      select: { id: true, label: true }
+    }
+  },
+  orderBy: { createdAt: 'asc' },
+  take: 100 // Sécurité supplémentaire
+})
 
     if (events.length === 0) {
       return new Response(JSON.stringify({
@@ -58,21 +63,37 @@ export async function POST(request: NextRequest) {
     // Router vers le bon générateur
     let result
     switch (format) {
-      case 'markdown':
-        result = await generateMarkdown(events, options, style)
-        break
-      case 'pdf':
-        result = await generatePDF(events, options)
-        break
-      case 'docx':
-        result = await generateDOCX(events, options)
-        break
-      default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Format non supporté'
-        }), { status: 400 })
-    }
+  case 'markdown':
+  // Convertir PDFStyle en ExportStyle
+  let markdownStyle: ExportStyle
+  
+  if (style === 'design-bw') {
+    markdownStyle = 'sobre'  // BW → sobre
+  } else if (style === 'design-color') {
+    markdownStyle = 'design'  // design-color → design
+  } else if (style === 'sobre-color' || style === 'sobre-bw') {
+    markdownStyle = 'sobre'   // sobre-* → sobre
+  } else {
+    markdownStyle = 'design'  // fallback
+  }
+  
+  result = await generateMarkdown(events, options, markdownStyle)
+  break
+  case 'pdf':
+    result = await generatePDF(events, options, style)
+    break
+  case 'docx':
+    result = await generateDOCX(events, options)
+    break
+  case 'html':  // ← AJOUTE
+    result = await generateHTML(events, options)
+    break
+  default:
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Format non supporté'
+    }), { status: 400 })
+}
 
     return new Response(JSON.stringify({
       success: true,
@@ -119,200 +140,83 @@ async function generateMarkdown(events: any[], options: any, style: ExportStyle)
   }
 }
 
-// 📄 GÉNÉRATEUR PDF
-async function generatePDF(events: any[], options: any) {
+// 📄 GÉNÉRATEUR PDF (SIMPLE - MAX 100 MESSAGES)
+async function generatePDF(
+  events: any[], 
+  options: any, 
+  style: PDFStyle
+): Promise<{ content: string; pageCount: number; estimatedSize: string }> {
+  
+  // Fonction helper pour convertir PDFStyle → ExportStyle
+  function convertToExportStyle(pdfStyle: PDFStyle): ExportStyle {
+    switch (pdfStyle) {
+      case 'design-color': return 'design'
+      case 'design-bw': return 'sobre'
+      case 'sobre-color': return 'sobre'
+      case 'sobre-bw': return 'sobre'
+      case 'minimal-bw': return 'sobre'
+      default: return 'design'
+    }
+  }
+  
   try {
-    // Créer un nouveau document PDF
-    const pdfDoc = await PDFDocument.create()
+    console.log(`📄 Génération PDF unique (max 100 messages), style: ${style}`)
     
-    // Ajouter une page
-    let page = pdfDoc.addPage()
-    const { width, height } = page.getSize()
-    
-    // Charger les polices
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-    
-    // Configurer les styles
-    const margin = 50
-    let yPosition = height - margin
-    const lineHeight = 20
-    const titleSize = 16
-    const textSize = 10
-    const smallTextSize = 8
-    
-    // Titre
-    page.drawText('Export de conversations Bandhu', {
-      x: margin,
-      y: yPosition,
-      size: titleSize,
-      font: boldFont,
-      color: rgb(0.2, 0.2, 0.2),
-    })
-    yPosition -= lineHeight * 2
-    
-    // Date de génération
-    page.drawText(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, {
-      x: margin,
-      y: yPosition,
-      size: smallTextSize,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
-    })
-    yPosition -= lineHeight * 1.5
-    
-    // Séparateur
-    page.drawLine({
-      start: { x: margin, y: yPosition },
-      end: { x: width - margin, y: yPosition },
-      thickness: 1,
-      color: rgb(0.8, 0.8, 0.8),
-    })
-    yPosition -= lineHeight
-    
-    let currentThreadId: string | null = null
-    
-    // Parcourir les events
-    for (const event of events) {
-      // Vérifier si on doit changer de page
-      if (yPosition < margin + 100) {
-        const newPage = pdfDoc.addPage()
-        page = newPage
-        yPosition = height - margin
-      }
-      
-      // Nouveau thread = nouvelle section
-      if (event.threadId !== currentThreadId) {
-        if (currentThreadId !== null) {
-          yPosition -= lineHeight // Espace entre les threads
-        }
-        
-        page.drawText(event.thread.label, {
-          x: margin,
-          y: yPosition,
-          size: textSize + 2,
-          font: boldFont,
-          color: rgb(0.1, 0.3, 0.6),
-        })
-        yPosition -= lineHeight * 1.2
-        
-        currentThreadId = event.threadId
-      }
-      
-      // Afficher le rôle (Vous/Assistant)
-      const role = event.role === 'user' ? 'Vous' : 'Assistant'
-      const roleColor = event.role === 'user' ? rgb(0.2, 0.5, 0.8) : rgb(0.8, 0.4, 0.1)
-      
-      page.drawText(`${role}:`, {
-        x: margin,
-        y: yPosition,
-        size: textSize,
-        font: boldFont,
-        color: roleColor,
-      })
-      yPosition -= lineHeight
-      
-      // Afficher le contenu (nettoyer le texte pour PDF)
-      const content = cleanTextForPDF(event.content)
-      const maxWidth = width - (margin * 2)
-      
-      // Découper le texte si trop long
-      const lines = splitTextIntoLines(content, font, textSize, maxWidth)
-      
-      for (const line of lines) {
-        if (yPosition < margin + 20) {
-          const newPage = pdfDoc.addPage()
-          page = newPage
-          yPosition = height - margin
-        }
-        
-        page.drawText(line, {
-          x: margin + 10, // Indentation
-          y: yPosition,
-          size: textSize,
-          font: font,
-          color: rgb(0.1, 0.1, 0.1),
-        })
-        yPosition -= lineHeight
-      }
-      
-      // Timestamp optionnel
-      if (options.includeTimestamps) {
-        const timestamp = new Date(event.createdAt).toLocaleString('fr-FR')
-        page.drawText(timestamp, {
-          x: margin + 10,
-          y: yPosition,
-          size: smallTextSize,
-          font: font,
-          color: rgb(0.6, 0.6, 0.6),
-        })
-        yPosition -= lineHeight
-      }
-      
-      yPosition -= lineHeight / 2 // Espace entre les messages
+    // Vérifier la limite
+    if (events.length > 100) {
+      console.warn(`⚠️ Limite dépassée: ${events.length} messages, troncation à 100`)
+      events = events.slice(0, 100)
     }
     
-    // Pied de page sur la dernière page
-    const pages = pdfDoc.getPages()
-    const lastPage = pages[pages.length - 1]
-    lastPage.drawText(`Bandhu - ${events.length} messages exportés`, {
-      x: margin,
-      y: 30,
-      size: smallTextSize,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
-    })
+    console.log(`📝 ${events.length} messages à convertir en PDF`)
     
-    // Sauvegarder le PDF
-    const pdfBytes = await pdfDoc.save()
+    // Générer l'HTML selon le style
+    let html: string
+    
+    if (style === 'design-bw') {
+      html = await generateChatHTMLForPDF_BW(events, {
+        style: 'sobre',
+        includeTimestamps: options.includeTimestamps || false,
+        title: options.title || 'Conversation Bandhu'
+      })
+    } else if (style === 'minimal-bw') {
+      html = await generateMinimalPDFHTML(events, {
+        includeTimestamps: options.includeTimestamps || false,
+        includeThreadHeaders: true,
+        title: options.title || 'Conversation Bandhu'
+      })
+    } else {
+      html = await generateChatHTMLForPDF(events, {
+        style: convertToExportStyle(style),
+        includeTimestamps: options.includeTimestamps || false,
+        title: options.title || 'Conversation Bandhu'
+      })
+    }
+    
+    console.log('✅ HTML généré:', html.length, 'caractères')
+    
+    // Convertir HTML → PDF
+    const pdfBuffer = await convertHTMLToPDF(
+      html, 
+      style as any,
+      { includeTimestamps: options.includeTimestamps }
+    )
+    
+    console.log('✅ PDF généré:', pdfBuffer.length, 'bytes')
+    
+    // Estimer le nombre de pages (environ 15 messages par page)
+    const pageCount = Math.ceil(events.length / 15)
     
     return {
-      content: Buffer.from(pdfBytes).toString('base64'),
-      pageCount: pdfDoc.getPageCount(),
-      estimatedSize: `${Math.round(pdfBytes.length / 1024)}KB`
+      content: pdfBuffer.toString('base64'),
+      pageCount,
+      estimatedSize: `${Math.round(pdfBuffer.length / 1024)}KB`
     }
     
   } catch (error) {
-    console.error('Erreur génération PDF:', error)
-    // Fallback vers Markdown en cas d'erreur
-    const markdownResult = await generateMarkdown(events, options, 'sobre')
-    return {
-      content: Buffer.from(markdownResult.content).toString('base64'),
-      pageCount: markdownResult.pageCount,
-      estimatedSize: markdownResult.estimatedSize
-    }
+    console.error('❌ Erreur génération PDF:', error)
+    throw new Error(`Échec génération PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
-}
-
-// Nettoyer le texte pour PDF (supprimer caractères non supportés)
-function cleanTextForPDF(text: string): string {
-  return text
-    .replace(/\n/g, ' ') // Remplacer les sauts de ligne par des espaces
-    .replace(/[^\x20-\x7E\u00C0-\u00FF]/g, '') // Garder seulement ASCII étendu
-    .replace(/\s+/g, ' ') // Normaliser les espaces
-    .trim()
-}
-
-// Fonction utilitaire pour découper le texte
-function splitTextIntoLines(text: string, font: any, fontSize: number, maxWidth: number): string[] {
-  const lines: string[] = []
-  const words = text.split(' ')
-  let currentLine = ''
-  
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word
-    const width = font.widthOfTextAtSize(testLine, fontSize)
-    
-    if (width <= maxWidth) {
-      currentLine = testLine
-    } else {
-      if (currentLine) lines.push(currentLine)
-      currentLine = word
-    }
-  }
-  
-  if (currentLine) lines.push(currentLine)
-  return lines
 }
 
 // 📝 GÉNÉRATEUR DOCX
@@ -506,5 +410,28 @@ async function generateDOCX(events: any[], options: any) {
       pageCount: markdownResult.pageCount,
       estimatedSize: markdownResult.estimatedSize
     }
+  }
+}
+
+// 🌐 GÉNÉRATEUR HTML
+async function generateHTML(events: any[], options: any) {
+  try {
+    console.log('🔄 Début génération HTML...')
+    
+    const html = await generateChatHTML(events, {
+      style: options.style === 'sobre' ? 'sobre' : 'design',
+      includeTimestamps: options.includeTimestamps
+    })
+    
+    console.log('✅ HTML généré:', html.length, 'caractères')
+    
+    return {
+      content: html,
+      pageCount: 1,
+      estimatedSize: `${Math.round(Buffer.byteLength(html, 'utf8') / 1024)}KB`
+    }
+  } catch (error) {
+    console.error('❌ Erreur génération HTML:', error)
+    throw error
   }
 }
