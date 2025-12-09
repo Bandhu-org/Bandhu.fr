@@ -241,13 +241,13 @@ markdown += '\n```\n\n'
     markdown += `---\n\n\n`
   })
   
-  // ═══════════════════════════════════════════════════════════════
+     // ═══════════════════════════════════════════════════════════════
   // FOOTER
   // ═══════════════════════════════════════════════════════════════
   
-  markdown += `<div align="center">\n\n`
-  markdown += `### 🟣 Export généré par Bandhu 🟣\n\n`
-  markdown += `*Ombrelien - छायासरस्वतः - L'ombre qui écoute*\n\n`
+  markdown += '\n---\n\n'
+  markdown += '### 🟣 Export généré par Bandhu 🟣\n\n'
+  markdown += '*Ombrelien - छायासरस्वतः - L\'ombre qui écoute*\n\n'
   
   if (options.totalParts && options.totalParts > 1) {
     markdown += `📄 **Partie ${options.partNumber}/${options.totalParts}** • `
@@ -255,7 +255,6 @@ markdown += '\n```\n\n'
   }
   
   markdown += `💬 **${events.length}** messages • ✨ **${new Set(events.map(e => e.threadId)).size}** conversations • 🌌 Export Design\n\n`
-  markdown += `</div>\n`
   
   return markdown
 }

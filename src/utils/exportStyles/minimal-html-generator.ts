@@ -114,6 +114,12 @@ export async function generateMinimalHTML(
 ): Promise<string> {
   console.log('🔍 [MINIMAL HTML] Generating HTML for', plainTextContent.length, 'chars')
   
+  // DEBUG : Check what we're receiving
+  console.log('🔍 [MINIMAL HTML] First 500 chars of input:')
+  console.log(plainTextContent.substring(0, 500))
+  console.log('🔍 [MINIMAL HTML] Contains "Sounil"?', plainTextContent.includes('Sounil'))
+  console.log('🔍 [MINIMAL HTML] Contains "User"?', plainTextContent.includes('User'))
+
   // Simple replacement
   const html = getMinimalHTMLTemplate()
     .replace('{{CONTENT}}', plainTextContent)

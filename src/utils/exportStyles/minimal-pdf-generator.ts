@@ -7,7 +7,7 @@ import { generateMinimalHTML } from './minimal-html-generator'
 interface Event {
   id: string
   content: string
-  role: 'user' | 'assistant'
+  role: string  // ← CHANGER de 'user' | 'assistant' à string
   createdAt: string
   threadId: string
   thread: {

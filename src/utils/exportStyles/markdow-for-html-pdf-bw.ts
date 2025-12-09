@@ -49,7 +49,7 @@ function wrapEmojisForGrayscale(text: string): string {
     
     if (isUser) {
       // Extraire header
-      const headerMatch = event.content.match(/^\[(.+?)\s+•\s+.+?\s+à\s+(\d{2}:\d{2})\]/)
+      const headerMatch = event.content.match(/^\[([^•]+?)\s*•/)
       
       let displayName = 'User'
       let displayTime: string | null = null
