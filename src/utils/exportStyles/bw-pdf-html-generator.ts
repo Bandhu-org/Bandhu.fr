@@ -4,7 +4,7 @@ import type { ExportStyle } from '@/utils/exportTemplates'
 import fs from 'fs'
 import path from 'path'
 import { decode } from 'he'
-import { generateMarkdownForHTML } from './markdown-for-html'
+import { generateMarkdownForHTML_BW } from './markdow-for-html-pdf-bw'
 
 export async function renderMarkdownBW(md: string) {
   const decoded = decode(md);
@@ -487,7 +487,7 @@ export async function generateChatHTMLForPDF_BW(
   console.log('🔍 [HTML GENERATOR PDF BW] Génération HTML pour', events.length, 'events')
   
   // 1. Générer le Markdown en DESIGN (pas sobre)
-  const markdown = await generateMarkdownForHTML(
+  const markdown = await generateMarkdownForHTML_BW(
   events,
   {
     includeTimestamps: options.includeTimestamps || false
