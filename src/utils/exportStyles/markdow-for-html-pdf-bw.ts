@@ -24,6 +24,15 @@ export async function generateMarkdownForHTML_BW(
   let markdown = ''
   
   let currentThreadId: string | null = null
+
+  // Fonction pour wrapper les emojis avec HTML
+function wrapEmojisForGrayscale(text: string): string {
+  // Regex pour capturer les emojis courants
+  return text.replace(
+    /([\uD83C-\uD83F][\uDC00-\uDFFF]|[\u2600-\u26FF]|[\u2700-\u27BF])/g,
+    '<span class="emoji-bw">$1</span>'
+  );
+}
   
   events.forEach((event) => {
     // Nouvelle section pour chaque thread
@@ -62,10 +71,10 @@ export async function generateMarkdownForHTML_BW(
         markdown += `${dateStr} à ${displayTime}\n\n`
       }
       
-      // CONTENU EN BLOC CODE USER (gardé)
-      markdown += '```user\n'
-      markdown += cleanContent
-      markdown += '\n```\n\n'
+     // CONTENU EN BLOC CODE USER
+markdown += '```user\n'
+markdown += wrapEmojisForGrayscale(cleanContent)  // <-- MODIFIÉ
+markdown += '\n```\n\n'
       
     } else {
       // ====== OMBRELIEN - MARKDOWN NORMAL ======
@@ -78,8 +87,8 @@ export async function generateMarkdownForHTML_BW(
         markdown += `${dateStr} à ${timeStr}\n\n`
       }
 
-      // MARKDOWN NORMAL (pas de code block) - comme l'ancienne version
-      markdown += event.content + '\n\n'
+      // MARKDOWN NORMAL avec emojis wrappés
+markdown += wrapEmojisForGrayscale(event.content) + '\n\n'  // <-- MODIFIÉ
     }
     
     markdown += '---\n\n'

@@ -45,14 +45,6 @@ export async function POST(request: NextRequest) {
         finalFilename = filename || `conversations-${new Date().toISOString().split('T')[0]}.pdf`
         break
 
-        case 'zip':
-  const zipBuffer = Buffer.from(content, 'base64')
-  fileContent = zipBuffer.buffer
-  contentType = 'application/zip'
-  fileExtension = 'zip'
-  finalFilename = filename || `conversations-${new Date().toISOString().split('T')[0]}.zip`
-  break
-
       case 'docx':
         // Pour l'instant, on gère le placeholder  
         if (content.startsWith('DOCX_PLACEHOLDER:')) {

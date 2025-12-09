@@ -36,7 +36,7 @@ interface ExportModalProps {
 
 const FORMAT_LIMITS = {
   markdown: 500,
-  pdf: 50,
+  pdf: 100,
   docx: 100,
   html: 500  // ← AJOUTE
 }
@@ -471,34 +471,27 @@ setTimeout(() => {
       false
     )
     if (!result.success) throw new Error(result.error)
-
-    // Détecter si ZIP
-    const isZip = result.content.startsWith('UEsDB')
     
     const downloadResponse = await fetch('/api/export/download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        format: isZip ? 'zip' : selectedFormat,
-        content: result.content,
-        filename: isZip
-          ? `bandhu-export-${new Date().toISOString().split('T')[0]}.zip`
-          : `bandhu-export-${new Date().toISOString().split('T')[0]}.${
-              selectedFormat === 'markdown' ? 'md' : selectedFormat
-            }`
-      })
-    })
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    format: selectedFormat,  // ← plus de 'zip'
+    content: result.content,
+    filename: `bandhu-export-${new Date().toISOString().split('T')[0]}.${
+      selectedFormat === 'markdown' ? 'md' : selectedFormat
+    }`
+  })
+})
 
       if (downloadResponse.ok) {
   const blob = await downloadResponse.blob()
   const url = window.URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = isZip
-    ? `bandhu-export-${new Date().toISOString().split('T')[0]}.zip`
-    : `bandhu-export-${new Date().toISOString().split('T')[0]}.${
-        selectedFormat === 'markdown' ? 'md' : selectedFormat
-      }`
+  a.download = `bandhu-export-${new Date().toISOString().split('T')[0]}.${
+  selectedFormat === 'markdown' ? 'md' : selectedFormat
+}`
   document.body.appendChild(a)
   a.click()
   // ...

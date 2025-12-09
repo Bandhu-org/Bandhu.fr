@@ -402,6 +402,13 @@ function getHTMLTemplateForPDF_BW(): string {
       text-decoration: none;
       border-bottom: 1px dotted #000000;
     }
+
+    /* ========== EMOJIS N&B ========== */
+.emoji-bw {
+  filter: grayscale(100%) !important;
+  -webkit-filter: grayscale(100%) !important;
+  display: inline-block !important;
+}
     
     .content a:hover {
       border-bottom-style: solid;
