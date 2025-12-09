@@ -36,7 +36,7 @@ interface ExportModalProps {
 
 const FORMAT_LIMITS = {
   markdown: 500,
-  pdf: Infinity,
+  pdf: 50,
   docx: 100,
   html: 500  // ← AJOUTE
 }

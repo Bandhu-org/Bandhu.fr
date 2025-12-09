@@ -86,19 +86,18 @@ function getHTMLTemplateForPDF_BW(): string {
       min-height: 100vh;
     }
     
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: white;
-      color: var(--text-color);
-      line-height: 1.5;
-      padding: 30px;
-      margin: 0;
-      font-size: 15px;
-      min-height: 100vh;
-      /* 🔥 NOUVEAU : Forcer tout en niveaux de gris */
-      filter: grayscale(100%) !important;
-  -webkit-filter: grayscale(100%) !important;
-    }
+   body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: white;
+  color: var(--text-color);
+  line-height: 1.5;
+  padding: 30px;
+  margin: 0;
+  font-size: 15px;
+  min-height: 100vh;
+  /* 🔥 SUPPRIMÉ : filter: grayscale sur tout le body */
+  /* On appliquera le grayscale seulement aux éléments visuels */
+}
 
     .container {
   background: var(--background);
@@ -319,8 +318,11 @@ function getHTMLTemplateForPDF_BW(): string {
   border-radius: 8px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: break-word;
   border: 1px solid #000000 !important;
   margin: 1.2em 0;
+  max-width: 100%;
+  overflow: auto;
 }
 
 /* CODE BLOCKS AI - N&B pur */
@@ -328,24 +330,32 @@ function getHTMLTemplateForPDF_BW(): string {
   background: #ffffff !important;
   padding: 20px;
   border-radius: 8px;
-  white-space: pre-wrap;    /* ← WRAP autorisé */
-  word-wrap: break-word;    /* ← Casse les mots longs */
-  overflow-wrap: break-word; /* ← Standard moderne */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   border: 1px solid #000000 !important;
   margin: 1.2em 0;
-  max-width: 100%;          /* ← Ne dépasse pas du conteneur */
-  overflow: auto;           /* ← Scroll si nécessaire */
+  max-width: 100%;
+  overflow: auto;
 }
 
+/* Code dans les blocs */
 .content pre code {
   background: none;
+  border: none;
   padding: 0;
   color: #000000 !important;
-  white-space: pre-wrap;    /* ← WRAP ici aussi */
+  white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
   display: block;
-  max-width: 100%;          /* ← Important */
+  max-width: 100%;
+}
+
+/* Règle générale pour éviter tout débordement */
+.content * {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
     /* Syntax Highlighting - TOUT EN NOIR */

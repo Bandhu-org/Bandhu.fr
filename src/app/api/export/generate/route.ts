@@ -38,10 +38,10 @@ export async function POST(request: NextRequest) {
       }), { status: 400 })
     }
 
-    // Récupérer les events sélectionnés avec leurs threads (OPTIMISÉ)
-    const events = await prisma.event.findMany({
+    // Récupérer les events sélectionnés (LIMITÉ À 100)
+const events = await prisma.event.findMany({
   where: {
-    id: { in: selectedEvents }, // ← Enlève slice(0, 100)
+    id: { in: selectedEvents.slice(0, 100) }, // Limite à 100 IDs
     user: { email: session.user.email }
   },
   include: {
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       select: { id: true, label: true }
     }
   },
-  orderBy: { createdAt: 'asc' }
-  // ← Enlève take: 100
+  orderBy: { createdAt: 'asc' },
+  take: 100 // Sécurité supplémentaire
 })
 
     if (events.length === 0) {
@@ -142,7 +142,7 @@ async function generateMarkdown(events: any[], options: any, style: ExportStyle)
   }
 }
 
-// 📄 GÉNÉRATEUR PDF (NOUVEAU FLUX HTML → PDF)
+// 📄 GÉNÉRATEUR PDF (SIMPLE - MAX 100 MESSAGES)
 async function generatePDF(
   events: any[], 
   options: any, 
@@ -151,136 +151,72 @@ async function generatePDF(
   
   // Fonction helper pour convertir PDFStyle → ExportStyle
   function convertToExportStyle(pdfStyle: PDFStyle): ExportStyle {
-  switch (pdfStyle) {
-    case 'design-color': return 'design'
-    case 'design-bw': return 'sobre'
-    case 'sobre-color': return 'sobre'
-    case 'sobre-bw': return 'sobre'
-    case 'minimal-bw': return 'sobre' // ou 'minimal' si tu veux un style dédié
-    default: return 'design'
+    switch (pdfStyle) {
+      case 'design-color': return 'design'
+      case 'design-bw': return 'sobre'
+      case 'sobre-color': return 'sobre'
+      case 'sobre-bw': return 'sobre'
+      case 'minimal-bw': return 'sobre'
+      default: return 'design'
+    }
   }
-}
   
   try {
-    console.log(`📄 Génération PDF via HTML (nouveau flux), style: ${style}`)
+    console.log(`📄 Génération PDF unique (max 100 messages), style: ${style}`)
     
-    // Split adaptatif selon le style
-const chunks = splitEventsForPDF(events, style)
+    // Vérifier la limite
+    if (events.length > 100) {
+      console.warn(`⚠️ Limite dépassée: ${events.length} messages, troncation à 100`)
+      events = events.slice(0, 100)
+    }
     
-    if (chunks.length === 1) {
-      // Un seul PDF
-      console.log(`📄 Génération PDF unique (${events.length} messages)`)
-      
-      // 1. Générer notre super HTML (choisir entre couleur, BW, ou minimal)
-let html
-if (style === 'design-bw') {
-  html = await generateChatHTMLForPDF_BW(chunks[0].events, {
-    style: 'sobre',
-    includeTimestamps: options.includeTimestamps || false,
-    title: options.title
-  })
-} else if (style === 'minimal-bw') {
-  // NOUVEAU : générateur minimal
-  html = await generateMinimalPDFHTML(chunks[0].events, {
-    includeTimestamps: options.includeTimestamps || false,
-    includeThreadHeaders: true,
-    title: options.title
-  })
-} else {
-  html = await generateChatHTMLForPDF(chunks[0].events, {
-    style: convertToExportStyle(style),
-    includeTimestamps: options.includeTimestamps || false,
-    title: options.title
-  })
-}
-      
-      console.log('✅ HTML généré:', html.length, 'caractères')
-      
-      // 2. Convertir HTML → PDF
-      const pdfBuffer = await convertHTMLToPDF(
-        html, 
-        style as any,
-        { includeTimestamps: options.includeTimestamps }
-      )
-      
-      console.log('✅ PDF unique généré:', pdfBuffer.length, 'bytes')
-      
-      return {
-        content: pdfBuffer.toString('base64'),
-        pageCount: Math.ceil(events.length / 15),
-        estimatedSize: `${Math.round(pdfBuffer.length / 1024)}KB`
-      }
-      
-    } else {
-      // Multiple PDFs → ZIP
-      console.log(`📦 ${chunks.length} PDFs à générer`)
-      
-      const pdfs = await Promise.all(
-        chunks.map(async (chunk) => {
-          console.log(`🔧 Génération chunk ${chunk.partNumber}/${chunk.totalParts}`)
-          console.log(`📊 Events: ${chunk.events.length}`)
-          
-          // Générer HTML pour ce chunk (choisir entre couleur, BW, ou minimal)
-let html
-if (style === 'design-bw') {
-  html = await generateChatHTMLForPDF_BW(chunk.events, {
-    style: 'sobre',
-    includeTimestamps: options.includeTimestamps || false,
-    title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
-  })
-} else if (style === 'minimal-bw') {
-  // NOUVEAU : générateur minimal
-  html = await generateMinimalPDFHTML(chunk.events, {
-    includeTimestamps: options.includeTimestamps || false,
-    includeThreadHeaders: true,
-    title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
-  })
-} else {
-  html = await generateChatHTMLForPDF(chunk.events, {
-    style: convertToExportStyle(style),
-    includeTimestamps: options.includeTimestamps || false,
-    title: `Partie ${chunk.partNumber}/${chunk.totalParts}`
-  })
-}
-          
-          // Convertir en PDF
-          const pdfBuffer = await convertHTMLToPDF(
-            html,
-            style as any,
-            { includeTimestamps: options.includeTimestamps }
-          )
-          
-          return {
-            buffer: pdfBuffer,
-            partNumber: chunk.partNumber,
-            totalParts: chunk.totalParts
-          }
-        })
-      )
-      
-      console.log(`✅ ${pdfs.length} PDFs générés`)
-      
-      // Créer ZIP
-      const zip = new JSZip()
-      
-      pdfs.forEach((pdf) => {
-        const filename = `conversation-partie-${pdf.partNumber}-sur-${pdf.totalParts}.pdf`
-        console.log(`📦 Ajout au ZIP: ${filename} (${pdf.buffer.length} bytes)`)
-        zip.file(filename, pdf.buffer)
+    console.log(`📝 ${events.length} messages à convertir en PDF`)
+    
+    // Générer l'HTML selon le style
+    let html: string
+    
+    if (style === 'design-bw') {
+      html = await generateChatHTMLForPDF_BW(events, {
+        style: 'sobre',
+        includeTimestamps: options.includeTimestamps || false,
+        title: options.title || 'Conversation Bandhu'
       })
-      
-      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
-      console.log(`✅ ZIP généré: ${zipBuffer.length} bytes`)
-      
-      return {
-        content: zipBuffer.toString('base64'),
-        pageCount: pdfs.reduce((sum, pdf) => sum + Math.ceil(events.length / chunks.length / 15), 0),
-        estimatedSize: `${Math.round(zipBuffer.length / 1024)}KB`
-      }
+    } else if (style === 'minimal-bw') {
+      html = await generateMinimalPDFHTML(events, {
+        includeTimestamps: options.includeTimestamps || false,
+        includeThreadHeaders: true,
+        title: options.title || 'Conversation Bandhu'
+      })
+    } else {
+      html = await generateChatHTMLForPDF(events, {
+        style: convertToExportStyle(style),
+        includeTimestamps: options.includeTimestamps || false,
+        title: options.title || 'Conversation Bandhu'
+      })
+    }
+    
+    console.log('✅ HTML généré:', html.length, 'caractères')
+    
+    // Convertir HTML → PDF
+    const pdfBuffer = await convertHTMLToPDF(
+      html, 
+      style as any,
+      { includeTimestamps: options.includeTimestamps }
+    )
+    
+    console.log('✅ PDF généré:', pdfBuffer.length, 'bytes')
+    
+    // Estimer le nombre de pages (environ 15 messages par page)
+    const pageCount = Math.ceil(events.length / 15)
+    
+    return {
+      content: pdfBuffer.toString('base64'),
+      pageCount,
+      estimatedSize: `${Math.round(pdfBuffer.length / 1024)}KB`
     }
     
   } catch (error) {
-    console.error('❌ Erreur génération PDF (nouveau flux):', error)
+    console.error('❌ Erreur génération PDF:', error)
     throw new Error(`Échec génération PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
 }
