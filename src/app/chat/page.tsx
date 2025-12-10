@@ -30,6 +30,11 @@ import { SendIcon } from '@/app/components/icons/SendIcon'
 import Image from 'next/image'
 import { ExportIcon } from '@/app/components/icons/ExportIcon'
 
+import { TimelineProvider, useTimeline } from '@/contexts/TimelineContext'
+import TimelineSidebar from '@/app/components/TimelineSidebar/TimelineSidebar'
+// En haut avec les autres imports :
+import TimelineToggleButton from '@/app/components/TimelineSidebar/TimelineToggleButton'
+
 interface Event {
   id: string
   content: string
@@ -973,8 +978,8 @@ const renderThreadCard = (thread: Thread) => {
   }
 
   // ========== RENDER ==========
-  return (
-  <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white overflow-hidden">
+ return (
+    <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white overflow-hidden">
     
     {/* ========== SIDEBAR ========== */}
 <div className={`
@@ -983,6 +988,9 @@ const renderThreadCard = (thread: Thread) => {
   overflow-hidden
 `}>
   <div className="w-80 h-full bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
+
+  {/* BOUTON TOGGLE TIMELINE */}
+        <TimelineToggleButton />
     
     {/* ========== NOUVEAU HEADER BRANDING ========== */}
 <div className="flex-shrink-0 mb-4 px-2">
@@ -1287,8 +1295,6 @@ const renderThreadCard = (thread: Thread) => {
     {isSidebarCollapsed ? '→' : '←'}
   </span>
 </button>
-
-
 
       {/* ========== CHAT AREA ========== */}
       <div className={`
@@ -2067,6 +2073,6 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
             </div>
       {/* Modal Export - EN DEHORS du flux */}
       {exportModal}
-      </div>
-  )
+    </div>
+)
 }

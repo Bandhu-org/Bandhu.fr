@@ -1,0 +1,167 @@
+// src/app/api/timeline/events/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+
+export async function GET(request: NextRequest) {
+  console.log('🌐 [TIMELINE API] Route called')
+  try {
+    const session = await getServerSession()
+    
+    if (!session?.user?.email) {
+      console.log('❌ [TIMELINE API] No session')
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      )
+    }
+
+    // Récupérer les paramètres
+    const searchParams = request.nextUrl.searchParams
+    const start = searchParams.get('start')
+    const end = searchParams.get('end')
+    const zoom = searchParams.get('zoom') || 'month'
+    const limit = parseInt(searchParams.get('limit') || '100')
+
+    console.log('📅 [TIMELINE API] Params:', { start, end, zoom, limit })
+
+    // Validation
+    if (!start || !end) {
+      return NextResponse.json(
+        { error: 'Les paramètres start et end sont requis' },
+        { status: 400 }
+      )
+    }
+
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return NextResponse.json(
+        { error: 'Dates invalides' },
+        { status: 400 }
+      )
+    }
+
+    // Récupérer l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Utilisateur non trouvé' },
+        { status: 404 }
+      )
+    }
+
+    // Construire la requête selon le zoom
+    let events: any[] = []
+
+    if (zoom === 'year') {
+  // Version simplifiée sans queryRaw
+  const events = await prisma.event.findMany({
+    where: {
+      userId: user.id,
+      createdAt: {
+        gte: startDate,
+        lte: endDate
+      }
+    },
+    select: {
+      createdAt: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+
+  // Agrégation manuelle par mois
+  const monthlyMap = new Map<string, number>()
+  
+  events.forEach(event => {
+    const monthKey = event.createdAt.toISOString().slice(0, 7) // YYYY-MM
+    monthlyMap.set(monthKey, (monthlyMap.get(monthKey) || 0) + 1)
+  })
+
+  const monthlyCounts = Array.from(monthlyMap.entries())
+    .sort(([a], [b]) => b.localeCompare(a)) // Tri décroissant
+    .slice(0, 12)
+
+  return NextResponse.json({
+    events: monthlyCounts.map(([monthKey, count]) => ({
+      id: `month_${monthKey}`,
+      createdAt: new Date(`${monthKey}-01T00:00:00Z`),
+      role: 'system' as const,
+      contentPreview: `${count} événements`,
+      threadId: '',
+      threadLabel: 'Agrégat mensuel',
+      userId: user.id,
+      count
+    }))
+  })
+    } else {
+      // Pour les autres zooms: événements réels
+      events = await prisma.event.findMany({
+        where: {
+          userId: user.id,
+          createdAt: {
+            gte: startDate,
+            lte: endDate
+          }
+        },
+        include: {
+          thread: {
+            select: {
+              id: true,
+              label: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: Math.min(limit, 500) // Max 500
+      })
+    }
+
+    // Formater la réponse
+    const formattedEvents = events.map(event => ({
+      id: event.id,
+      createdAt: event.createdAt,
+      role: event.role as 'user' | 'assistant' | 'system',
+      contentPreview: event.content.length > 50 
+        ? event.content.substring(0, 50) + '...' 
+        : event.content,
+      threadId: event.threadId,
+      threadLabel: event.thread?.label || 'Sans titre',
+      userId: event.userId,
+      userName: event.user?.name || undefined
+    }))
+
+    return NextResponse.json({
+      events: formattedEvents,
+      meta: {
+        total: formattedEvents.length,
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        zoom,
+        hasMore: formattedEvents.length === Math.min(limit, 500)
+      }
+    })
+
+  } catch (error) {
+    console.error('Erreur API timeline:', error)
+    return NextResponse.json(
+      { error: 'Erreur interne du serveur' },
+      { status: 500 }
+    )
+  }
+}
