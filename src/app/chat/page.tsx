@@ -897,8 +897,11 @@ const renderThreadCard = (thread: Thread) => {
  {/* Exporter la conversation */}
 <button
   onClick={async (e) => {
-    e.stopPropagation()
-    setOpenThreadMenuId(null)
+    console.log('🔵 AVANT setShowExportModal(true)')
+  e.stopPropagation()
+  setOpenThreadMenuId(null)
+  setShowExportModal(true)
+  console.log('🔵 APRÈS setShowExportModal(true)')
     
     // ✅ SI MODAL OUVERT → juste ajouter à la sélection
     if (showExportModal) {
@@ -991,6 +994,7 @@ const renderThreadCard = (thread: Thread) => {
   }
 
   // ========== RENDER ==========
+  console.log('🔍 Avant render - showExportModal:', showExportModal)
  return (
     <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white overflow-hidden">
     
@@ -1311,7 +1315,7 @@ const renderThreadCard = (thread: Thread) => {
 
       {/* ========== CHAT AREA ========== */}
       <div 
-  className="flex-1 flex flex-col relative chat-area-margin"
+  className="flex-1 flex flex-col relative transition-all duration-300 overflow-hidden"
   style={{
     marginRight: `${(isTimelineOpen ? 320 : 0) + (showExportModal ? 400 : 0)}px`
   }}
