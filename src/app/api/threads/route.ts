@@ -29,42 +29,43 @@ export async function GET(_request: NextRequest) {
       )
     }
 
-    // ========== CHARGER TOUS LES THREADS ==========
+    // ✅ Formater pour ThreadsView
     const threads = await prisma.thread.findMany({
-      where: { userId: user.id },
-            include: {
-        events: {
-          orderBy: { createdAt: 'desc' },
-          take: 3, // Derniers 3 messages
-          select: {
-            id: true,
-            content: true,
-            role: true,
-            createdAt: true,
-          }
-        }
-      },
-      orderBy: { lastActivity: 'desc' },
-    })
+  where: { userId: user.id },
+  include: {
+    events: {
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: {
+        id: true,
+        content: true,
+        role: true,
+        createdAt: true,
+      }
+    }
+  },
+  orderBy: [
+    { isPinned: 'desc' },      // ✅ Épinglés d'abord
+    { lastActivity: 'desc' }
+  ],
+})
 
-        // Formater la réponse
-    const formattedThreads = threads.map(thread => ({
-      id: thread.id,
-      label: thread.label || 'Sans titre',
-      messageCount: thread.messageCount || 0,
-      lastActivity: thread.lastActivity || thread.updatedAt,
-      activeDates: thread.activeDates || [],
-      isPinned: thread.isPinned || false,
-      participants: ['Vous'], // À améliorer plus tard
-      messages: thread.events?.map(event => ({
-        id: event.id,
-        content: event.content?.length > 100 
-          ? event.content.substring(0, 100) + '...' 
-          : event.content || '',
-        role: event.role as 'user' | 'assistant',
-        createdAt: event.createdAt
-      })) || []
-    }))
+const formattedThreads = threads.map(thread => ({
+  id: thread.id,
+  label: thread.label || 'Sans titre',
+  messageCount: thread.messageCount || 0,
+  lastActivity: thread.lastActivity || thread.updatedAt,
+  isPinned: thread.isPinned || false, // ✅ ICI
+  activeDates: thread.activeDates || [],
+  messages: thread.events?.map(event => ({
+    id: event.id,
+    content: event.content?.length > 100 
+      ? event.content.substring(0, 100) + '...' 
+      : event.content || '',
+    role: event.role as 'user' | 'assistant',
+    createdAt: event.createdAt
+  })) || []
+}))
 
     return NextResponse.json({ 
       threads: formattedThreads 

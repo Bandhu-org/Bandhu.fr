@@ -1,75 +1,71 @@
+// src/components/TimelineSidebar/ThreadsView.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useTimeline } from '@/contexts/TimelineContext'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useTimeline, type TimelineEvent } from '@/contexts/TimelineContext'
 
-interface ThreadMessage {
-  id: string
-  content: string
-  role: 'user' | 'assistant'
-  createdAt: Date
-}
-
-interface Thread {
+interface ThreadGroup {
   id: string
   label: string
   messageCount: number
   lastActivity: Date
-  participants: string[]
-  messages: ThreadMessage[]
+  events: TimelineEvent[]
 }
 
 export default function ThreadsView() {
-  const { expandedThreadIds, toggleThreadExpanded, collapseThread } = useTimeline()
-  const [fullyExpandedThreadId, setFullyExpandedThreadId] = useState<string | null>(null)
-  const [threads, setThreads] = useState<Thread[]>([])
+  const { densityLevel, getItemHeight } = useTimeline()
+  const [threads, setThreads] = useState<ThreadGroup[]>([])
+  const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Charger les threads au montage
+  const itemHeight = getItemHeight()
+
   useEffect(() => {
     loadThreads()
   }, [])
 
   const loadThreads = async () => {
+    console.log('🔍 [THREADS] Start loading...')
     setIsLoading(true)
     setError(null)
     
     try {
-      const response = await fetch('/api/threads')
+      console.log('📡 [THREADS] Fetching /api/threads')
+      const response = await fetch('/api/threads/timeline')
+      console.log('📥 [THREADS] Response status:', response.status)
       
       if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`)
+        throw new Error(`Erreur ${response.status}`)
       }
       
       const data = await response.json()
+      console.log('✅ [THREADS] Data received:', data)
       
-      if (!data.threads || !Array.isArray(data.threads)) {
-        throw new Error('Format de réponse invalide')
-      }
-      
-      // Formatter selon TON format d'API
-      const formattedThreads = data.threads.map((thread: any) => ({
+      const formattedThreads: ThreadGroup[] = data.threads.map((thread: any) => ({
         id: thread.id,
         label: thread.label || 'Sans titre',
         messageCount: thread.messageCount || 0,
-        lastActivity: new Date(thread.lastActivity || thread.updatedAt || Date.now()),
-        participants: thread.participants || ['Vous'],
-        messages: (thread.messages || []).map((msg: any) => ({
-          id: msg.id,
-          content: msg.content?.length > 100 
-            ? msg.content.substring(0, 100) + '...' 
-            : msg.content || '',
-          role: msg.role === 'user' || msg.role === 'assistant' ? msg.role : 'user',
-          createdAt: new Date(msg.createdAt || Date.now())
+        lastActivity: new Date(thread.lastActivity || thread.updatedAt),
+        events: (thread.events || []).map((e: any) => ({
+          id: e.id,
+          createdAt: new Date(e.createdAt),
+          role: e.role as 'user' | 'assistant' | 'system',
+          contentPreview: e.content?.length > 100 
+            ? e.content.substring(0, 100) + '...' 
+            : e.content || '',
+          threadId: thread.id,
+          threadLabel: thread.label || 'Sans titre',
+          userId: e.userId || '',
+          userName: e.user?.name
         }))
       }))
       
       setThreads(formattedThreads)
-      console.log(`✅ Chargé ${formattedThreads.length} conversations`)
+      console.log(`✅ Chargé ${formattedThreads.length} threads`)
       
     } catch (err) {
-      console.error('❌ Erreur chargement threads:', err)
+      console.error('❌ [THREADS] Error:', err)
       setError(err instanceof Error ? err.message : 'Erreur inconnue')
     } finally {
       setIsLoading(false)
@@ -77,25 +73,228 @@ export default function ThreadsView() {
   }
 
   const toggleThread = (threadId: string) => {
-    toggleThreadExpanded(threadId)
-    if (fullyExpandedThreadId === threadId) {
-      setFullyExpandedThreadId(null)
+    setExpandedThreadIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(threadId)) {
+        newSet.delete(threadId)
+      } else {
+        newSet.add(threadId)
+      }
+      return newSet
+    })
+  }
+
+  // ============================================================
+  // RENDER HEADER SELON DENSITÉ
+  // ============================================================
+  const renderThreadHeader = useCallback((thread: ThreadGroup, isExpanded: boolean) => {
+    const baseClasses = "cursor-pointer transition"
+    
+    switch (densityLevel) {
+      case 0: // Détaillé (même hauteur qu'un event)
+        return (
+          <div
+            onClick={() => toggleThread(thread.id)}
+            className={`${baseClasses} p-3 bg-gray-800/40 hover:bg-gray-800/60`}
+            style={{ height: itemHeight }}
+          >
+            <div className="flex items-center justify-between h-full">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-sm ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
+                    {isExpanded ? '▼' : '▶'}
+                  </span>
+                  <h3 className="font-medium text-gray-200">{thread.label}</h3>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
+                  <span>{thread.messageCount} messages</span>
+                  <span>•</span>
+                  <span>{thread.lastActivity.toLocaleDateString('fr-FR')}</span>
+                </div>
+              </div>
+              <div className="w-2 h-2 rounded-full bg-bandhu-primary/60" />
+            </div>
+          </div>
+        )
+
+      case 1: // Condensé
+        return (
+          <div
+            onClick={() => toggleThread(thread.id)}
+            className={`${baseClasses} p-2 bg-gray-800/40 hover:bg-gray-800/60`}
+            style={{ height: itemHeight }}
+          >
+            <div className="flex items-center justify-between h-full">
+              <div className="flex items-center gap-2 flex-1">
+                <span className={`text-xs ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
+                  {isExpanded ? '▼' : '▶'}
+                </span>
+                <span className="font-medium text-sm text-gray-200 truncate">{thread.label}</span>
+                <span className="text-xs text-gray-500">({thread.messageCount})</span>
+              </div>
+              <div className="w-1.5 h-1.5 rounded-full bg-bandhu-primary/60" />
+            </div>
+          </div>
+        )
+
+      case 2: // Dense
+        return (
+          <div
+            onClick={() => toggleThread(thread.id)}
+            className={`${baseClasses} px-2 py-1 bg-gray-800/40 hover:bg-gray-800/60 flex items-center justify-between`}
+            style={{ height: itemHeight }}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={`text-xs ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
+                {isExpanded ? '▼' : '▶'}
+              </span>
+              <span className="text-xs text-gray-300 truncate">{thread.label}</span>
+              <span className="text-xs text-gray-500">({thread.messageCount})</span>
+            </div>
+          </div>
+        )
+
+      case 3: // Bâtonnets
+        return (
+          <div
+            onClick={() => toggleThread(thread.id)}
+            className={`${baseClasses} px-2 bg-gray-800/50 hover:bg-gray-800/70 flex items-center gap-1`}
+            style={{ height: itemHeight }}
+          >
+            <span className={`text-[10px] ${isExpanded ? 'text-bandhu-primary' : 'text-gray-500'}`}>
+              {isExpanded ? '▼' : '▶'}
+            </span>
+            <span className="text-[10px] text-gray-400 truncate flex-1">
+              {thread.label}
+            </span>
+            <span className="text-[10px] text-gray-600">{thread.messageCount}</span>
+          </div>
+        )
+
+      case 4: // Ultra-dense
+        return (
+          <div
+            onClick={() => toggleThread(thread.id)}
+            className={`${baseClasses} px-1 bg-gray-800/60 hover:bg-gray-800/80`}
+            style={{ height: itemHeight }}
+            title={`${thread.label} (${thread.messageCount} messages)`}
+          >
+            <div className={`h-full w-full rounded-sm ${
+              isExpanded ? 'bg-bandhu-primary/80' : 'bg-gray-600/80'
+            }`} />
+          </div>
+        )
     }
-  }
+  }, [densityLevel, itemHeight])
 
-  const toggleFullyExpanded = (threadId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setFullyExpandedThreadId(prev => prev === threadId ? null : threadId)
-  }
+  // ============================================================
+  // RENDER EVENT SELON DENSITÉ
+  // ============================================================
+  const renderEvent = useCallback((event: TimelineEvent) => {
+    switch (densityLevel) {
+      case 0:
+        return (
+          <div className="relative pl-6 h-full">
+            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className={`w-3 h-3 rounded-full border-2 ${
+                event.role === 'user' ? 'bg-blue-500/20 border-blue-400' 
+                : event.role === 'assistant' ? 'bg-purple-500/20 border-purple-400'
+                : 'bg-gray-500/20 border-gray-400'
+              }`} />
+            </div>
+            <div className="ml-6 p-3 rounded-lg bg-gray-800/30 border border-gray-700/50 hover:border-gray-600/70 transition h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  event.role === 'user' ? 'bg-blue-900/30 text-blue-300' : 'bg-purple-900/30 text-purple-300'
+                }`}>
+                  {event.role === 'user' ? '👤' : '🌑'}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {event.createdAt.toLocaleDateString('fr-FR', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                  })}
+                </span>
+              </div>
+              <p className="text-sm text-gray-200 line-clamp-2 flex-1">{event.contentPreview}</p>
+            </div>
+          </div>
+        )
 
-  // États de chargement/erreur
+      case 1:
+        return (
+          <div className="relative pl-6 h-full">
+            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className={`w-2 h-2 rounded-full ${
+                event.role === 'user' ? 'bg-blue-500/40' 
+                : event.role === 'assistant' ? 'bg-purple-500/40' : 'bg-gray-500/40'
+              }`} />
+            </div>
+            <div className="ml-6 p-2 rounded-lg bg-gray-800/20 border border-gray-700/30 h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs text-gray-400">
+                  {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                  event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
+                }`}>
+                  {event.role === 'user' ? 'Vous' : 'Assistant'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-300 truncate flex-1">{event.contentPreview}</p>
+            </div>
+          </div>
+        )
+
+      case 2:
+        return (
+          <div className="relative pl-4 h-full flex items-center">
+            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                event.role === 'user' ? 'bg-blue-500/60' 
+                : event.role === 'assistant' ? 'bg-purple-500/60' : 'bg-gray-500/60'
+              }`} />
+            </div>
+            <div className="ml-4 flex items-center justify-between w-full pr-2">
+              <span className="text-xs text-gray-400 truncate">
+                {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <span className="text-xs text-gray-300 truncate max-w-[60%]">{event.contentPreview}</span>
+            </div>
+          </div>
+        )
+
+      case 3:
+        return (
+          <div className="relative pl-3 h-full flex items-center">
+            <div className={`absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-6 rounded-sm ${
+              event.role === 'user' ? 'bg-blue-500/70' 
+              : event.role === 'assistant' ? 'bg-purple-500/70' : 'bg-gray-500/70'
+            }`} />
+            <div className="ml-3 text-[10px] text-gray-400 truncate w-full pr-2">
+              {event.contentPreview.substring(0, 40)}
+            </div>
+          </div>
+        )
+
+      case 4:
+        return (
+          <div 
+            className={`absolute left-0 right-0 mx-2 rounded-sm ${
+              event.role === 'user' ? 'bg-blue-500/80' 
+              : event.role === 'assistant' ? 'bg-purple-500/80' : 'bg-gray-500/80'
+            }`}
+            style={{ height: '6px' }}
+            title={`${event.createdAt.toLocaleString()}: ${event.contentPreview}`}
+          />
+        )
+    }
+  }, [densityLevel])
+
+  // États de chargement
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bandhu-primary"></div>
-          <p className="mt-2 text-sm text-gray-500">Chargement des conversations...</p>
-        </div>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bandhu-primary" />
       </div>
     )
   }
@@ -105,11 +304,11 @@ export default function ThreadsView() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center p-6">
           <div className="text-4xl mb-3 opacity-30">⚠️</div>
-          <p className="text-gray-500">Erreur de chargement</p>
+          <p className="text-gray-500">Erreur</p>
           <p className="text-xs text-gray-600 mt-1">{error}</p>
           <button
             onClick={loadThreads}
-            className="mt-4 px-4 py-2 text-sm bg-bandhu-primary/20 text-bandhu-primary rounded-lg hover:bg-bandhu-primary/30 transition"
+            className="mt-4 px-4 py-2 text-sm bg-bandhu-primary/20 rounded hover:bg-bandhu-primary/30"
           >
             Réessayer
           </button>
@@ -124,163 +323,40 @@ export default function ThreadsView() {
         <div className="text-center p-6">
           <div className="text-4xl mb-3 opacity-30">💬</div>
           <p className="text-gray-500">Aucune conversation</p>
-          <p className="text-xs text-gray-600 mt-1">Commencez à discuter avec vos Bandhus</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3">
-      {/* En-tête avec bouton "Tout replier" */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-gray-500">
-          {threads.length} conversation{threads.length > 1 ? 's' : ''}
-          {expandedThreadIds.length > 0 && (
-            <span className="ml-2 text-bandhu-primary">
-              • {expandedThreadIds.length} dépliée{expandedThreadIds.length > 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-        {expandedThreadIds.length > 0 && (
-          <button
-            onClick={() => {
-              expandedThreadIds.forEach(threadId => {
-                collapseThread(threadId)
-              })
-            }}
-            className="text-xs text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-gray-800/50"
-          >
-            Tout replier
-          </button>
-        )}
-      </div>
-
-      {/* Liste des threads */}
+    <div className="space-y-0.5">
       {threads.map(thread => {
-        const isExpanded = expandedThreadIds.includes(thread.id)
-        const isFullyExpanded = fullyExpandedThreadId === thread.id
-        
+        const isExpanded = expandedThreadIds.has(thread.id)
+        const threadHeight = isExpanded ? thread.events.length * itemHeight : 0
+
         return (
-          <div
-            key={thread.id}
-            className={`rounded-lg border transition ${
-              isExpanded
-                ? 'bg-gray-800/40 border-gray-600/50'
-                : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600/70'
-            }`}
-          >
-            {/* En-tête du thread */}
-            <div 
-              className="p-3 cursor-pointer"
-              onClick={() => toggleThread(thread.id)}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium text-gray-200">
-                      {thread.label}
-                    </h3>
-                    <span className={`text-xs transition ${
-                      isExpanded 
-                        ? 'text-bandhu-primary' 
-                        : 'text-gray-500'
-                    }`}>
-                      {isExpanded ? '▼' : '▶'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>
-                      {thread.messageCount} message{thread.messageCount > 1 ? 's' : ''}
-                    </span>
-                    <span>•</span>
-                    <span>
-                      {thread.lastActivity.toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
-                  
-                  <div className="flex gap-1 mt-2">
-                    {thread.participants.map((participant, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-0.5 text-xs bg-gray-700/50 rounded"
-                      >
-                        {participant}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Indicateur visuel */}
-                <div className="w-2 h-2 rounded-full bg-bandhu-primary/60 ml-2" />
-              </div>
-            </div>
-            
-            {/* Messages dépliés */}
-            {isExpanded && thread.messages && thread.messages.length > 0 && (
-              <div className={`border-t border-gray-700/50`}>
-                {/* En-tête interne avec bouton "déplier en entier" */}
-                <div className="pt-3 px-3 flex items-center justify-between">
-                  <div className="text-xs text-gray-500">
-                    {thread.messages.length} message{thread.messages.length > 1 ? 's' : ''} récents
-                  </div>
-                  <button
-                    onClick={(e) => toggleFullyExpanded(thread.id, e)}
-                    className="text-xs text-bandhu-primary hover:text-bandhu-secondary px-2 py-1 rounded hover:bg-gray-800/50"
-                  >
-                    {isFullyExpanded ? '↸ Replier' : '↴ Déplier en entier'}
-                  </button>
-                </div>
-                
-                {/* Conteneur scrollable */}
-                <div 
-                  className={`overflow-y-auto px-3 my-3 ${
-                    isFullyExpanded 
-                      ? 'max-h-[400px]' 
-                      : 'max-h-48'
-                  } pr-2`}
-                >
-                  <div className="space-y-2">
-                    {thread.messages.map(message => (
-                      <div
-                        key={message.id}
-                        className={`p-2 rounded ${
-                          message.role === 'user'
-                            ? 'bg-blue-900/20 border-l-2 border-blue-500'
-                            : 'bg-purple-900/20 border-l-2 border-purple-500'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium">
-                            {message.role === 'user' ? '👤 Vous' : '🤖 Assistant'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(message.createdAt).toLocaleTimeString('fr-FR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-sm">{message.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Bouton pour ouvrir le thread complet */}
-                <div className="pt-3 px-3 border-t border-gray-700/30 pb-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      console.log('Ouvrir le thread complet:', thread.id)
-                      // TODO: Naviguer vers le thread
+          <div key={thread.id} className="border border-gray-700/50 rounded overflow-hidden">
+            {/* Header adaptatif */}
+            {renderThreadHeader(thread, isExpanded)}
+
+            {/* Events du thread */}
+            {isExpanded && (
+              <div style={{ height: threadHeight }} className="relative bg-gray-900/20">
+                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
+                {thread.events.map((event, idx) => (
+                  <div
+                    key={event.id}
+                    style={{
+                      position: 'absolute',
+                      top: idx * itemHeight,
+                      height: itemHeight,
+                      width: '100%'
                     }}
-                    className="w-full py-1.5 text-xs bg-gray-800/50 hover:bg-gray-700/50 rounded transition"
+                    className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'}`}
                   >
-                    Ouvrir cette conversation dans le chat
-                  </button>
-                </div>
+                    {renderEvent(event)}
+                  </div>
+                ))}
               </div>
             )}
           </div>
