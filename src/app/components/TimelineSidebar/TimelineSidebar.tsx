@@ -4,6 +4,7 @@
 import React from 'react'
 import { useTimeline } from '@/contexts/TimelineContext'
 import TimelineView from './TimelineView'
+import ThreadsView from './ThreadsView'  // ← AJOUTE CETTE LIGNE
 
 export default function TimelineSidebar() {
   const { 
@@ -11,8 +12,8 @@ export default function TimelineSidebar() {
     closeTimeline,
     densityLevel,
     setDensityLevel,
-    zoomLevel,
-    setZoomLevel 
+    viewMode,        // ← AJOUTE CETTE LIGNE
+    setViewMode      // ← AJOUTE CETTE LIGNE
   } = useTimeline()
 
   if (!isTimelineOpen) return null
@@ -59,7 +60,7 @@ export default function TimelineSidebar() {
       {/* Sidebar panel */}
       <div className="relative flex-1 w-80 bg-gradient-to-b from-gray-900/95 to-gray-950/95 backdrop-blur-xl border-l border-gray-800 shadow-2xl overflow-hidden">
         <div className="h-full flex flex-col">
-          {/* Header */}
+                    {/* Header */}
           <div className="p-4 border-b border-gray-800/50">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -74,6 +75,30 @@ export default function TimelineSidebar() {
                 title="Fermer"
               >
                 ✕
+              </button>
+            </div>
+
+            {/* Switch Vue Chronologie / Conversations */}
+            <div className="flex border-b border-gray-800/50 mb-3">
+              <button
+                onClick={() => setViewMode('timeline')}
+                className={`flex-1 py-2 text-sm transition ${
+                  viewMode === 'timeline'
+                    ? 'border-b-2 border-bandhu-primary text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Chronologie
+              </button>
+              <button
+                onClick={() => setViewMode('threads')}
+                className={`flex-1 py-2 text-sm transition ${
+                  viewMode === 'threads'
+                    ? 'border-b-2 border-bandhu-primary text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Conversations
               </button>
             </div>
 
@@ -122,9 +147,9 @@ export default function TimelineSidebar() {
             </div>
           </div>
 
-          {/* Contenu */}
+                    {/* Contenu */}
           <div className="flex-1 overflow-y-auto p-4">
-            <TimelineView />
+            {viewMode === 'timeline' ? <TimelineView /> : <ThreadsView />}
           </div>
 
           {/* Footer */}
