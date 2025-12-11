@@ -2,7 +2,6 @@
 'use client'
 
 import { TimelineProvider } from '@/contexts/TimelineContext'
-import TimelineSidebar from '@/app/components/TimelineSidebar/TimelineSidebar'
 
 export default function TimelineWrapper({ 
   children 
@@ -12,7 +11,6 @@ export default function TimelineWrapper({
   return (
     <TimelineProvider>
       {children}
-      <TimelineSidebar />
     </TimelineProvider>
   )
 }

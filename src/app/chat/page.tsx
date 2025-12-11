@@ -67,6 +67,7 @@ export default function ChatPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
+  const { isTimelineOpen } = useTimeline()
 
   // ========== ÉTATS ==========
   const [threads, setThreads] = useState<Thread[]>([])
@@ -1297,11 +1298,12 @@ const renderThreadCard = (thread: Thread) => {
 </button>
 
       {/* ========== CHAT AREA ========== */}
-      <div className={`
-  flex-1 flex flex-col relative
-  transition-all duration-300 ease-in-out
-  ${showExportModal ? 'lg:mr-[600px]' : ''}
-`}>
+      <div 
+  className="flex-1 flex flex-col relative chat-area-margin"
+  style={{
+    marginRight: `${(isTimelineOpen ? 320 : 0) + (showExportModal ? 400 : 0)}px`
+  }}
+>
         {/* Header */}
 <div className={`py-1 px-5 border-b border-gray-800 bg-gray-900/30 transition-all duration-300 ${
   isSidebarCollapsed ? 'ml-16' : ''
@@ -2071,6 +2073,9 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
 />
 
             </div>
+      {/* Timeline Sidebar */}
+      <TimelineSidebar />
+
       {/* Modal Export - EN DEHORS du flux */}
       {exportModal}
     </div>

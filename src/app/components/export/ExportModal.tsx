@@ -527,10 +527,10 @@ setTimeout(() => {
       {/* SIDEBAR CONTAINER */}
       <div className="
   fixed inset-y-0 right-0 
-  w-full sm:w-[400px] md:w-[500px]
+  w-full sm:w-[400px] md:w-[400px]
   max-w-full z-50 
   transform transition-transform duration-300 ease-in-out
-  lg:absolute lg:right-0 lg:transform-none lg:w-[600px] lg:h-full
+  lg:absolute lg:right-0 lg:transform-none lg:w-[400px] lg:h-full
 "
   style={{ 
     transform: isOpen ? 'translateX(0)' : 'translateX(100%)' 
