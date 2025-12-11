@@ -11,68 +11,84 @@ export default function TimelineView() {
   const { events, isLoading, zoomLevel, hasMore, loadMore, loadPrevious: loadPreviousFromContext } = useTimeline()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const lastScrollTop = useRef(0)
+  const isLoadingPrevious = useRef(false)
+  const isLoadingMore = useRef(false)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 })
 
-  // ✅ Fonction locale pour gérer le scroll lors du chargement vers le haut
   const loadPrevious = async () => {
-    if (!scrollContainerRef.current) return
-    
-    // Sauvegarder où on est dans le scroll
-    const oldScrollHeight = scrollContainerRef.current.scrollHeight
-    const oldScrollTop = scrollContainerRef.current.scrollTop
-    
-    console.log('📍 Scroll avant chargement:', { oldScrollHeight, oldScrollTop })
-    
-    // Charger les events précédents
-    await loadPreviousFromContext()
-    
-    // Attendre que le DOM se mette à jour, puis ajuster le scroll
+  if (!scrollContainerRef.current || isLoadingPrevious.current || isLoading) return
+  
+  isLoadingPrevious.current = true
+  
+  const container = scrollContainerRef.current
+  
+  // ✅ Sauvegarder l'item qu'on voit ACTUELLEMENT (pas le premier)
+  const currentScrollTop = container.scrollTop
+  const currentVisibleIndex = Math.floor(currentScrollTop / ITEM_HEIGHT)
+  const currentEvent = events[currentVisibleIndex]
+  const offsetInItem = currentScrollTop % ITEM_HEIGHT
+  
+  console.log('📍 Avant chargement - Index visible:', currentVisibleIndex, 'Event:', currentEvent?.id, 'Offset:', offsetInItem)
+  
+  await loadPreviousFromContext()
+  
+  await new Promise(resolve => setTimeout(resolve, 50))
+  
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (scrollContainerRef.current) {
-        const newScrollHeight = scrollContainerRef.current.scrollHeight
-        const heightDiff = newScrollHeight - oldScrollHeight
+      if (scrollContainerRef.current && currentEvent) {
+        // ✅ Trouver où est passé l'event qu'on regardait
+        const newIndex = events.findIndex(e => e.id === currentEvent.id)
         
-        // Décaler le scroll vers le bas de la même hauteur qu'on a ajouté en haut
-        scrollContainerRef.current.scrollTop = oldScrollTop + heightDiff
-        
-        console.log('📍 Scroll après ajustement:', { 
-          newScrollHeight, 
-          heightDiff, 
-          newScrollTop: oldScrollTop + heightDiff 
-        })
+        if (newIndex >= 0) {
+          // ✅ Repositionner au MÊME endroit visuel
+          const newScrollTop = (newIndex * ITEM_HEIGHT) + offsetInItem
+          scrollContainerRef.current.scrollTop = newScrollTop
+          
+          console.log('📍 Après chargement - Nouvel index:', newIndex, 'Nouveau scroll:', newScrollTop)
+        }
       }
+      
+      setTimeout(() => {
+        isLoadingPrevious.current = false
+      }, 200)
+    })
+  })
+}
+
+const handleScroll = () => {
+  if (!scrollContainerRef.current) return
+
+  const { scrollTop, clientHeight } = scrollContainerRef.current
+  const scrollBottom = scrollTop + clientHeight
+
+  const isScrollingUp = scrollTop < lastScrollTop.current
+  lastScrollTop.current = scrollTop
+
+  const start = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER)
+  const end = Math.min(events.length, Math.ceil(scrollBottom / ITEM_HEIGHT) + BUFFER)
+
+  setVisibleRange({ start, end })
+
+  const totalHeight = events.length * ITEM_HEIGHT
+
+  // ✅ Déclencher à 20% du haut (miroir du 80% du bas)
+  if (isScrollingUp && scrollTop < totalHeight * 0.2 && !isLoading && !isLoadingPrevious.current) {
+    console.log('⬆️ [TIMELINE] Triggering loadPrevious at 20%')
+    loadPrevious()
+  }
+
+  // Bas : déclencher à 80%
+  if (!isScrollingUp && scrollBottom > totalHeight * 0.8 && hasMore && !isLoading && !isLoadingMore.current) {
+    console.log('⬇️ [TIMELINE] Triggering loadMore at 80%')
+    isLoadingMore.current = true
+    loadMore().finally(() => {
+      setTimeout(() => {
+        isLoadingMore.current = false
+      }, 300)
     })
   }
-
-  const handleScroll = () => {
-    if (!scrollContainerRef.current) return
-
-    const { scrollTop, clientHeight } = scrollContainerRef.current
-    const scrollBottom = scrollTop + clientHeight
-
-    // Détecter direction
-    const isScrollingUp = scrollTop < lastScrollTop.current
-    lastScrollTop.current = scrollTop
-
-    // Calculer items visibles
-    const start = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER)
-    const end = Math.min(events.length, Math.ceil(scrollBottom / ITEM_HEIGHT) + BUFFER)
-
-    setVisibleRange({ start, end })
-
-    // Scroll vers le HAUT - charger previous
-    if (isScrollingUp && scrollTop < 200 && !isLoading) {
-      console.log('⬆️ [TIMELINE] Triggering loadPrevious')
-      loadPrevious()
-    }
-
-    // Scroll vers le BAS - charger more
-    const totalHeight = events.length * ITEM_HEIGHT
-    if (!isScrollingUp && scrollBottom > totalHeight * 0.8 && hasMore && !isLoading) {
-      console.log('⬇️ [TIMELINE] Triggering loadMore')
-      loadMore()
-    }
-  }
+}
 
   useEffect(() => {
     const container = scrollContainerRef.current
