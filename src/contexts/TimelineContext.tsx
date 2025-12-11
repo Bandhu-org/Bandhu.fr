@@ -15,6 +15,7 @@ export interface TimelineEvent {
 }
 
 export type ZoomLevel = 'year' | 'month' | 'week' | 'day'
+export type DensityLevel = 0 | 1 | 2 | 3 | 4  // 0 = détaillé, 4 = ultra-dense
 
 interface TimelineRange {
   start: Date
@@ -22,25 +23,36 @@ interface TimelineRange {
 }
 
 interface TimelineContextType {
+  // État
   events: TimelineEvent[]
   zoomLevel: ZoomLevel
+  densityLevel: DensityLevel
   viewRange: TimelineRange
   isLoading: boolean
   hasMore: boolean
+  
+  // Actions
   setZoomLevel: (level: ZoomLevel) => void
+  setDensityLevel: (level: DensityLevel) => void
   setViewRange: (range: TimelineRange) => void
   loadEvents: (range: TimelineRange, zoom: ZoomLevel, reset?: boolean) => Promise<void>
   loadMore: () => Promise<void>
   loadPrevious: () => Promise<void>
   clearEvents: () => void
+  
+  // UI
   isTimelineOpen: boolean
   toggleTimeline: () => void
   openTimeline: () => void
   closeTimeline: () => void
+  
+  // Utilitaires
+  getItemHeight: (level?: DensityLevel) => number
 }
 
 const TimelineContext = createContext<TimelineContextType | undefined>(undefined)
 
+// Cache
 const CACHE_MAX_SIZE = 5
 const cache = new Map<string, TimelineEvent[]>()
 
@@ -48,44 +60,56 @@ function generateCacheKey(range: TimelineRange, zoom: ZoomLevel): string {
   return `${zoom}:${range.start.toISOString()}:${range.end.toISOString()}`
 }
 
+// Hauteurs selon le niveau de densité
+const DENSITY_HEIGHTS: Record<DensityLevel, number> = {
+  0: 120, // Vue détaillée (actuelle)
+  1: 60,  // Condensé
+  2: 30,  // Très condensé
+  3: 15,  // Bâtonnets fins
+  4: 8    // Ultra-dense
+}
+
 export function TimelineProvider({ children }: { children: ReactNode }) {
+  // État principal
   const [events, setEvents] = useState<TimelineEvent[]>([])
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month')
+  const [densityLevel, setDensityLevel] = useState<DensityLevel>(0)
   const [viewRange, setViewRange] = useState<TimelineRange>(() => {
     const end = new Date()
     const start = new Date()
     start.setMonth(start.getMonth() - 1)
     return { start, end }
   })
+  
+  // État de chargement
   const [isLoading, setIsLoading] = useState(false)
-  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [hasMore, setHasMore] = useState(false)
-  const [currentOffset, setCurrentOffset] = useState(0)
-  const [totalCount, setTotalCount] = useState(0) // ✅ ICI !
-
+  const [totalCount, setTotalCount] = useState(0)
+  
+  // UI
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
+  
+  // Références
   const currentOffsetRef = useRef(0)
+  const prevDensityLevelRef = useRef<DensityLevel>(0)
+  const isInitialMount = useRef(true)
 
+  // -------------------------------------------------------------------
+  // CHARGEMENT DES ÉVÉNEMENTS
+  // -------------------------------------------------------------------
   const loadEvents = useCallback(async (
     range: TimelineRange, 
     zoom: ZoomLevel, 
     reset: boolean = true
   ) => {
-    console.log('🚀 [TIMELINE] loadEvents', { 
-      zoom,
-      reset,
-      currentOffset: currentOffsetRef.current
-    })
-    
     const cacheKey = generateCacheKey(range, zoom)
     
     if (reset) {
-      setCurrentOffset(0)
       currentOffsetRef.current = 0
       cache.delete(cacheKey)
     }
 
     if (!reset && cache.has(cacheKey)) {
-      console.log('📦 Using cache')
       setEvents(cache.get(cacheKey)!)
       return
     }
@@ -100,16 +124,11 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         offset: currentOffsetRef.current.toString()
       })
 
-      console.log('📡 Fetching with offset:', currentOffsetRef.current)
-
       const response = await fetch(`/api/timeline/events?${params}`)
       
-      if (!response.ok) {
-        throw new Error(`Failed to load events: ${response.status}`)
-      }
+      if (!response.ok) throw new Error(`Failed to load events: ${response.status}`)
       
       const data = await response.json()
-      
       if (!data.events || !Array.isArray(data.events)) {
         throw new Error('Invalid response format')
       }
@@ -126,8 +145,6 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         userId: e.userId || '',
         userName: e.userName || undefined
       }))
-
-      console.log('✅ Received', timelineEvents.length, 'events')
 
       if (reset) {
         setEvents(timelineEvents)
@@ -140,45 +157,26 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         setEvents(prev => [...prev, ...timelineEvents])
       }
 
+      // Mettre à jour les métadonnées
       const newOffset = currentOffsetRef.current + timelineEvents.length
-      setCurrentOffset(newOffset)
       currentOffsetRef.current = newOffset
-
-      // ✅ Capture le total
-      if (data.meta?.total) {
-        setTotalCount(data.meta.total)
-      }
-
-      // ✅ Recalculer hasMore
-      const stillHasMore = currentOffsetRef.current < (data.meta?.total || 0)
-      setHasMore(stillHasMore)
       
-      console.log('📊 New offset:', newOffset, 'hasMore:', stillHasMore, 'total:', data.meta?.total)
+      if (data.meta?.total) setTotalCount(data.meta.total)
+      setHasMore(currentOffsetRef.current < (data.meta?.total || 0))
 
     } catch (error) {
-      console.error('❌ Error loading timeline events:', error)
-      if (reset) {
-        setEvents([])
-      }
+      console.error('Error loading timeline events:', error)
+      if (reset) setEvents([])
     } finally {
       setIsLoading(false)
     }
   }, [])
 
-  const clearEvents = useCallback(() => {
-    setEvents([])
-    cache.clear()
-    setCurrentOffset(0)
-    currentOffsetRef.current = 0
-  }, [])
-
+  // -------------------------------------------------------------------
+  // CHARGEMENT BIDIRECTIONNEL
+  // -------------------------------------------------------------------
   const loadMore = useCallback(async () => {
-    if (!hasMore || isLoading) {
-      console.log('⏸️ LoadMore skipped:', { hasMore, isLoading })
-      return
-    }
-    
-    console.log('⬇️ Loading more (bottom) from offset:', currentOffsetRef.current)
+    if (!hasMore || isLoading) return
     
     setIsLoading(true)
     try {
@@ -191,13 +189,9 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
       })
 
       const response = await fetch(`/api/timeline/events?${params}`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load more: ${response.status}`)
-      }
+      if (!response.ok) throw new Error(`Failed to load more: ${response.status}`)
       
       const data = await response.json()
-      
       if (!data.events || !Array.isArray(data.events)) {
         throw new Error('Invalid response format')
       }
@@ -215,41 +209,29 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         userName: e.userName || undefined
       }))
 
-      console.log('✅ LoadMore received', timelineEvents.length, 'more events')
-
       setEvents(prev => {
         const newEvents = [...prev, ...timelineEvents]
-        if (newEvents.length > 250) {
-          console.warn('⚠️ Déchargement du haut, gardant 250 derniers')
-          return newEvents.slice(-250)
+        // Limite mémoire à 500 événements maximum
+        if (newEvents.length > 500) {
+          return newEvents.slice(-500)
         }
         return newEvents
       })
       
-      const newOffset = currentOffsetRef.current + timelineEvents.length
-      setCurrentOffset(newOffset)
-      currentOffsetRef.current = newOffset
-      
-      // ✅ Recalculer hasMore
-      const stillHasMore = currentOffsetRef.current < totalCount
-      setHasMore(stillHasMore)
-      console.log('📊 LoadMore - offset:', newOffset, 'hasMore:', stillHasMore, 'total:', totalCount)
+      currentOffsetRef.current += timelineEvents.length
+      setHasMore(currentOffsetRef.current < totalCount)
 
     } catch (error) {
-      console.error('❌ Error in loadMore:', error)
+      console.error('Error in loadMore:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [hasMore, isLoading, viewRange, zoomLevel, totalCount]) // ✅ Ajouter totalCount dans les deps
+  }, [hasMore, isLoading, viewRange, zoomLevel, totalCount])
 
   const loadPrevious = useCallback(async () => {
-    if (isLoading || currentOffsetRef.current <= 0) {
-      console.log('⏸️ LoadPrevious skipped:', { isLoading, offset: currentOffsetRef.current })
-      return
-    }
+    if (isLoading || currentOffsetRef.current <= 0) return
     
     const previousOffset = Math.max(0, currentOffsetRef.current - 50)
-    console.log('⬆️ Loading previous (top) from offset:', previousOffset)
     
     setIsLoading(true)
     try {
@@ -262,13 +244,9 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
       })
 
       const response = await fetch(`/api/timeline/events?${params}`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load previous: ${response.status}`)
-      }
+      if (!response.ok) throw new Error(`Failed to load previous: ${response.status}`)
       
       const data = await response.json()
-      
       if (!data.events || !Array.isArray(data.events)) {
         throw new Error('Invalid response format')
       }
@@ -286,70 +264,91 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
         userName: e.userName || undefined
       }))
 
-      console.log('✅ LoadPrevious received', timelineEvents.length, 'events')
-
       setEvents(prev => {
         const existingIds = new Set(prev.map(e => e.id))
         const newEvents = timelineEvents.filter(e => !existingIds.has(e.id))
-        
-        console.log('🔍 Filtered', newEvents.length, 'new events')
-        
         const combined = [...newEvents, ...prev]
         
-        if (combined.length > 250) {
-          console.warn('⚠️ Déchargement du bas, gardant 250 premiers')
-          return combined.slice(0, 250)
+        if (combined.length > 500) {
+          return combined.slice(0, 500)
         }
         return combined
       })
       
       currentOffsetRef.current = previousOffset
-      
-      // ✅ Recalculer hasMore
-      const stillHasMore = currentOffsetRef.current < totalCount
-      setHasMore(stillHasMore)
-      console.log('📊 hasMore après loadPrevious:', stillHasMore)
+      setHasMore(currentOffsetRef.current < totalCount)
 
     } catch (error) {
-      console.error('❌ Error in loadPrevious:', error)
+      console.error('Error in loadPrevious:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, viewRange, zoomLevel, totalCount]) // ✅ Ajouter totalCount
+  }, [isLoading, viewRange, zoomLevel, totalCount])
 
+  // -------------------------------------------------------------------
+  // UTILITAIRES
+  // -------------------------------------------------------------------
+  const getItemHeight = useCallback((level?: DensityLevel): number => {
+    return DENSITY_HEIGHTS[level ?? densityLevel]
+  }, [densityLevel])
+
+  const clearEvents = useCallback(() => {
+    setEvents([])
+    cache.clear()
+    currentOffsetRef.current = 0
+  }, [])
+
+  // UI controls
   const toggleTimeline = useCallback(() => setIsTimelineOpen(prev => !prev), [])
   const openTimeline = useCallback(() => setIsTimelineOpen(true), [])
   const closeTimeline = useCallback(() => setIsTimelineOpen(false), [])
 
-  const isInitialMount = useRef(true)
-  
+  // -------------------------------------------------------------------
+  // EFFECTS
+  // -------------------------------------------------------------------
   useEffect(() => {
     if (isInitialMount.current) {
-      console.log('⚡ Initial mount')
       isInitialMount.current = false
       loadEvents(viewRange, zoomLevel, true)
     } else {
-      console.log('🔄 Range/zoom changed')
       loadEvents(viewRange, zoomLevel, true)
     }
-  }, [viewRange, zoomLevel])
+  }, [viewRange, zoomLevel, loadEvents])
 
+  // Sauvegarder le précédent niveau de densité pour les transitions
+  useEffect(() => {
+    prevDensityLevelRef.current = densityLevel
+  }, [densityLevel])
+
+  // -------------------------------------------------------------------
+  // VALEUR DU CONTEXTE
+  // -------------------------------------------------------------------
   const value: TimelineContextType = {
+    // État
     events,
     zoomLevel,
+    densityLevel,
     viewRange,
     isLoading,
     hasMore,
+    
+    // Actions
     setZoomLevel,
+    setDensityLevel,
     setViewRange,
     loadEvents,
     loadMore,
     loadPrevious,
     clearEvents,
+    
+    // UI
     isTimelineOpen,
     toggleTimeline,
     openTimeline,
-    closeTimeline
+    closeTimeline,
+    
+    // Utilitaires
+    getItemHeight
   }
 
   return (
