@@ -356,7 +356,7 @@ export default function TimelineView() {
             const actualIndex = visibleRange.start + idx
             return (
               <div
-                key={event.id}
+                key={`${event.id}-${actualIndex}`}
                 style={{
                   position: 'absolute',
                   top: actualIndex * itemHeight,
