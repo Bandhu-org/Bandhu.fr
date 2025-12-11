@@ -16,8 +16,6 @@ export default function TimelineSidebar() {
     setViewMode
   } = useTimeline()
 
-  if (!isTimelineOpen) return null
-
   const handleZoomOut = () => {
     if (densityLevel < 4) {
       setDensityLevel((densityLevel + 1) as typeof densityLevel)
