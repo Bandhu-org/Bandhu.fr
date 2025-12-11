@@ -33,6 +33,33 @@ export default function TimelineView() {
   // Calculs
   const itemHeight = getItemHeight()
   const totalHeight = events.length * itemHeight
+
+  // ------------------------------------------------------------
+  // STYLE FOR HIGHLIGHT ANIMATION
+  // ------------------------------------------------------------
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      .timeline-event-highlight {
+        animation: timeline-pulse 1.5s ease-in-out;
+        border-color: rgba(168, 85, 247, 0.5) !important;
+      }
+      @keyframes timeline-pulse {
+        0%, 100% { 
+          background-color: transparent; 
+          border-color: rgba(55, 65, 81, 0.5);
+        }
+        50% { 
+          background-color: rgba(168, 85, 247, 0.1); 
+          border-color: rgba(168, 85, 247, 0.8);
+        }
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, []) // Empty dependency array = run once on mount
   
   // ------------------------------------------------------------
   // GESTION DU SCROLL AVEC DENSITÉ VARIABLE
@@ -87,6 +114,52 @@ export default function TimelineView() {
     }
   }, [events.length, itemHeight, totalHeight, isLoading, hasMore, loadPrevious, loadMore])
 
+  // CLICK NAVIGATION (density level 0 only)
+// ------------------------------------------------------------
+const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
+  // Uniquement en mode détaillé
+  if (densityLevel === 0) {
+    console.log('🎯 Navigation timeline:', { eventId, threadId })
+    
+    // 1. Charge le thread via la fonction globale
+    if (typeof window !== 'undefined' && (window as any).loadThread) {
+      try {
+        await (window as any).loadThread(threadId)
+        console.log('✅ Thread chargé')
+      } catch (error) {
+        console.error('❌ Erreur chargement thread:', error)
+        return
+      }
+    } else {
+      console.warn('⚠️ loadThread non disponible globalement')
+      return
+    }
+    
+    // 2. Scroll après un délai (le temps que les messages se chargent)
+    setTimeout(() => {
+      // Cherche l'élément dans le DOM
+      let targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
+      if (!targetElement) {
+        targetElement = document.getElementById(`event-${eventId}`)
+      }
+      
+      if (targetElement) {
+        console.log('🎯 Élément trouvé, scroll en cours...')
+        // Scroll personnalisé avec offset
+targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        
+        // Animation de highlight
+        targetElement.classList.add('timeline-event-highlight')
+        setTimeout(() => {
+          targetElement.classList.remove('timeline-event-highlight')
+        }, 1500)
+      } else {
+        console.warn('⚠️ Élément non trouvé:', eventId)
+      }
+    }, 800) // Délai pour laisser le thread charger
+  }
+}, [densityLevel])
+
   // ------------------------------------------------------------
   // ADJUSTEMENT DU SCROLL QUAND LA DENSITÉ CHANGE
   // ------------------------------------------------------------
@@ -129,19 +202,19 @@ export default function TimelineView() {
       // NIVEAU 0 : DÉTAILLÉ (120px)
       // --------------------------------------------------------
       case 0:
-        return (
-          <div className="relative pl-6 h-full">
-            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className={`
-                w-3 h-3 rounded-full border-2
-                ${event.role === 'user' 
-                  ? 'bg-blue-500/20 border-blue-400' 
-                  : event.role === 'assistant'
-                  ? 'bg-purple-500/20 border-purple-400'
-                  : 'bg-gray-500/20 border-gray-400'
-                }
-              `} />
-            </div>
+  return (
+    <div className="relative pl-6 h-full">
+      <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className={`
+          w-3 h-3 rounded-full border-2
+          ${event.role === 'user' 
+            ? 'bg-blue-500/20 border-blue-400' 
+            : event.role === 'assistant'
+            ? 'bg-purple-500/20 border-purple-400'
+            : 'bg-gray-500/20 border-gray-400'
+          }
+        `} />
+      </div>
 
             <div className="ml-6 p-3 rounded-lg bg-gray-800/30 border border-gray-700/50 hover:border-gray-600/70 transition h-full flex flex-col">
               <div className="flex items-center gap-2 mb-1">
@@ -356,17 +429,20 @@ export default function TimelineView() {
             const actualIndex = visibleRange.start + idx
             return (
               <div
-                key={`${event.id}-${actualIndex}`}
-                style={{
-                  position: 'absolute',
-                  top: actualIndex * itemHeight,
-                  height: itemHeight,
-                  width: '100%'
-                }}
-                className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'}`}
-              >
-                {renderEvent(event)}
-              </div>
+  key={`${event.id}-${actualIndex}`}
+  style={{
+    position: 'absolute',
+    top: actualIndex * itemHeight,
+    height: itemHeight,
+    width: '100%'
+  }}
+  className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'} ${
+    densityLevel === 0 ? 'cursor-pointer' : ''
+  }`}
+  onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
+>
+  {renderEvent(event)}
+</div>
             )
           })}
         </div>

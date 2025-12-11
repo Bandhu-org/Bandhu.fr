@@ -72,6 +72,27 @@ export default function ThreadsView() {
     }
   }
 
+const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
+  if (densityLevel === 0) {
+    // 1. Charge le thread
+    if (typeof window !== 'undefined' && (window as any).loadThread) {
+      await (window as any).loadThread(threadId)
+    }
+    
+    // 2. Scroll après un délai
+    setTimeout(() => {
+      const targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        targetElement.classList.add('timeline-event-highlight')
+        setTimeout(() => {
+          targetElement.classList.remove('timeline-event-highlight')
+        }, 1500)
+      }
+    }, 500) // Délai pour laisser le thread se charger
+  }
+}, [densityLevel])
+
   const toggleThread = (threadId: string) => {
     setExpandedThreadIds(prev => {
       const newSet = new Set(prev)
@@ -193,8 +214,11 @@ export default function ThreadsView() {
   const renderEvent = useCallback((event: TimelineEvent) => {
     switch (densityLevel) {
       case 0:
-        return (
-          <div className="relative pl-6 h-full">
+  return (
+    <div 
+      className="relative pl-6 h-full cursor-pointer"
+      onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
+    >
             <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <div className={`w-3 h-3 rounded-full border-2 ${
                 event.role === 'user' ? 'bg-blue-500/20 border-blue-400' 
@@ -345,17 +369,20 @@ export default function ThreadsView() {
                 <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
                 {thread.events.map((event, idx) => (
                   <div
-                    key={event.id}
-                    style={{
-                      position: 'absolute',
-                      top: idx * itemHeight,
-                      height: itemHeight,
-                      width: '100%'
-                    }}
-                    className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'}`}
-                  >
-                    {renderEvent(event)}
-                  </div>
+  key={event.id}
+  style={{
+    position: 'absolute',
+    top: idx * itemHeight,
+    height: itemHeight,
+    width: '100%'
+  }}
+  className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'} ${
+    densityLevel === 0 ? 'cursor-pointer' : ''
+  }`}
+  onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
+>
+  {renderEvent(event)}
+</div>
                 ))}
               </div>
             )}

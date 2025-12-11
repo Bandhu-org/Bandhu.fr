@@ -403,7 +403,19 @@ useEffect(() => {
   }
 }
 
-
+// ========== EXPOSE loadThread GLOBALEMENT ==========
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    ;(window as any).loadThread = loadThread
+    console.log('🌐 loadThread exposé globalement')
+  }
+  return () => {
+    if (typeof window !== 'undefined') {
+      delete (window as any).loadThread
+      console.log('🌐 loadThread nettoyé')
+    }
+  }
+}, [loadThread]) // Dépend de loadThread
 
   const renameThread = async (threadId: string, newLabel: string) => {
   // MAJ OPTIMISTE IMMÉDIATE
@@ -1692,7 +1704,7 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
 </div>
 </div>
               ) : (
-                <div className="max-w-[800px] relative mb-8">
+                <div className="max-w-[800px] relative mb-8" data-message-id={event.id}>
   {/* SECTION AI AVEC CONTAINER ESPACEMENT */}
   <div className={`bg-transparent rounded-2xl ${
     selectedMessageIds.has(event.id) 
