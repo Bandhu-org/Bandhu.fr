@@ -13,6 +13,8 @@ export default function TimelineView() {
   const lastScrollTop = useRef(0)
   const isLoadingPrevious = useRef(false)
   const isLoadingMore = useRef(false)
+  const isDraggingScrollbar = useRef(false)
+  const scrollTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 })
 
   const loadPrevious = async () => {
@@ -63,7 +65,23 @@ const handleScroll = () => {
   const scrollBottom = scrollTop + clientHeight
 
   const isScrollingUp = scrollTop < lastScrollTop.current
+  const scrollDelta = Math.abs(scrollTop - lastScrollTop.current)
   lastScrollTop.current = scrollTop
+
+  // ✅ Détecter drag scrollbar = mouvement > 500px d'un coup
+  if (scrollDelta > 500) {
+    isDraggingScrollbar.current = true
+    console.log('🚫 Drag scrollbar détecté, triggers désactivés')
+  }
+
+  // ✅ Reset le flag après 300ms sans mouvement
+  if (scrollTimeout.current) {
+    clearTimeout(scrollTimeout.current)
+  }
+  scrollTimeout.current = setTimeout(() => {
+    isDraggingScrollbar.current = false
+    console.log('✅ Drag scrollbar terminé')
+  }, 300)
 
   const start = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER)
   const end = Math.min(events.length, Math.ceil(scrollBottom / ITEM_HEIGHT) + BUFFER)
@@ -72,21 +90,22 @@ const handleScroll = () => {
 
   const totalHeight = events.length * ITEM_HEIGHT
 
-  // ✅ Déclencher à 20% du haut (miroir du 80% du bas)
-  if (isScrollingUp && scrollTop < totalHeight * 0.2 && !isLoading && !isLoadingPrevious.current) {
-    console.log('⬆️ [TIMELINE] Triggering loadPrevious at 20%')
-    loadPrevious()
-  }
+  // ✅ Ne pas trigger si on drag la scrollbar
+  if (!isDraggingScrollbar.current) {
+    if (isScrollingUp && scrollTop < totalHeight * 0.2 && !isLoading && !isLoadingPrevious.current) {
+      console.log('⬆️ [TIMELINE] Triggering loadPrevious at 20%')
+      loadPrevious()
+    }
 
-  // Bas : déclencher à 80%
-  if (!isScrollingUp && scrollBottom > totalHeight * 0.8 && hasMore && !isLoading && !isLoadingMore.current) {
-    console.log('⬇️ [TIMELINE] Triggering loadMore at 80%')
-    isLoadingMore.current = true
-    loadMore().finally(() => {
-      setTimeout(() => {
-        isLoadingMore.current = false
-      }, 300)
-    })
+    if (!isScrollingUp && scrollBottom > totalHeight * 0.8 && hasMore && !isLoading && !isLoadingMore.current) {
+      console.log('⬇️ [TIMELINE] Triggering loadMore at 80%')
+      isLoadingMore.current = true
+      loadMore().finally(() => {
+        setTimeout(() => {
+          isLoadingMore.current = false
+        }, 300)
+      })
+    }
   }
 }
 
