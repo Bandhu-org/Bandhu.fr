@@ -33,15 +33,18 @@ interface TimelineContextType {
   viewRange: TimelineRange
   isLoading: boolean
   hasMore: boolean
-  viewMode: ViewMode  // ← AJOUTE CETTE LIGNE
-  expandedThreadId: string | null
+  viewMode: ViewMode
+  expandedThreadIds: string[]  // ← REMPLACE expandedThreadId
   
   // Actions
   setZoomLevel: (level: ZoomLevel) => void
   setDensityLevel: (level: DensityLevel) => void
   setViewRange: (range: TimelineRange) => void
-  setViewMode: (mode: ViewMode) => void  // ← AJOUTE CETTE LIGNE
-  setExpandedThreadId: (id: string | null) => void
+  setViewMode: (mode: ViewMode) => void
+  toggleThreadExpanded: (threadId: string) => void  // ← NOUVEAU
+  expandThread: (threadId: string) => void         // ← NOUVEAU
+  collapseThread: (threadId: string) => void       // ← NOUVEAU
+  collapseAllThreads: () => void                   // ← NOUVEAU
   loadEvents: (range: TimelineRange, zoom: ZoomLevel, reset?: boolean) => Promise<void>
   loadMore: () => Promise<void>
   loadPrevious: () => Promise<void>
@@ -82,7 +85,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month')
   const [densityLevel, setDensityLevel] = useState<DensityLevel>(0)
   const [viewMode, setViewMode] = useState<ViewMode>('timeline')
-  const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null)
+    const [expandedThreadIds, setExpandedThreadIds] = useState<string[]>([])
   const [viewRange, setViewRange] = useState<TimelineRange>(() => {
     const end = new Date()
     const start = new Date()
@@ -294,6 +297,28 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoading, viewRange, zoomLevel, totalCount])
 
+    const toggleThreadExpanded = useCallback((threadId: string) => {
+    setExpandedThreadIds(prev =>
+      prev.includes(threadId)
+        ? prev.filter(id => id !== threadId)
+        : [...prev, threadId]
+    )
+  }, [])
+
+  const expandThread = useCallback((threadId: string) => {
+    setExpandedThreadIds(prev =>
+      prev.includes(threadId) ? prev : [...prev, threadId]
+    )
+  }, [])
+
+  const collapseThread = useCallback((threadId: string) => {
+    setExpandedThreadIds(prev => prev.filter(id => id !== threadId))
+  }, [])
+
+  const collapseAllThreads = useCallback(() => {
+    setExpandedThreadIds([])
+  }, [])
+
   // -------------------------------------------------------------------
   // UTILITAIRES
   // -------------------------------------------------------------------
@@ -338,7 +363,7 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     zoomLevel,
     densityLevel,
     viewMode,
-    expandedThreadId,
+    expandedThreadIds,
     viewRange,
     isLoading,
     hasMore,
@@ -347,7 +372,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     setZoomLevel,
     setDensityLevel,
     setViewMode,
-    setExpandedThreadId,
+    toggleThreadExpanded,
+    expandThread,
+    collapseThread,
+    collapseAllThreads,
     setViewRange,
     loadEvents,
     loadMore,

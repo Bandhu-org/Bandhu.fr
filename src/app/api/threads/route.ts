@@ -32,20 +32,43 @@ export async function GET(_request: NextRequest) {
     // ========== CHARGER TOUS LES THREADS ==========
     const threads = await prisma.thread.findMany({
       where: { userId: user.id },
-      select: {
-        id: true,
-        label: true,
-        messageCount: true,
-        lastActivity: true,
-        activeDates: true,
-        isPinned: true,      // ← IMPORTANT pour l'épinglage
-        createdAt: true,     // ← IMPORTANT pour l'âge
-        updatedAt: true
+            include: {
+        events: {
+          orderBy: { createdAt: 'desc' },
+          take: 3, // Derniers 3 messages
+          select: {
+            id: true,
+            content: true,
+            role: true,
+            createdAt: true,
+          }
+        }
       },
       orderBy: { lastActivity: 'desc' },
     })
 
-    return NextResponse.json({ threads })
+        // Formater la réponse
+    const formattedThreads = threads.map(thread => ({
+      id: thread.id,
+      label: thread.label || 'Sans titre',
+      messageCount: thread.messageCount || 0,
+      lastActivity: thread.lastActivity || thread.updatedAt,
+      activeDates: thread.activeDates || [],
+      isPinned: thread.isPinned || false,
+      participants: ['Vous'], // À améliorer plus tard
+      messages: thread.events?.map(event => ({
+        id: event.id,
+        content: event.content?.length > 100 
+          ? event.content.substring(0, 100) + '...' 
+          : event.content || '',
+        role: event.role as 'user' | 'assistant',
+        createdAt: event.createdAt
+      })) || []
+    }))
+
+    return NextResponse.json({ 
+      threads: formattedThreads 
+    })
   } catch (error) {
     console.error('Erreur chargement threads:', error)
     return NextResponse.json(
