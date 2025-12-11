@@ -2073,22 +2073,22 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
 />
 
             </div>
-      {/* Timeline Sidebar - Position absolue à droite */}
+      {/* Export Modal - Le plus à droite */}
 <div className={`absolute top-0 bottom-0 right-0 transition-all duration-300 ease-in-out ${
-  isTimelineOpen ? 'translate-x-0' : 'translate-x-full'
+  showExportModal ? 'translate-x-0' : 'translate-x-full'
 }`}>
-  {isTimelineOpen && <TimelineSidebar />}
+  {showExportModal && exportModal}
 </div>
 
-{/* Export Modal - Position absolue, décalé si Timeline ouvert */}
+{/* Timeline - À gauche de Export Modal */}
 <div className={`absolute top-0 bottom-0 transition-all duration-300 ease-in-out ${
-  showExportModal ? 'translate-x-0' : 'translate-x-full'
+  isTimelineOpen ? 'translate-x-0' : 'translate-x-full'
 }`}
   style={{
-    right: isTimelineOpen ? '320px' : '0'
+    right: showExportModal ? '400px' : '0'
   }}
 >
-  {showExportModal && exportModal}
+  {isTimelineOpen && <TimelineSidebar />}
 </div>
     </div>
 )
