@@ -13,7 +13,7 @@ interface ThreadGroup {
 }
 
 export default function ThreadsView() {
-  const { densityLevel, getItemHeight } = useTimeline()
+  const { densityLevel, getItemHeight, selectedEventIds, toggleEventSelection } = useTimeline()
   const [threads, setThreads] = useState<ThreadGroup[]>([])
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
@@ -110,6 +110,7 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
   // ============================================================
   const renderThreadHeader = useCallback((thread: ThreadGroup, isExpanded: boolean) => {
     const baseClasses = "cursor-pointer transition"
+    
     
     switch (densityLevel) {
       case 0: // Détaillé (même hauteur qu'un event)
@@ -212,6 +213,7 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
   // RENDER EVENT SELON DENSITÉ
   // ============================================================
   const renderEvent = useCallback((event: TimelineEvent) => {
+    const isSelected = selectedEventIds.includes(event.id)
     switch (densityLevel) {
       case 0:
   return (
@@ -219,14 +221,33 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
       className="relative pl-6 h-full cursor-pointer"
       onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
     >
-            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className={`w-3 h-3 rounded-full border-2 ${
-                event.role === 'user' ? 'bg-blue-500/20 border-blue-400' 
-                : event.role === 'assistant' ? 'bg-purple-500/20 border-purple-400'
-                : 'bg-gray-500/20 border-gray-400'
-              }`} />
-            </div>
-            <div className="ml-6 p-3 rounded-lg bg-gray-800/30 border border-gray-700/50 hover:border-gray-600/70 transition h-full flex flex-col">
+            {/* Barre latérale cliquable */}
+<div 
+  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
+  onClick={(e) => {
+    e.stopPropagation()
+    toggleEventSelection(event.id)
+  }}
+>
+  <div className={`
+    w-3 h-3 rounded-full border-2 transition-all duration-200
+    ${isSelected 
+      ? 'bg-bandhu-primary border-bandhu-primary scale-125' 
+      : event.role === 'user' 
+        ? 'bg-blue-500/20 border-blue-400 hover:border-blue-300' 
+        : event.role === 'assistant' 
+          ? 'bg-purple-500/20 border-purple-400 hover:border-purple-300'
+          : 'bg-gray-500/20 border-gray-400'
+    }
+  `} />
+</div>
+            <div className={`
+  ml-6 p-3 rounded-lg border transition-all duration-200 h-full flex flex-col
+  ${isSelected
+    ? 'bg-bandhu-primary/10 border-bandhu-primary/50'
+    : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600/70'
+  }
+`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   event.role === 'user' ? 'bg-blue-900/30 text-blue-300' : 'bg-purple-900/30 text-purple-300'

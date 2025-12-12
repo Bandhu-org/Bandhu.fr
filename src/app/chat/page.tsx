@@ -67,7 +67,13 @@ export default function ChatPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
-  const { isTimelineOpen } = useTimeline()
+  const { 
+  isTimelineOpen,
+  selectedEventIds,
+  toggleEventSelection,
+  setSelectedEventIds,
+  clearSelection 
+} = useTimeline()
 
   // ========== ÉTATS ==========
   const [threads, setThreads] = useState<Thread[]>([])
@@ -99,7 +105,7 @@ export default function ChatPage() {
   const BOTTOM_SPACER = 300 
   const COLLAPSE_HEIGHT = '16em'
   const [scrollButtonIcon, setScrollButtonIcon] = useState<'down' | 'up'>('down')
-  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set())
+  const selectedMessageIds = new Set(selectedEventIds)
   const [targetThreadIdForExport, setTargetThreadIdForExport] = useState<string | null>(null)
   const [showClearSelectionModal, setShowClearSelectionModal] = useState(false)
 
@@ -148,12 +154,12 @@ const exportModal = useMemo(() => (
       setShowExportModal(false)
       setTargetThreadIdForExport(null)
     }}
-    initialSelectedIds={Array.from(selectedMessageIds)}
+    initialSelectedIds={selectedEventIds}
     preselectThreadId={targetThreadIdForExport || undefined}
     activeThreadId={activeThreadId || undefined}
     onSelectionChange={(newSelectedIds) => {
-      setSelectedMessageIds(new Set(newSelectedIds))
-    }}
+  setSelectedEventIds(newSelectedIds)
+}}
   />
 ), [showExportModal, selectedMessageIds, targetThreadIdForExport, activeThreadId])
 
@@ -493,15 +499,7 @@ const handleCopyMessage = async (content: string, messageId: string) => {
 }
 
 const toggleMessageSelection = (messageId: string) => {
-  setSelectedMessageIds(prev => {
-    const newSet = new Set(prev)
-    if (newSet.has(messageId)) {
-      newSet.delete(messageId)
-    } else {
-      newSet.add(messageId)
-    }
-    return newSet
-  })
+  toggleEventSelection(messageId)
 }
 
 // ========== SCROLLER UN MESSAGE À LA POSITION STANDARD ==========
@@ -909,15 +907,14 @@ const renderThreadCard = (thread: Thread) => {
       if (response.ok) {
         const data = await response.json()
         const messageIds = data.events
-          .filter((e: Event) => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
+          .filter((e: { type: string }) => e.type === 'USER_MESSAGE' || e.type === 'AI_MESSAGE')
           .map((e: Event) => e.id)
         
         // Ajouter à la sélection existante
-        setSelectedMessageIds(prev => {
-          const newSet = new Set(prev)
-          messageIds.forEach((id: string) => newSet.add(id))
-          return newSet
-        })
+        setSelectedEventIds((prev: string[]) => {
+  const uniqueIds = new Set([...prev, ...messageIds])
+  return Array.from(uniqueIds) as string[]
+})
       }
       return // ← STOP ICI
     }
@@ -939,7 +936,7 @@ const renderThreadCard = (thread: Thread) => {
           .map((e: Event) => e.id)
         
         // ✅ 5. Cocher les messages (comme si l'utilisateur avait cliqué)
-        setSelectedMessageIds(new Set(messageIds))
+        setSelectedEventIds(messageIds)
         
         // ✅ 6. Attendre un frame pour que les checkboxes s'affichent
         requestAnimationFrame(() => {
@@ -2049,9 +2046,9 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
         </button>
         <button
           onClick={() => {
-            setSelectedMessageIds(new Set())
-            setShowClearSelectionModal(false)
-          }}
+  clearSelection()
+  setShowClearSelectionModal(false)
+}}
           className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:opacity-90 transition font-medium flex items-center gap-2"
         >
           <span>Clear</span>

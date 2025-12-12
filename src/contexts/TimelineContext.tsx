@@ -58,6 +58,14 @@ interface TimelineContextType {
   
   // Utilitaires
   getItemHeight: (level?: DensityLevel) => number
+
+  // Sélection d'events
+selectedEventIds: string[]
+toggleEventSelection: (eventId: string) => void
+setSelectedEventIds: (ids: string[] | ((prev: string[]) => string[])) => void
+clearSelection: () => void
+selectEventsRange: (startId: string, endId: string) => void
+
 }
 
 const TimelineContext = createContext<TimelineContextType | undefined>(undefined)
@@ -105,6 +113,9 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const currentOffsetRef = useRef(0)
   const prevDensityLevelRef = useRef<DensityLevel>(0)
   const isInitialMount = useRef(true)
+
+// Sélection d'events
+const [selectedEventIds, setSelectedEventIdsState] = useState<string[]>([])
 
   // -------------------------------------------------------------------
   // CHARGEMENT DES ÉVÉNEMENTS
@@ -319,12 +330,62 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     setExpandedThreadIds([])
   }, [])
 
+// Sélection d'events
+const toggleEventSelection = useCallback((eventId: string) => {
+  setSelectedEventIdsState(prev =>
+    prev.includes(eventId)
+      ? prev.filter(id => id !== eventId)
+      : [...prev, eventId]
+  )
+}, [])
+
+const setSelectedEventIds = useCallback((ids: string[] | ((prev: string[]) => string[])) => {
+  if (typeof ids === 'function') {
+    setSelectedEventIdsState(ids)
+  } else {
+    setSelectedEventIdsState(ids)
+  }
+}, [])
+
+const clearSelection = useCallback(() => {
+  setSelectedEventIdsState([])
+}, [])
+
+const selectEventsRange = useCallback((startId: string, endId: string) => {
+  setEvents(prevEvents => {
+    // Trouver les index des events start et end
+    const startIndex = prevEvents.findIndex(e => e.id === startId)
+    const endIndex = prevEvents.findIndex(e => e.id === endId)
+    
+    if (startIndex === -1 || endIndex === -1) return prevEvents
+    
+    // Déterminer le début et la fin de la plage
+    const rangeStart = Math.min(startIndex, endIndex)
+    const rangeEnd = Math.max(startIndex, endIndex)
+    
+    // Récupérer les IDs de la plage
+    const rangeIds = prevEvents
+      .slice(rangeStart, rangeEnd + 1)
+      .map(e => e.id)
+    
+    // Ajouter tous les IDs de la plage (sans doublons)
+    setSelectedEventIdsState(prev => {
+      const newSet = new Set(prev)
+      rangeIds.forEach(id => newSet.add(id))
+      return Array.from(newSet)
+    })
+    
+    return prevEvents
+  })
+}, [])
+
   // -------------------------------------------------------------------
   // UTILITAIRES
   // -------------------------------------------------------------------
   const getItemHeight = useCallback((level?: DensityLevel): number => {
     return DENSITY_HEIGHTS[level ?? densityLevel]
   }, [densityLevel])
+
 
   const clearEvents = useCallback(() => {
     setEvents([])
@@ -389,8 +450,16 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     closeTimeline,
     
     // Utilitaires
-    getItemHeight
-  }
+    getItemHeight,
+
+    // ← AJOUTE CES LIGNES ↓
+    // Sélection d'events
+    selectedEventIds,
+    toggleEventSelection,
+    setSelectedEventIds,
+    clearSelection,
+    selectEventsRange,
+}
 
   return (
     <TimelineContext.Provider value={value}>
