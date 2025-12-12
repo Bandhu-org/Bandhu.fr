@@ -107,11 +107,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   const [viewMode, setViewMode] = useState<ViewMode>('timeline')
     const [expandedThreadIds, setExpandedThreadIds] = useState<string[]>([])
   const [viewRange, setViewRange] = useState<TimelineRange>(() => {
-    const end = new Date()
-    const start = new Date()
-    start.setMonth(start.getMonth() - 1)
-    return { start, end }
-  })
+  const end = new Date()
+  const start = new Date(2025, 0, 1)  // 1er janvier 2025
+  return { start, end }
+})
   
   // État de chargement
   const [isLoading, setIsLoading] = useState(false)

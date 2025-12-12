@@ -119,47 +119,49 @@ export default function TimelineView() {
   // CLICK NAVIGATION (density level 0 only)
 // ------------------------------------------------------------
 const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
-  // Uniquement en mode détaillé
-  if (densityLevel === 0) {
-    console.log('🎯 Navigation timeline:', { eventId, threadId })
-    
-    // 1. Charge le thread via la fonction globale
-    if (typeof window !== 'undefined' && (window as any).loadThread) {
-      try {
-        await (window as any).loadThread(threadId)
-        console.log('✅ Thread chargé')
-      } catch (error) {
-        console.error('❌ Erreur chargement thread:', error)
-        return
-      }
-    } else {
-      console.warn('⚠️ loadThread non disponible globalement')
+  // Navigation désactivée uniquement en mode ultra-dense (niveau 4)
+  if (densityLevel === 4) {
+    return
+  }
+  
+  console.log('🎯 Navigation timeline:', { eventId, threadId, densityLevel })
+  
+  // 1. Charge le thread via la fonction globale
+  if (typeof window !== 'undefined' && (window as any).loadThread) {
+    try {
+      await (window as any).loadThread(threadId)
+      console.log('✅ Thread chargé')
+    } catch (error) {
+      console.error('❌ Erreur chargement thread:', error)
       return
     }
-    
-    // 2. Scroll après un délai (le temps que les messages se chargent)
-    setTimeout(() => {
-      // Cherche l'élément dans le DOM
-      let targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
-      if (!targetElement) {
-        targetElement = document.getElementById(`event-${eventId}`)
-      }
-      
-      if (targetElement) {
-        console.log('🎯 Élément trouvé, scroll en cours...')
-        // Scroll personnalisé avec offset
-targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        
-        // Animation de highlight
-        targetElement.classList.add('timeline-event-highlight')
-        setTimeout(() => {
-          targetElement.classList.remove('timeline-event-highlight')
-        }, 1500)
-      } else {
-        console.warn('⚠️ Élément non trouvé:', eventId)
-      }
-    }, 800) // Délai pour laisser le thread charger
+  } else {
+    console.warn('⚠️ loadThread non disponible globalement')
+    return
   }
+  
+  // 2. Scroll après un délai (le temps que les messages se chargent)
+  setTimeout(() => {
+    // Cherche l'élément dans le DOM
+    let targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
+    if (!targetElement) {
+      targetElement = document.getElementById(`event-${eventId}`)
+    }
+    
+    if (targetElement) {
+      console.log('🎯 Élément trouvé, scroll en cours...')
+      // Scroll personnalisé avec offset
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      
+      // Animation de highlight
+      targetElement.classList.add('timeline-event-highlight')
+      setTimeout(() => {
+        targetElement.classList.remove('timeline-event-highlight')
+      }, 1500)
+    } else {
+      console.warn('⚠️ Élément non trouvé:', eventId)
+    }
+  }, 800) // Délai pour laisser le thread charger
 }, [densityLevel])
 
   // ------------------------------------------------------------
@@ -206,7 +208,10 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       // --------------------------------------------------------
       case 0:
   return (
-    <div className="relative pl-6 h-full">
+    <div 
+      className="relative pl-6 h-full cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
       <div 
   className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
   onClick={(e) => {
@@ -460,7 +465,7 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
         )
 
   }  // ← Ferme le switch
-  }, [densityLevel, selectedEventIds, toggleEventSelection])  // ← Ferme le useCallback
+  }, [densityLevel, selectedEventIds, toggleEventSelection, handleEventClick])  // ← AJOUTÉ
 
   // ------------------------------------------------------------
   // RENDU DES ÉVÉNEMENTS VISIBLES
@@ -545,7 +550,6 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
   className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'} ${
     densityLevel === 0 ? 'cursor-pointer' : ''
   }`}
-  onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
 >
   {renderEvent(event)}
 </div>
