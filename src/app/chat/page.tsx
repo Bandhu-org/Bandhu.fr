@@ -30,7 +30,7 @@ import { SendIcon } from '@/app/components/icons/SendIcon'
 import Image from 'next/image'
 import { ExportIcon } from '@/app/components/icons/ExportIcon'
 
-import { TimelineProvider, useTimeline } from '@/contexts/TimelineContext'
+import { TimelineProvider, useTimeline, type TimelineEvent } from '@/contexts/TimelineContext'
 import TimelineSidebar from '@/app/components/TimelineSidebar/TimelineSidebar'
 // En haut avec les autres imports :
 import TimelineToggleButton from '@/app/components/TimelineSidebar/TimelineToggleButton'
@@ -72,7 +72,8 @@ export default function ChatPage() {
   selectedEventIds,
   toggleEventSelection,
   setSelectedEventIds,
-  clearSelection 
+  clearSelection,
+  addEvent
 } = useTimeline()
 
   // ========== ÉTATS ==========
@@ -638,6 +639,25 @@ const sendMessage = async () => {
         const scrollTopBefore = container?.scrollTop || 0
         
         setEvents(data.events)
+
+
+        
+  const newEvents = data.events.slice(-2)
+  
+  // Pour chaque nouveau message...
+  newEvents.forEach((eventData: any) => {
+  const timelineEvent: TimelineEvent = {
+    id: eventData.id,
+    createdAt: new Date(eventData.createdAt),
+    role: eventData.role || (eventData.type === 'USER_MESSAGE' ? 'user' : 'assistant'),
+    contentPreview: eventData.content?.substring(0, 100) || '',
+    threadId: threadToUse || activeThreadId || '',
+    threadLabel: threads.find(t => t.id === (threadToUse || activeThreadId))?.label || 'Nouveau fil',
+    userId: session?.user?.id || '',
+    userName: session?.user?.name || undefined
+  }
+  addEvent(timelineEvent)
+})
         
         // Restaurer la position
         requestAnimationFrame(() => {

@@ -65,6 +65,7 @@ toggleEventSelection: (eventId: string) => void
 setSelectedEventIds: (ids: string[] | ((prev: string[]) => string[])) => void
 clearSelection: () => void
 selectEventsRange: (startId: string, endId: string) => void
+addEvent: (event: TimelineEvent) => void
 
 }
 
@@ -308,6 +309,18 @@ const [selectedEventIds, setSelectedEventIdsState] = useState<string[]>([])
     }
   }, [isLoading, viewRange, zoomLevel, totalCount])
 
+  // AJOUTER CETTE FONCTION
+const addEvent = useCallback((event: TimelineEvent) => {
+  setEvents(prev => {
+    // Vérifier si l'événement existe déjà
+    if (prev.some(e => e.id === event.id)) {
+      return prev
+    }
+    // Ajouter au début (le plus récent en premier)
+    return [event, ...prev]
+  })
+}, [])
+
     const toggleThreadExpanded = useCallback((threadId: string) => {
     setExpandedThreadIds(prev =>
       prev.includes(threadId)
@@ -459,6 +472,7 @@ const selectEventsRange = useCallback((startId: string, endId: string) => {
     setSelectedEventIds,
     clearSelection,
     selectEventsRange,
+    addEvent,
 }
 
   return (
