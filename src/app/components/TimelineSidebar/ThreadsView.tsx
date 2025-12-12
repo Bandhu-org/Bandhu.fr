@@ -80,7 +80,6 @@ useEffect(() => {
   }
 
 const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
-  if (densityLevel === 0) {
     // 1. Charge le thread
     if (typeof window !== 'undefined' && (window as any).loadThread) {
       await (window as any).loadThread(threadId)
@@ -98,7 +97,7 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
       }
     }, 500) // Délai pour laisser le thread se charger
   }
-}, [densityLevel])
+, [densityLevel])
 
   const toggleThread = (threadId: string) => {
     setExpandedThreadIds(prev => {
@@ -297,8 +296,12 @@ const selectedEventsSet = useMemo(() =>
         )
 
       case 1:
-        return (
-          <div className="relative pl-6 h-full">
+        case 1:
+  return (
+    <div 
+      className="relative pl-6 h-full cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
             <div 
   className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
   onClick={(e) => {
@@ -362,8 +365,11 @@ const selectedEventsSet = useMemo(() =>
         )
 
       case 2:
-        return (
-          <div className="relative pl-4 h-full flex items-center">
+  return (
+    <div 
+      className="relative pl-4 h-full flex items-center cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
             <div 
   className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
   onClick={(e) => {
@@ -404,8 +410,11 @@ const selectedEventsSet = useMemo(() =>
         )
 
       case 3:
-        return (
-          <div className="relative pl-3 h-full flex items-center">
+  return (
+    <div 
+      className="relative pl-3 h-full flex items-center cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
             <div 
   className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
   onClick={(e) => {

@@ -275,8 +275,11 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       // NIVEAU 1 : CONDENSÉ (60px)
       // --------------------------------------------------------
       case 1:
-        return (
-          <div className="relative pl-6 h-full">
+  return (
+    <div 
+      className="relative pl-6 h-full cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
             <div 
               className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
               onClick={(e) => {
@@ -339,8 +342,11 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       // NIVEAU 2 : TRÈS CONDENSÉ (30px)
       // --------------------------------------------------------
       case 2:
-        return (
-          <div className="relative pl-4 h-full flex items-center">
+  return (
+    <div 
+      className="relative pl-4 h-full flex items-center cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
             <div 
               className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
               onClick={(e) => {
@@ -387,8 +393,11 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       // NIVEAU 3 : BÂTONNETS FINS (15px)
       // --------------------------------------------------------
       case 3:
-        return (
-          <div className="relative pl-3 h-full flex items-center">
+  return (
+    <div 
+      className="relative pl-3 h-full flex items-center cursor-pointer"
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
             <div 
               className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
               onClick={(e) => {
