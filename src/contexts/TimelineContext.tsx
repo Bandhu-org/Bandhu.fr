@@ -14,6 +14,13 @@ export interface TimelineEvent {
   userName?: string
 }
 
+export interface ThreadData {
+  id: string
+  label: string
+  messageCount: number
+  lastActivity: Date
+}
+
 export type ZoomLevel = 'year' | 'month' | 'week' | 'day'
 export type DensityLevel = 0 | 1 | 2 | 3 | 4  // 0 = détaillé, 4 = ultra-dense
 
@@ -66,6 +73,9 @@ setSelectedEventIds: (ids: string[] | ((prev: string[]) => string[])) => void
 clearSelection: () => void
 selectEventsRange: (startId: string, endId: string) => void
 addEvent: (event: TimelineEvent) => void
+threads: ThreadData[]
+  addThread: (thread: ThreadData) => void
+  updateThread: (threadId: string, updates: Partial<ThreadData>) => void
 
 }
 
@@ -91,6 +101,7 @@ const DENSITY_HEIGHTS: Record<DensityLevel, number> = {
 export function TimelineProvider({ children }: { children: ReactNode }) {
   // État principal
   const [events, setEvents] = useState<TimelineEvent[]>([])
+  const [threads, setThreads] = useState<ThreadData[]>([])
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('month')
   const [densityLevel, setDensityLevel] = useState<DensityLevel>(0)
   const [viewMode, setViewMode] = useState<ViewMode>('timeline')
@@ -309,16 +320,61 @@ const [selectedEventIds, setSelectedEventIdsState] = useState<string[]>([])
     }
   }, [isLoading, viewRange, zoomLevel, totalCount])
 
-  // AJOUTER CETTE FONCTION
+
 const addEvent = useCallback((event: TimelineEvent) => {
+  // 1. Ajouter l'événement
   setEvents(prev => {
-    // Vérifier si l'événement existe déjà
-    if (prev.some(e => e.id === event.id)) {
-      return prev
-    }
-    // Ajouter au début (le plus récent en premier)
+    if (prev.some(e => e.id === event.id)) return prev
     return [event, ...prev]
   })
+  
+  // 2. Mettre à jour le thread correspondant
+  setThreads(prev => {
+    const existingThread = prev.find(t => t.id === event.threadId)
+    
+    if (existingThread) {
+      // Mettre à jour le thread existant
+      return prev.map(thread => 
+        thread.id === event.threadId
+          ? { 
+              ...thread, 
+              messageCount: thread.messageCount + 1,
+              lastActivity: event.createdAt
+            }
+          : thread
+      )
+    } else {
+      // Créer un nouveau thread (premier message)
+      const newThread: ThreadData = {
+        id: event.threadId,
+        label: event.threadLabel,
+        messageCount: 1,
+        lastActivity: event.createdAt
+      }
+      return [newThread, ...prev]
+    }
+  })
+}, [])
+
+const addThread = useCallback((thread: ThreadData) => {
+  setThreads(prev => {
+    // Éviter les doublons
+    if (prev.some(t => t.id === thread.id)) {
+      return prev
+    }
+    // Ajouter au début (plus récent en premier)
+    return [thread, ...prev]
+  })
+}, [])
+
+const updateThread = useCallback((threadId: string, updates: Partial<ThreadData>) => {
+  setThreads(prev => 
+    prev.map(thread => 
+      thread.id === threadId 
+        ? { ...thread, ...updates, lastActivity: new Date() }
+        : thread
+    )
+  )
 }, [])
 
     const toggleThreadExpanded = useCallback((threadId: string) => {
@@ -428,6 +484,58 @@ const selectEventsRange = useCallback((startId: string, endId: string) => {
     prevDensityLevelRef.current = densityLevel
   }, [densityLevel])
 
+
+// -------------------------------------------------------------------
+// CHARGEMENT INITIAL DES THREADS AVEC LEURS ÉVÉNEMENTS
+// -------------------------------------------------------------------
+useEffect(() => {
+  const loadInitialThreads = async () => {
+    try {
+      const response = await fetch('/api/threads/timeline')
+      if (response.ok) {
+        const data = await response.json()
+        const threadData: ThreadData[] = data.threads.map((t: any) => ({
+          id: t.id,
+          label: t.label || 'Sans titre',
+          messageCount: t.messageCount || 0,
+          lastActivity: new Date(t.lastActivity || t.updatedAt)
+        }))
+        setThreads(threadData)
+        
+        // ⭐ AJOUTER : Extraire tous les événements des threads
+        const allEvents: TimelineEvent[] = []
+        data.threads.forEach((thread: any) => {
+          if (thread.events && Array.isArray(thread.events)) {
+            thread.events.forEach((e: any) => {
+              allEvents.push({
+                id: e.id,
+                createdAt: new Date(e.createdAt),
+                role: e.role as 'user' | 'assistant' | 'system',
+                contentPreview: e.content?.substring(0, 100) || '',
+                threadId: thread.id,
+                threadLabel: thread.label || 'Sans titre',
+                userId: e.userId || '',
+                userName: e.user?.name
+              })
+            })
+          }
+        })
+        
+        // Ajouter ces événements au contexte (sans doublons)
+        setEvents(prev => {
+          const existingIds = new Set(prev.map(e => e.id))
+          const newEvents = allEvents.filter(e => !existingIds.has(e.id))
+          return [...newEvents, ...prev]
+        })
+      }
+    } catch (error) {
+      console.error('Error loading initial threads:', error)
+    }
+  }
+  
+  loadInitialThreads()
+}, [])
+
   // -------------------------------------------------------------------
   // VALEUR DU CONTEXTE
   // -------------------------------------------------------------------
@@ -473,6 +581,9 @@ const selectEventsRange = useCallback((startId: string, endId: string) => {
     clearSelection,
     selectEventsRange,
     addEvent,
+    threads,
+  addThread,
+  updateThread,
 }
 
   return (

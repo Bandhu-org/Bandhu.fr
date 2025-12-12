@@ -1,83 +1,43 @@
 // src/components/TimelineSidebar/ThreadsView.tsx
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useTimeline, type TimelineEvent } from '@/contexts/TimelineContext'
+import React, { useState, useCallback, useMemo } from 'react'
+import { useTimeline, type TimelineEvent, type ThreadData } from '@/contexts/TimelineContext'
 
-interface ThreadGroup {
-  id: string
-  label: string
-  messageCount: number
-  lastActivity: Date
+interface ThreadGroup extends ThreadData {
   events: TimelineEvent[]
 }
 
 export default function ThreadsView() {
-  const { densityLevel, getItemHeight, selectedEventIds, toggleEventSelection } = useTimeline()
-  const [threads, setThreads] = useState<ThreadGroup[]>([])
+  const { 
+    threads, // threads du contexte
+    events,
+    densityLevel, 
+    getItemHeight, 
+    selectedEventIds, 
+    toggleEventSelection 
+  } = useTimeline()
+  
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
   const itemHeight = getItemHeight()
 
-  useEffect(() => {
-  loadThreads()
-}, [])  // Garde vide pour le chargement initial
-
-// MAIS AJOUTE UN EFFET POUR selectedEventIds :
-useEffect(() => {
-  // Ce code s'exécute à chaque changement de selectedEventIds
-  console.log('🔵 selectedEventIds changed:', selectedEventIds.length)
-  // Forcer un re-render des events
-}, [selectedEventIds])
-
-  const loadThreads = async () => {
-    console.log('🔍 [THREADS] Start loading...')
-    setIsLoading(true)
-    setError(null)
-    
-    try {
-      console.log('📡 [THREADS] Fetching /api/threads')
-      const response = await fetch('/api/threads/timeline')
-      console.log('📥 [THREADS] Response status:', response.status)
-      
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`)
-      }
-      
-      const data = await response.json()
-      console.log('✅ [THREADS] Data received:', data)
-      
-      const formattedThreads: ThreadGroup[] = data.threads.map((thread: any) => ({
-        id: thread.id,
-        label: thread.label || 'Sans titre',
-        messageCount: thread.messageCount || 0,
-        lastActivity: new Date(thread.lastActivity || thread.updatedAt),
-        events: (thread.events || []).map((e: any) => ({
-          id: e.id,
-          createdAt: new Date(e.createdAt),
-          role: e.role as 'user' | 'assistant' | 'system',
-          contentPreview: e.content?.length > 100 
-            ? e.content.substring(0, 100) + '...' 
-            : e.content || '',
-          threadId: thread.id,
-          threadLabel: thread.label || 'Sans titre',
-          userId: e.userId || '',
-          userName: e.user?.name
-        }))
-      }))
-      
-      setThreads(formattedThreads)
-      console.log(`✅ Chargé ${formattedThreads.length} threads`)
-      
-    } catch (err) {
-      console.error('❌ [THREADS] Error:', err)
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
-    } finally {
-      setIsLoading(false)
+const threadsWithEvents = useMemo(() => {
+  // Grouper les events par threadId
+  const eventsByThread = new Map<string, TimelineEvent[]>()
+  
+  events.forEach(event => {
+    if (!eventsByThread.has(event.threadId)) {
+      eventsByThread.set(event.threadId, [])
     }
-  }
+    eventsByThread.get(event.threadId)!.push(event)
+  })
+  
+  // Combiner threads avec leurs events
+  return threads.map(thread => ({
+    ...thread,
+    events: eventsByThread.get(thread.id) || []
+  }))
+}, [threads, events])
 
 const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
     // 1. Charge le thread
@@ -473,34 +433,7 @@ const selectedEventsSet = useMemo(() =>
     }
   }, [densityLevel, selectedEventIds, handleEventClick, toggleEventSelection])  // ← AJOUTE LES DÉPENDANCES
 
-  // États de chargement
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bandhu-primary" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center p-6">
-          <div className="text-4xl mb-3 opacity-30">⚠️</div>
-          <p className="text-gray-500">Erreur</p>
-          <p className="text-xs text-gray-600 mt-1">{error}</p>
-          <button
-            onClick={loadThreads}
-            className="mt-4 px-4 py-2 text-sm bg-bandhu-primary/20 rounded hover:bg-bandhu-primary/30"
-          >
-            Réessayer
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (threads.length === 0) {
+  if (threadsWithEvents.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center p-6">
@@ -513,7 +446,7 @@ const selectedEventsSet = useMemo(() =>
 
   return (
     <div className="space-y-0.5">
-      {threads.map(thread => {
+      {threadsWithEvents.map(thread => {
         const isExpanded = expandedThreadIds.has(thread.id)
         const threadHeight = isExpanded ? thread.events.length * itemHeight : 0
 
