@@ -8,15 +8,17 @@ const BUFFER = 5 // Nombre d'items à render avant/après la zone visible
 
 export default function TimelineView() {
   const { 
-    events, 
-    isLoading, 
-    zoomLevel, 
-    densityLevel,
-    hasMore, 
-    loadMore, 
-    loadPrevious,
-    getItemHeight 
-  } = useTimeline()
+  events, 
+  isLoading, 
+  zoomLevel, 
+  densityLevel,
+  hasMore, 
+  loadMore, 
+  loadPrevious,
+  getItemHeight,
+  selectedEventIds,          // ← AJOUTER
+  toggleEventSelection      // ← AJOUTER
+} = useTimeline()
   
   // Réfs
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -197,6 +199,7 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
   // RENDU DES ÉVÉNEMENTS SELON LA DENSITÉ
   // ------------------------------------------------------------
   const renderEvent = useCallback((event: TimelineEvent) => {
+    const isSelected = selectedEventIds.includes(event.id)
     switch (densityLevel) {
       // --------------------------------------------------------
       // NIVEAU 0 : DÉTAILLÉ (120px)
@@ -204,19 +207,43 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       case 0:
   return (
     <div className="relative pl-6 h-full">
-      <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        <div className={`
-          w-3 h-3 rounded-full border-2
-          ${event.role === 'user' 
-            ? 'bg-blue-500/20 border-blue-400' 
-            : event.role === 'assistant'
-            ? 'bg-purple-500/20 border-purple-400'
-            : 'bg-gray-500/20 border-gray-400'
-          }
-        `} />
-      </div>
+      <div 
+  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
+  onClick={(e) => {
+    e.stopPropagation()
+    toggleEventSelection(event.id)
+  }}
+  title={isSelected ? "Désélectionner" : "Sélectionner"}
+>
+  {isSelected && (
+    <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
+  )}
+  
+  <div className={`
+    relative w-3 h-3 rounded-full border-2 transition-all duration-300
+    ${isSelected 
+      ? 'bg-bandhu-primary border-bandhu-primary scale-125 shadow-lg shadow-bandhu-primary/30' 
+      : event.role === 'user' 
+        ? 'bg-blue-500/20 border-blue-400 hover:border-blue-300 hover:scale-110' 
+        : event.role === 'assistant' 
+          ? 'bg-purple-500/20 border-purple-400 hover:border-purple-300 hover:scale-110'
+          : 'bg-gray-500/20 border-gray-400 hover:scale-110'
+    }
+  `} />
+  
+  <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
+    {isSelected ? 'Désélectionner' : 'Sélectionner'}
+    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+  </div>
+</div>
 
-            <div className="ml-6 p-3 rounded-lg bg-gray-800/30 border border-gray-700/50 hover:border-gray-600/70 transition h-full flex flex-col">
+            <div className={`
+  ml-6 p-3 rounded-lg border-2 transition-all duration-300 h-full flex flex-col
+  ${isSelected
+    ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-md shadow-bandhu-primary/20'
+    : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600/70'
+  }
+`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   event.role === 'user'
@@ -250,19 +277,45 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       case 1:
         return (
           <div className="relative pl-6 h-full">
-            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div 
+              className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleEventSelection(event.id)
+              }}
+              title={isSelected ? "Désélectionner" : "Sélectionner"}
+            >
+              {isSelected && (
+                <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
+              )}
+              {isSelected && (
+                <div className="absolute inset-0 -m-0.5 rounded-full bg-bandhu-primary/20" />
+              )}
               <div className={`
-                w-2 h-2 rounded-full
-                ${event.role === 'user' 
-                  ? 'bg-blue-500/40' 
-                  : event.role === 'assistant'
-                  ? 'bg-purple-500/40'
-                  : 'bg-gray-500/40'
+                relative w-2 h-2 rounded-full border transition-all duration-300
+                ${isSelected 
+                  ? 'bg-bandhu-primary border-bandhu-primary scale-150 shadow-lg shadow-bandhu-primary/40' 
+                  : event.role === 'user' 
+                    ? 'bg-blue-500/40 border-blue-400/60 hover:border-blue-300 hover:scale-125' 
+                    : event.role === 'assistant' 
+                      ? 'bg-purple-500/40 border-purple-400/60 hover:border-purple-300 hover:scale-125'
+                      : 'bg-gray-500/40 border-gray-400/60 hover:scale-125'
                 }
               `} />
+              <div className="absolute inset-0 -m-1 rounded-full bg-current opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+              <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
+                {isSelected ? 'Désélectionner ✓' : 'Sélectionner'}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+              </div>
             </div>
 
-            <div className="ml-6 p-2 rounded-lg bg-gray-800/20 border border-gray-700/30 h-full flex flex-col">
+            <div className={`
+              ml-6 p-2 rounded-lg border transition-all duration-200 h-full flex flex-col
+              ${isSelected
+                ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm shadow-bandhu-primary/20'
+                : 'bg-gray-800/20 border-gray-700/30'
+              }
+            `}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-gray-400">
                   {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -288,19 +341,38 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       case 2:
         return (
           <div className="relative pl-4 h-full flex items-center">
-            <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div 
+              className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleEventSelection(event.id)
+              }}
+              title={isSelected ? "Désélectionner" : "Sélectionner"}
+            >
+              {isSelected && (
+                <>
+                  <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/20 animate-pulse" />
+                  <div className="absolute inset-0 -m-0.5 rounded-full bg-bandhu-primary/40" />
+                </>
+              )}
               <div className={`
-                w-1.5 h-1.5 rounded-full
-                ${event.role === 'user' 
-                  ? 'bg-blue-500/60' 
-                  : event.role === 'assistant'
-                  ? 'bg-purple-500/60'
-                  : 'bg-gray-500/60'
+                relative w-1.5 h-1.5 rounded-full border transition-all duration-200
+                ${isSelected 
+                  ? 'bg-bandhu-primary border-bandhu-primary scale-150 shadow-md shadow-bandhu-primary/30' 
+                  : event.role === 'user' ? 'bg-blue-500/60 border-blue-400/50' 
+                  : event.role === 'assistant' ? 'bg-purple-500/60 border-purple-400/50' 
+                  : 'bg-gray-500/60 border-gray-400/50'
                 }
               `} />
             </div>
 
-            <div className="ml-4 flex items-center justify-between w-full pr-2">
+            <div className={`
+              ml-4 flex items-center justify-between w-full pr-2 transition-all duration-200
+              ${isSelected
+                ? 'px-2 py-1 rounded bg-bandhu-primary/5 border-l-2 border-bandhu-primary'
+                : ''
+              }
+            `}>
               <span className="text-xs text-gray-400 truncate">
                 {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </span>
@@ -317,17 +389,35 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       case 3:
         return (
           <div className="relative pl-3 h-full flex items-center">
+            <div 
+              className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleEventSelection(event.id)
+              }}
+              title={isSelected ? "Désélectionner" : "Sélectionner"}
+            >
+              {isSelected && (
+                <div className="absolute inset-0 -m-0.5 rounded-sm bg-bandhu-primary/30 animate-pulse" />
+              )}
+              <div className={`
+                relative w-1 h-6 rounded-sm border transition-all duration-200
+                ${isSelected 
+                  ? 'bg-bandhu-primary border-bandhu-primary shadow-sm shadow-bandhu-primary/40' 
+                  : event.role === 'user' ? 'bg-blue-500/70 border-blue-400/60' 
+                  : event.role === 'assistant' ? 'bg-purple-500/70 border-purple-400/60' 
+                  : 'bg-gray-500/70 border-gray-400/60'
+                }
+              `} />
+            </div>
+
             <div className={`
-              absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2
-              w-1 h-6 rounded-sm
-              ${event.role === 'user' 
-                ? 'bg-blue-500/70' 
-                : event.role === 'assistant'
-                ? 'bg-purple-500/70'
-                : 'bg-gray-500/70'
+              ml-3 text-[10px] truncate w-full pr-2 px-1 py-0.5 rounded transition-all duration-200
+              ${isSelected
+                ? 'text-bandhu-primary bg-bandhu-primary/10 font-medium'
+                : 'text-gray-400'
               }
-            `} />
-            <div className="ml-3 text-[10px] text-gray-400 truncate w-full pr-2">
+            `}>
               {event.contentPreview.substring(0, 40)}
               {event.contentPreview.length > 40 ? '...' : ''}
             </div>
@@ -340,21 +430,28 @@ targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
       case 4:
         return (
           <div 
-            className={`
-              absolute left-0 right-0 mx-2 rounded-sm
-              ${event.role === 'user' 
-                ? 'bg-blue-500/80' 
-                : event.role === 'assistant'
-                ? 'bg-purple-500/80'
+            className={`absolute left-0 right-0 mx-2 rounded-sm cursor-pointer group transition-all duration-200 ${
+              isSelected 
+                ? 'bg-bandhu-primary shadow-md shadow-bandhu-primary/40 h-2 -my-0.5' 
+                : event.role === 'user' ? 'bg-blue-500/80' 
+                : event.role === 'assistant' ? 'bg-purple-500/80' 
                 : 'bg-gray-500/80'
-              }
-            `}
-            style={{ height: '6px' }}
-            title={`${event.createdAt.toLocaleString()}: ${event.contentPreview}`}
-          />
+            }`}
+            style={{ height: isSelected ? '8px' : '6px' }}
+            title={isSelected ? "Désélectionner" : `${event.createdAt.toLocaleString()}: ${event.contentPreview}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleEventSelection(event.id)
+            }}
+          >
+            {isSelected && (
+              <div className="absolute inset-0 rounded-sm bg-white/20 animate-pulse" />
+            )}
+          </div>
         )
-    }
-  }, [densityLevel])
+
+  }  // ← Ferme le switch
+  }, [densityLevel, selectedEventIds, toggleEventSelection])  // ← Ferme le useCallback
 
   // ------------------------------------------------------------
   // RENDU DES ÉVÉNEMENTS VISIBLES
