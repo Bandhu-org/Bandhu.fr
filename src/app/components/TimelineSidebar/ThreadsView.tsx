@@ -1,7 +1,7 @@
 // src/components/TimelineSidebar/ThreadsView.tsx
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTimeline, type TimelineEvent } from '@/contexts/TimelineContext'
 
 interface ThreadGroup {
@@ -22,8 +22,15 @@ export default function ThreadsView() {
   const itemHeight = getItemHeight()
 
   useEffect(() => {
-    loadThreads()
-  }, [])
+  loadThreads()
+}, [])  // Garde vide pour le chargement initial
+
+// MAIS AJOUTE UN EFFET POUR selectedEventIds :
+useEffect(() => {
+  // Ce code s'exécute à chaque changement de selectedEventIds
+  console.log('🔵 selectedEventIds changed:', selectedEventIds.length)
+  // Forcer un re-render des events
+}, [selectedEventIds])
 
   const loadThreads = async () => {
     console.log('🔍 [THREADS] Start loading...')
@@ -104,6 +111,12 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
       return newSet
     })
   }
+
+  // Re-calculer les events sélectionnés quand selectedEventIds change
+const selectedEventsSet = useMemo(() => 
+  new Set(selectedEventIds),
+  [selectedEventIds]
+)
 
   // ============================================================
   // RENDER HEADER SELON DENSITÉ
@@ -221,30 +234,48 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
       className="relative pl-6 h-full cursor-pointer"
       onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
     >
-            {/* Barre latérale cliquable */}
+            {/* Barre latérale cliquable avec tooltip et animations */}
 <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
+  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
   onClick={(e) => {
     e.stopPropagation()
     toggleEventSelection(event.id)
   }}
+  title={isSelected ? "Désélectionner" : "Sélectionner"}
 >
+  {/* Effet de halo pulse quand sélectionné */}
+  {isSelected && (
+    <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
+  )}
+  
+  {/* Le point principal */}
   <div className={`
-    w-3 h-3 rounded-full border-2 transition-all duration-200
+    relative w-3 h-3 rounded-full border-2 transition-all duration-300
     ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-125' 
+      ? 'bg-bandhu-primary border-bandhu-primary scale-125 shadow-lg shadow-bandhu-primary/30' 
       : event.role === 'user' 
-        ? 'bg-blue-500/20 border-blue-400 hover:border-blue-300' 
+        ? 'bg-blue-500/20 border-blue-400 hover:border-blue-300 hover:scale-110' 
         : event.role === 'assistant' 
-          ? 'bg-purple-500/20 border-purple-400 hover:border-purple-300'
-          : 'bg-gray-500/20 border-gray-400'
+          ? 'bg-purple-500/20 border-purple-400 hover:border-purple-300 hover:scale-110'
+          : 'bg-gray-500/20 border-gray-400 hover:scale-110'
     }
   `} />
+  
+  {/* Animation d'onde quand sélectionné */}
+  {isSelected && (
+    <div className="absolute inset-0 -m-2 rounded-full bg-bandhu-primary/20 animate-pulse" />
+  )}
+  
+  {/* Tooltip */}
+  <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
+    {isSelected ? 'Désélectionner' : 'Sélectionner'}
+    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+  </div>
 </div>
             <div className={`
-  ml-6 p-3 rounded-lg border transition-all duration-200 h-full flex flex-col
+  ml-6 p-3 rounded-lg border-2 transition-all duration-300 h-full flex flex-col
   ${isSelected
-    ? 'bg-bandhu-primary/10 border-bandhu-primary/50'
+    ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-md shadow-bandhu-primary/20'
     : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600/70'
   }
 `}>
@@ -333,7 +364,7 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
           />
         )
     }
-  }, [densityLevel])
+  }, [densityLevel, selectedEventIds, handleEventClick, toggleEventSelection])  // ← AJOUTE LES DÉPENDANCES
 
   // États de chargement
   if (isLoading) {

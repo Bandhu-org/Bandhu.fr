@@ -1562,8 +1562,8 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
                     <div
   className={`px-5 py-3 rounded-xl bg-gradient-to-br from-gray-900/90 to-blue-800/50 border ${
     selectedMessageIds.has(event.id) 
-      ? 'border-purple-500/60 ring-2 ring-purple-500/30'
-      : 'border-bandhu-secondary/30'
+  ? 'border-bandhu-primary shadow-lg shadow-bandhu-primary/20 ring-1 ring-bandhu-primary/40 bg-gradient-to-r from-blue-900/10 to-bandhu-primary/5'
+  : 'border-bandhu-secondary/30'
   } text-gray-100 shadow-lg overflow-hidden relative`}
   style={{
     maxHeight: expandedMessages[event.id] ? 'none' : COLLAPSE_HEIGHT,
@@ -1709,9 +1709,9 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
   {/* SECTION AI AVEC CONTAINER ESPACEMENT */}
   <div className={`bg-transparent rounded-2xl ${
     selectedMessageIds.has(event.id) 
-      ? 'ring-1 ring-purple-500/30 shadow-lg shadow-purple-500/10' 
-      : ''
-  }`}>
+  ? 'ring-2 ring-bandhu-primary/50 shadow-lg shadow-bandhu-primary/15 bg-gradient-to-r from-purple-900/10 to-bandhu-primary/5' 
+  : ''
+}`}>
                     
                     {/* Message AI */}
                     <div className="px-4 py-5 bg-transparent text-gray-100 relative">
