@@ -22,7 +22,6 @@ export default function ThreadsView() {
   const itemHeight = getItemHeight()
 
 const threadsWithEvents = useMemo(() => {
-  // Grouper les events par threadId
   const eventsByThread = new Map<string, TimelineEvent[]>()
   
   events.forEach(event => {
@@ -32,11 +31,15 @@ const threadsWithEvents = useMemo(() => {
     eventsByThread.get(event.threadId)!.push(event)
   })
   
-  // Combiner threads avec leurs events
-  return threads.map(thread => ({
-    ...thread,
-    events: eventsByThread.get(thread.id) || []
-  }))
+  return threads
+    .map(thread => ({
+      ...thread,
+      events: eventsByThread.get(thread.id) || []
+    }))
+    .sort((a, b) => {
+      // Tri par lastActivity : ANCIEN en haut, RÉCENT en bas
+      return a.lastActivity.getTime() - b.lastActivity.getTime()
+    })
 }, [threads, events])
 
 const handleEventClick = useCallback(async (eventId: string, threadId: string) => {

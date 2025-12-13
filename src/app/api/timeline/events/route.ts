@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           createdAt: true
         },
         orderBy: {
-          createdAt: 'desc'
+          createdAt: 'asc'
         }
       })
 
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
           }
         },
         orderBy: {
-          createdAt: 'desc'
+          createdAt: 'asc'
         },
         skip: offset,
         take: Math.min(limit, 500)

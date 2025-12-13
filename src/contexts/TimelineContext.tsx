@@ -321,10 +321,9 @@ const [selectedEventIds, setSelectedEventIdsState] = useState<string[]>([])
 
 
 const addEvent = useCallback((event: TimelineEvent) => {
-  // 1. Ajouter l'événement
   setEvents(prev => {
     if (prev.some(e => e.id === event.id)) return prev
-    return [event, ...prev]
+    return [...prev, event]  // ← Nouveau en FIN
   })
   
   // 2. Mettre à jour le thread correspondant
