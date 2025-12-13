@@ -31,7 +31,7 @@ const threadsWithEvents = useMemo(() => {
     eventsByThread.get(event.threadId)!.push(event)
   })
   
-  return threads
+  const result = threads
     .map(thread => ({
       ...thread,
       events: eventsByThread.get(thread.id) || []
@@ -40,6 +40,8 @@ const threadsWithEvents = useMemo(() => {
       // Tri par lastActivity : ANCIEN en haut, RÉCENT en bas
       return a.lastActivity.getTime() - b.lastActivity.getTime()
     })
+  
+  return result
 }, [threads, events])
 
 const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
