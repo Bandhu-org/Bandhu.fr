@@ -10,33 +10,34 @@ export default function TimelineSidebar() {
   const { 
     isTimelineOpen, 
     closeTimeline,
-    densityLevel,
-    setDensityLevel,
+    densityRatio,
     viewMode,
-    setViewMode
+    setViewMode,
+    // ✨ Zoom temporel
+    zoomIn,
+    zoomOut,
+    msPerPixel
   } = useTimeline()
 
+  // ✨ Zoom temporel (pas density)
   const handleZoomOut = () => {
-    if (densityLevel < 4) {
-      setDensityLevel((densityLevel + 1) as typeof densityLevel)
-    }
+    zoomOut()
   }
 
   const handleZoomIn = () => {
-    if (densityLevel > 0) {
-      setDensityLevel((densityLevel - 1) as typeof densityLevel)
-    }
+    zoomIn()
   }
 
-  const densityLabels = [
-    { level: 0, label: 'Détaillé', icon: '🔍' },
-    { level: 1, label: 'Condensé', icon: '📄' },
-    { level: 2, label: 'Dense', icon: '📋' },
-    { level: 3, label: 'Bâtonnets', icon: '📊' },
-    { level: 4, label: 'Ultra-dense', icon: '📈' }
-  ]
+  // ✨ Label de densité basé sur le ratio continu
+const getDensityLabel = (ratio: number) => {
+  if (ratio > 0.8) return { label: 'Détaillé', icon: '🔍' }
+  if (ratio > 0.6) return { label: 'Condensé', icon: '📄' }
+  if (ratio > 0.4) return { label: 'Dense', icon: '📋' }
+  if (ratio > 0.2) return { label: 'Bâtonnets', icon: '📊' }
+  return { label: 'Ultra-dense', icon: '📈' }
+}
 
-  const currentDensity = densityLabels.find(d => d.level === densityLevel) || densityLabels[0]
+const currentDensity = getDensityLabel(densityRatio)
 
   return (
     <div className="w-80 h-full bg-gradient-to-b from-gray-900/95 to-gray-950/95 border-l border-gray-800 shadow-2xl overflow-hidden flex flex-col">
@@ -87,7 +88,7 @@ export default function TimelineSidebar() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleZoomIn}
-              disabled={densityLevel === 0}
+              disabled={false}
               className="p-1.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
               title="Zoom avant (plus détaillé)"
             >
@@ -95,13 +96,17 @@ export default function TimelineSidebar() {
             </button>
 
             <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/30 rounded-lg min-w-[120px]">
-              <span className="text-sm">{currentDensity.icon}</span>
-              <span className="text-xs text-gray-300">{currentDensity.label}</span>
+              <span className="text-sm">🔍</span>
+              <span className="text-xs text-gray-300">
+                {msPerPixel < 3600000 * 24 ? `${Math.round(msPerPixel / 3600000)}h/px` :
+                 msPerPixel < 3600000 * 24 * 30 ? `${Math.round(msPerPixel / (3600000 * 24))}j/px` :
+                 `${Math.round(msPerPixel / (3600000 * 24 * 30))}m/px`}
+              </span>
             </div>
 
             <button
               onClick={handleZoomOut}
-              disabled={densityLevel === 4}
+              disabled={false}
               className="p-1.5 rounded-lg hover:bg-gray-800/50 text-gray-400 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
               title="Zoom arrière (plus dense)"
             >
@@ -109,20 +114,9 @@ export default function TimelineSidebar() {
             </button>
           </div>
 
-          {/* Indicateur de niveau */}
+          {/* ✨ Indicateur auto */}
           <div className="flex items-center gap-1">
-            {densityLabels.map(({ level }) => (
-              <div
-                key={level}
-                className={`w-1.5 h-1.5 rounded-full ${
-                  level === densityLevel
-                    ? 'bg-bandhu-primary'
-                    : level < densityLevel
-                    ? 'bg-bandhu-primary/40'
-                    : 'bg-gray-700'
-                }`}
-              />
-            ))}
+            <span className="text-xs text-bandhu-primary/60">AUTO</span>
           </div>
         </div>
       </div>
@@ -138,12 +132,8 @@ export default function TimelineSidebar() {
           <div className="flex items-center gap-4">
             <span>Bandhu Timeline</span>
             <span className="px-2 py-0.5 bg-gray-800/50 rounded text-gray-400">
-              {densityLevel === 0 ? '120px' :
-               densityLevel === 1 ? '60px' :
-               densityLevel === 2 ? '30px' :
-               densityLevel === 3 ? '15px' :
-               '8px'} par événement
-            </span>
+  Auto • {currentDensity.label} ({(densityRatio * 100).toFixed(0)}%)
+</span>
           </div>
           <span className="text-bandhu-primary/60">beta</span>
         </div>
