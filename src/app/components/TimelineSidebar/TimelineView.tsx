@@ -14,6 +14,9 @@ type VisualizationMode = 'bars' | 'mini' | 'discrete'
 const MINI_ITEM_HEIGHT = 32
 const DISCRETE_ITEM_HEIGHT = 96
 
+// ✨ NOUVEAU : Compteur pour éviter les events en rafale
+let pendingZoomTimeout: NodeJS.Timeout | null = null
+
 /* ============================================================
    RULER TEMPOREL
 ============================================================ */
@@ -281,29 +284,50 @@ useEffect(() => {
   if (!container) return
 
   const onWheel = (e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault()
-      e.stopPropagation()
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // ✨ Throttle - Ignorer si déjà en train de zoomer
+    if (isZoomingRef.current) {
+      console.log('⏭️ Zoom ignoré (trop rapide)')
       
-      // ✨ Throttle - Ignorer si déjà en train de zoomer
-      if (isZoomingRef.current) {
-        console.log('⏭️ Zoom ignoré (trop rapide)')
-        return
+      // ✨ NOUVEAU : Annuler le timeout précédent et créer un nouveau
+      if (pendingZoomTimeout) {
+        clearTimeout(pendingZoomTimeout)
       }
-
-      isZoomingRef.current = true
       
-      // Capturer AVANT le zoom
-      const scrollTopBefore = container.scrollTop
-      const totalHeightBefore = container.scrollHeight
-      const scrollRatioBefore = scrollTopBefore / totalHeightBefore
+      // ✨ Débloquer après inactivité
+      pendingZoomTimeout = setTimeout(() => {
+        isZoomingRef.current = false
+        console.log('🔓 Throttle débloqué après inactivité')
+      }, 300) // 300ms d'inactivité = reset
+      
+      return
+    }
 
-      console.log('🎯 AVANT ZOOM:', {
-        scrollTopBefore,
-        scrollHeight: totalHeightBefore,
-        scrollRatioBefore,
-        msPerPixel
-      })
+    isZoomingRef.current = true
+    
+    // ✨ Clear le timeout si on traite un event
+    if (pendingZoomTimeout) {
+      clearTimeout(pendingZoomTimeout)
+      pendingZoomTimeout = null
+    }
+      
+      // ✨ Capturer le CENTRE de la fenêtre visible AVANT le zoom
+const scrollTopBefore = container.scrollTop
+const clientHeight = container.clientHeight
+const totalHeightBefore = container.scrollHeight
+const centerYBefore = scrollTopBefore + clientHeight / 2
+const centerRatioBefore = centerYBefore / totalHeightBefore
+
+console.log('🎯 AVANT ZOOM:', {
+  scrollTopBefore,
+  centerYBefore,
+  scrollHeight: totalHeightBefore,
+  centerRatioBefore,
+  msPerPixel
+})
 
       if (e.deltaY < 0) {
         zoomIn()
@@ -313,25 +337,29 @@ useEffect(() => {
 
       // ✨ Double RAF pour attendre le re-render de React
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const totalHeightAfter = container.scrollHeight
-          const newScrollTopCompensated = scrollRatioBefore * totalHeightAfter
+  requestAnimationFrame(() => {
+    const totalHeightAfter = container.scrollHeight
+    
+    // ✨ Recalculer la position pour garder le CENTRE au même ratio
+    const newCenterY = centerRatioBefore * totalHeightAfter
+    const newScrollTop = newCenterY - clientHeight / 2
 
-          console.log('🔄 APRÈS ZOOM:', {
-            scrollHeight: totalHeightAfter,
-            heightDelta: totalHeightAfter - totalHeightBefore,
-            scrollRatioBefore,
-            oldScrollTop: container.scrollTop,
-            newScrollTopCompensated,
-            msPerPixel
-          })
-          
-          container.scrollTop = Math.max(0, newScrollTopCompensated)
+    console.log('🔄 APRÈS ZOOM:', {
+      scrollHeight: totalHeightAfter,
+      heightDelta: totalHeightAfter - totalHeightBefore,
+      centerRatioBefore,
+      newCenterY,
+      oldScrollTop: container.scrollTop,
+      newScrollTop,
+      msPerPixel
+    })
+    
+    container.scrollTop = Math.max(0, newScrollTop)
           
           // Débloquer après un délai
           setTimeout(() => {
             isZoomingRef.current = false
-          }, 100)
+          }, 200)
         })
       })
     }
