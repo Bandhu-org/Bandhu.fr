@@ -10,33 +10,46 @@ import React, {
   ReactNode,
   useMemo,
 } from 'react'
+import type {
+  EventMetadata,
+  EventDetails,
+  ThreadData,
+  ViewMode,
+  TimelineRange,
+  MetadataResponse,
+  DetailsResponse
+} from '@/types/timeline'
 
 /* ============================================================
-   ZOOM DISCRET — 1 bucket temporel = 1px
+   ZOOM STEPS - Du plus zoomé au plus large
 ============================================================ */
 
 const ZOOM_STEPS_MS = [
-  5_000,             // 5 secondes / px
-  15_000,            // 15 secondes
-  30_000,            // 30 secondes
-  60_000,            // 1 minute
-  2 * 60_000,        // 2 minutes
-  5 * 60_000,        // 5 minutes
-  10 * 60_000,       // 10 minutes
-  30 * 60_000,       // 30 minutes
-  1 * 3_600_000,     // 1 heure
-  2 * 3_600_000,     // 2 heures
-  4 * 3_600_000,     // 4 heures
-  8 * 3_600_000,     // 8 heures
-  16 * 3_600_000,    // 16 heures
-  32 * 3_600_000,    // 32 heures
-  64 * 3_600_000,    // ~5 jours
-  128 * 3_600_000,   // ~10 jours
-  256 * 3_600_000,   // ~20 jours
-  512 * 3_600_000,   // ~40 jours
-  8760 * 3_600_000,  // 1 an
+  100,             // 100ms/px (ZOOM MAX - discrete)
+  200,             // 200ms/px ✨ NOUVEAU
+  500,             // 500ms/px
+  1_000,           // 1s/px
+  2_000,           // 2s/px ✨ NOUVEAU
+  5_000,           // 5s/px
+  10_000,          // 10s/px ✨ NOUVEAU
+  15_000,          // 15s/px
+  30_000,          // 30s/px ✨ NOUVEAU
+  60_000,          // 1min/px
+  2 * 60_000,      // 2min/px ✨ NOUVEAU
+  5 * 60_000,      // 5min/px
+  10 * 60_000,     // 10min/px
+  15 * 60_000,     // 15min/px ✨ NOUVEAU
+  30 * 60_000,     // 30min/px
+  1 * 3_600_000,   // 1h/px
+  2 * 3_600_000,   // 2h/px
+  4 * 3_600_000,   // 4h/px
+  8 * 3_600_000,   // 8h/px
+  16 * 3_600_000,  // 16h/px
+  24 * 3_600_000,  // 1 jour/px
+  7 * 24 * 3_600_000,    // 1 semaine/px
+  30 * 24 * 3_600_000,   // 1 mois/px
+  365 * 24 * 3_600_000,  // 1 an/px
 ] as const
-
 
 const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v))
@@ -45,36 +58,11 @@ const clamp = (v: number, min: number, max: number) =>
    TYPES
 ============================================================ */
 
-export interface TimelineEvent {
-  id: string
-  createdAt: Date
-  role: 'user' | 'assistant' | 'system'
-  contentPreview: string
-  threadId: string
-  threadLabel: string
-  userId: string
-  userName?: string
-}
-
-export interface ThreadData {
-  id: string
-  label: string
-  messageCount: number
-  lastActivity: Date
-}
-
-export type ViewMode = 'timeline' | 'threads'
-
-interface TimelineRange {
-  start: Date
-  end: Date
-}
-
 interface TimelineContextType {
   /* State */
-  events: TimelineEvent[]
+  eventsMetadata: EventMetadata[]
+  eventsDetailsCache: Map<string, EventDetails>
   threads: ThreadData[]
-  viewRange: TimelineRange
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
   isLoading: boolean
@@ -104,7 +92,9 @@ interface TimelineContextType {
   closeTimeline: () => void
 
   /* Loading */
-  loadEvents: (range: TimelineRange, reset?: boolean) => Promise<void>
+  loadMetadata: () => Promise<void>
+  loadDetails: (eventIds: string[]) => Promise<void>
+  getEventDetails: (eventId: string) => EventDetails | undefined
 
   /* Selection */
   selectedEventIds: string[]
@@ -125,20 +115,15 @@ const TimelineContext = createContext<TimelineContextType | undefined>(undefined
 export function TimelineProvider({ children }: { children: ReactNode }) {
   /* -------------------- Core state -------------------- */
 
-  const [events, setEvents] = useState<TimelineEvent[]>([])
+  const [eventsMetadata, setEventsMetadata] = useState<EventMetadata[]>([])
+  const [eventsDetailsCache, setEventsDetailsCache] = useState<Map<string, EventDetails>>(new Map())
   const [threads, setThreads] = useState<ThreadData[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('timeline')
   const [isLoading, setIsLoading] = useState(false)
 
-  const [viewRange, setViewRange] = useState<TimelineRange>(() => {
-    const end = new Date()
-    const start = new Date(end.getTime() - 1000 * 60 * 60 * 24 * 30)
-    return { start, end }
-  })
-
   /* -------------------- Zoom discret -------------------- */
 
-  const [zoomIndex, setZoomIndex] = useState(2) // 1h/px
+  const [zoomIndex, setZoomIndex] = useState(12) // Par défaut : 1h/px
 
   const msPerPixel = useMemo(
     () => ZOOM_STEPS_MS[clamp(zoomIndex, 0, ZOOM_STEPS_MS.length - 1)],
@@ -155,23 +140,17 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     []
   )
 
-  /* -------------------- Derived timeline bounds -------------------- */
+  /* -------------------- Timeline bounds (basés sur les EVENTS) -------------------- */
 
   const timelineStart = useMemo(() => {
-    if (events.length === 0) return viewRange.start
-    return events.reduce(
-      (min, e) => (e.createdAt < min ? e.createdAt : min),
-      events[0].createdAt
-    )
-  }, [events, viewRange.start])
+    if (eventsMetadata.length === 0) return new Date()
+    return eventsMetadata[0].createdAt // ✨ Premier event
+  }, [eventsMetadata])
 
   const timelineEnd = useMemo(() => {
-    if (events.length === 0) return viewRange.end
-    return events.reduce(
-      (max, e) => (e.createdAt > max ? e.createdAt : max),
-      events[0].createdAt
-    )
-  }, [events, viewRange.end])
+    if (eventsMetadata.length === 0) return new Date()
+    return eventsMetadata[eventsMetadata.length - 1].createdAt // ✨ Dernier event
+  }, [eventsMetadata])
 
   const totalTimelineMs = useMemo(
     () => timelineEnd.getTime() - timelineStart.getTime(),
@@ -226,50 +205,98 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     setSelectedEventIds([])
   }, [])
 
-  /* -------------------- Loading -------------------- */
+  /* -------------------- Loading Metadata -------------------- */
 
-  const loadEvents = useCallback(async (range: TimelineRange, reset = true) => {
+  const loadMetadata = useCallback(async () => {
     setIsLoading(true)
+    console.log('📊 [TIMELINE] Loading metadata...')
+    
     try {
-      const params = new URLSearchParams({
-        start: range.start.toISOString(),
-        end: range.end.toISOString(),
-        limit: '5000',
-      })
+      const res = await fetch('/api/timeline/metadata')
+      if (!res.ok) throw new Error('Failed to load metadata')
 
-      const res = await fetch(`/api/timeline/events?${params}`)
-      if (!res.ok) throw new Error('Failed to load timeline')
-
-      const data = await res.json()
-      const loaded: TimelineEvent[] = data.events.map((e: any) => ({
+      const data: MetadataResponse = await res.json()
+      
+      const metadata: EventMetadata[] = data.events.map(e => ({
         id: e.id,
         createdAt: new Date(e.createdAt),
         role: e.role,
-        contentPreview: e.contentPreview ?? '',
-        threadId: e.threadId,
-        threadLabel: e.threadLabel ?? '',
-        userId: e.userId ?? '',
-        userName: e.userName,
+        threadId: e.threadId
       }))
 
-      setEvents(reset ? loaded : prev => [...prev, ...loaded])
+      setEventsMetadata(metadata)
+      console.log(`✅ [TIMELINE] Loaded ${metadata.length} metadata`)
+
+    } catch (error) {
+      console.error('❌ [TIMELINE] Error loading metadata:', error)
     } finally {
       setIsLoading(false)
     }
   }, [])
 
+  /* -------------------- Loading Details -------------------- */
+
+  const loadDetails = useCallback(async (eventIds: string[]) => {
+    if (eventIds.length === 0) return
+
+    // Filtrer les IDs déjà en cache
+    const missingIds = eventIds.filter(id => !eventsDetailsCache.has(id))
+    
+    if (missingIds.length === 0) {
+      console.log('✅ [TIMELINE] All details in cache')
+      return
+    }
+
+    console.log(`📝 [TIMELINE] Loading ${missingIds.length} details...`)
+
+    try {
+      // Batch par 500 max
+      const batches: string[][] = []
+      for (let i = 0; i < missingIds.length; i += 500) {
+        batches.push(missingIds.slice(i, i + 500))
+      }
+
+      for (const batch of batches) {
+        const res = await fetch(`/api/timeline/details?ids=${batch.join(',')}`)
+        if (!res.ok) throw new Error('Failed to load details')
+
+        const data: DetailsResponse = await res.json()
+
+        // Ajouter au cache
+        setEventsDetailsCache(prev => {
+          const newCache = new Map(prev)
+          Object.entries(data.details).forEach(([id, details]) => {
+            newCache.set(id, { id, ...details })
+          })
+          return newCache
+        })
+
+        console.log(`✅ [TIMELINE] Loaded ${Object.keys(data.details).length} details`)
+      }
+
+    } catch (error) {
+      console.error('❌ [TIMELINE] Error loading details:', error)
+    }
+  }, [eventsDetailsCache])
+
+  /* -------------------- Get Event Details -------------------- */
+
+  const getEventDetails = useCallback((eventId: string): EventDetails | undefined => {
+    return eventsDetailsCache.get(eventId)
+  }, [eventsDetailsCache])
+
   /* -------------------- Initial load -------------------- */
 
   useEffect(() => {
-    loadEvents(viewRange, true)
-  }, [viewRange, loadEvents])
+    loadMetadata()
+  }, [loadMetadata])
 
   /* -------------------- Context value -------------------- */
 
   const value: TimelineContextType = {
-    events,
+    eventsMetadata,
+    eventsDetailsCache,
     threads,
-    viewRange,
     viewMode,
     setViewMode,
     isLoading,
@@ -294,7 +321,9 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     openTimeline,
     closeTimeline,
 
-    loadEvents,
+    loadMetadata,
+    loadDetails,
+    getEventDetails,
 
     selectedEventIds,
     toggleEventSelection,

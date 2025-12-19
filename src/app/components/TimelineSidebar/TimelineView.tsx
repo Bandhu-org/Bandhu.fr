@@ -2,96 +2,22 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import { useTimeline, type TimelineEvent } from '@/contexts/TimelineContext'
+import { useTimeline } from '@/contexts/TimelineContext'
+import type { EventMetadata, EventDetails } from '@/types/timeline'
 
-const PERIOD_MS = 7 * 24 * 3600000 // 7 jours
+/* ============================================================
+   TYPES & CONSTANTS
+============================================================ */
+
+type VisualizationMode = 'bars' | 'mini' | 'discrete'
+
+const MINI_ITEM_HEIGHT = 32
 const DISCRETE_ITEM_HEIGHT = 96
 
-interface MinuteGroup {
-  minuteTs: number
-  events: TimelineEvent[]
-}
+/* ============================================================
+   RULER TEMPOREL
+============================================================ */
 
-function MinuteContainer({
-  minute,
-  events,
-  itemHeight,
-  renderEvent,
-}: {
-  minute: number
-  events: TimelineEvent[]
-  itemHeight: number
-  renderEvent: (e: TimelineEvent) => React.ReactNode
-}) {
-  const [expanded, setExpanded] = useState(true)
-
-  const height = expanded ? events.length * itemHeight : 0
-
-  return (
-    <div className="border border-gray-700/50 rounded overflow-hidden bg-gray-900/20 transition-all">
-      {/* HEADER (copié de ThreadsView) */}
-      <div
-        onClick={() => setExpanded(v => !v)}
-        className="cursor-pointer p-2 bg-gray-800/40 hover:bg-gray-800/60 flex items-center justify-between"
-        style={{ height: itemHeight }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">
-            {expanded ? '▼' : '▶'}
-          </span>
-          <span className="text-sm text-gray-200">
-            {new Date(minute).toLocaleTimeString('fr-FR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-          <span className="text-xs text-gray-500">
-            ({events.length})
-          </span>
-        </div>
-      </div>
-
-      {/* EVENTS */}
-      {expanded && (
-        <div style={{ height }} className="relative">
-          <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
-          {events.map((event, idx) => (
-            <div
-              key={event.id}
-              style={{
-                position: 'absolute',
-                top: idx * itemHeight,
-                height: itemHeight,
-                width: '100%',
-              }}
-              className="px-4"
-            >
-              {renderEvent(event)}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-
-
-type Tier = 'heatmap' | 'clusters' | 'bars' | 'bars-count' | 'mini-containers' | 'discrete'
-type VisualizationMode = 'heatmap' | 'clusters' | 'bars' | 'mini-containers' | 'discrete'
-
-function getTimelineTier(msPerPixel: number): Tier {
-  if (msPerPixel >= 24 * 3600000) return 'heatmap'        // >= 1j/px
-  if (msPerPixel >= 6 * 3600000) return 'clusters'        // >= 6h/px
-  if (msPerPixel >= 30 * 60000) return 'bars'             // >= 30min/px
-  if (msPerPixel >= 5 * 60000) return 'bars-count'        // >= 5min/px
-  if (msPerPixel >= 10 * 1000) return 'mini-containers'
-  return 'discrete'                                       // < 1min/px (zoom max)
-}
-
-// ------------------------------------------------------------
-// RULER TEMPOREL
-// ------------------------------------------------------------
 interface RulerProps {
   scrollTop: number
   clientHeight: number
@@ -187,12 +113,13 @@ function TemporalRuler({ scrollTop, clientHeight, totalHeight, yToDate, dateToY,
   )
 }
 
-// ------------------------------------------------------------
-// COMPONENT
-// ------------------------------------------------------------
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
+
 export default function TimelineView() {
   const {
-    events,
+    eventsMetadata,
     isLoading,
     densityRatio,
     selectedEventIds,
@@ -202,402 +129,101 @@ export default function TimelineView() {
     getTotalHeight,
     msPerPixel,
     zoomIn,
-    zoomOut
+    zoomOut,
+    loadDetails,
+    getEventDetails
   } = useTimeline()
 
-  const isMinuteZoom = msPerPixel <= 60_000
-  const tier = getTimelineTier(msPerPixel)
+  /* -------------------- Refs & State -------------------- */
 
-    // ============================================
-  // NIVEAUX DE DISCRET (continuum visuel)
-  // ============================================
-  type DiscreteLevel = 'bars' | 'minute' | 'expanded-minute' | 'event'
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [scrollState, setScrollState] = useState({ scrollTop: 0, clientHeight: 0 })
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
+  const isZoomingRef = useRef(false)
 
-  const discreteLevel = useMemo<DiscreteLevel>(() => {
-    if (msPerPixel > 2 * 60_000) return 'bars'            // > 2 min / px
-    if (msPerPixel > 60_000) return 'minute'              // 1–2 min / px
-    if (msPerPixel > 15_000) return 'expanded-minute'     // 15s–1min / px
-    return 'event'                                        // < 15s / px
-  }, [msPerPixel])
+  /* -------------------- Visualization Mode -------------------- */
 
   const visualizationMode: VisualizationMode = useMemo(() => {
-  if (tier === 'heatmap') return 'heatmap'
-  if (tier === 'clusters') return 'clusters'
-  if (tier === 'bars' || tier === 'bars-count') return 'bars'
-  if (tier === 'mini-containers') return 'mini-containers' // ✨ NOUVEAU
-  return 'discrete'
-}, [tier])
+    if (msPerPixel > 1000) return 'bars'      // > 1s/px
+    if (msPerPixel > 100) return 'mini'       // 100ms-1s/px
+    return 'discrete'                         // < 100ms/px
+  }, [msPerPixel])
 
-const isElasticTime = visualizationMode === 'discrete' && isMinuteZoom
+  /* -------------------- Item Positions (TEMPS RÉEL) -------------------- */
 
-  // ------------------------------------------------------------
-  // LOCAL itemHeight (simple et stable)
-  // ------------------------------------------------------------
-  const getItemHeight = useCallback((ratio?: number) => {
-    const r = ratio ?? densityRatio
-    return 8 + (120 - 8) * r
-  }, [densityRatio])
-
-  const baseItemHeight = getItemHeight()
-
-  const totalHeightNatural = getTotalHeight()
-
-// ------------------------------------------------------------
-// SCROLL REF & STATE (DOIT ÊTRE AVANT visibleEvents)
-// ------------------------------------------------------------
-const scrollContainerRef = useRef<HTMLDivElement>(null)
-const [scrollState, setScrollState] = useState({ scrollTop: 0, clientHeight: 0 })
-const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
-
-
-
-// ============================================
-// Grouper les events par minute (CORRIGÉ)
-// ============================================
-const eventsByMinute = useMemo(() => {
-  if (!isMinuteZoom) return []
-
-  const map = new Map<number, TimelineEvent[]>()
-
-  for (const e of events) {
-    const minuteKey = Math.floor(e.createdAt.getTime() / 60_000) * 60_000
-    if (!map.has(minuteKey)) map.set(minuteKey, [])
-    map.get(minuteKey)!.push(e)
-  }
-
-  return Array.from(map.entries())
-    .sort((a, b) => a[0] - b[0])
-}, [events, isMinuteZoom])
-
-// ============================================
-// Calculer la position Y de chaque minute (NOUVEAU)
-// ============================================
-const minuteBlocks = useMemo(() => {
-  if (!isMinuteZoom) return []
-
-  let currentY = 0
-  const blocks: {
-    minuteTs: number
-    y: number
-    events: TimelineEvent[]
-    height: number
-  }[] = []
-
-  for (const [minuteTs, evts] of eventsByMinute) {
-    const height = evts.length * baseItemHeight
-    blocks.push({
-      minuteTs,
-      y: currentY,
-      events: evts,
-      height,
-    })
-    currentY += height
-  }
-
-  return blocks
-}, [eventsByMinute, isMinuteZoom, baseItemHeight])
-
-
-
-// ------------------------------------------------------------
-  // RENDER: container event (détaillé)
-  // ------------------------------------------------------------
-  const renderEvent = useCallback((event: TimelineEvent, forceDetail = false) => {
-  const isSelected = selectedEventIds.includes(event.id)
-  const isHovered = hoveredEventId === event.id
-
-  // ✨ Forcer densityRatio = 1.0 en mode discret
-  const effectiveRatio = forceDetail ? 1.0 : densityRatio
-
-  const dotSize = 2 + 6 * effectiveRatio
-  const dotBorder = 1 + 1 * effectiveRatio
-  const padding = 2 + 10 * effectiveRatio
-  const borderRadius = 2 + 6 * effectiveRatio
-  const showPreview = effectiveRatio > 0.3  // Toujours true si forceDetail
-  const showTime = effectiveRatio > 0.5      // Toujours true si forceDetail
-  const showThreadLabel = effectiveRatio > 0.7 // Toujours true si forceDetail
-
-    const colorConfig = {
-      user: { bg: `rgba(59,130,246,${0.1 + 0.2 * densityRatio})`, border: `rgba(96,165,250,${0.3 + 0.5 * densityRatio})`, dot: 'rgb(96,165,250)' },
-      assistant: { bg: `rgba(168,85,247,${0.1 + 0.2 * densityRatio})`, border: `rgba(192,132,252,${0.3 + 0.5 * densityRatio})`, dot: 'rgb(192,132,252)' },
-      system: { bg: `rgba(75,85,99,${0.1 + 0.2 * densityRatio})`, border: `rgba(107,114,128,${0.3 + 0.5 * densityRatio})`, dot: 'rgb(107,114,128)' }
-    } as const
-
-    const colors = colorConfig[event.role]
-
-    return (
-      <div className="relative pl-6 h-full">
-        {/* Select dot */}
-        <div
-          className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
-          onClick={(e) => {
-  e.stopPropagation()
-  toggleEventSelection(event.id)
-
-  if (typeof window !== 'undefined' && (window as any).loadThread) {
-    ;(window as any).loadThread(event.threadId)
-  }
-}}
-
-          title={isSelected ? 'Désélectionner' : 'Sélectionner'}
-        >
-          <div
-            className="relative rounded-full border-2 transition-all duration-200"
-            style={{
-              width: `${dotSize}px`,
-              height: `${dotSize}px`,
-              borderWidth: `${dotBorder}px`,
-              borderColor: isSelected ? 'rgb(168,85,247)' : colors.dot,
-              backgroundColor: isSelected ? 'rgb(168,85,247)' : colors.dot
-            }}
-          />
-        </div>
-
-        <div
-          className={`ml-6 h-full flex flex-col transition-all duration-200 ${isSelected ? 'border-2 border-bandhu-primary shadow-md shadow-bandhu-primary/20' : ''}`}
-          style={{
-            padding: `${padding}px`,
-            borderRadius: `${borderRadius}px`,
-            border: isSelected
-  ? '2px solid rgb(168,85,247)'
-  : isHovered
-  ? '2px solid rgba(168,85,247,0.6)'
-  : `1px solid ${colors.border}`,
-
-            backgroundColor: colors.bg
-          }}
-        >
-          {showTime && (
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-gray-400">
-                {event.createdAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-          )}
-
-          {showPreview && (
-            <p className="text-sm text-gray-200 line-clamp-2 flex-1" style={{ fontSize: `${12 + 2 * densityRatio}px` }}>
-              {event.contentPreview}
-            </p>
-          )}
-
-          {showThreadLabel && (
-            <div className="text-xs text-gray-500 truncate">{event.threadLabel}</div>
-          )}
-        </div>
-      </div>
-    )
-  }, [densityRatio, selectedEventIds, toggleEventSelection, hoveredEventId])
-
-  // ------------------------------------------------------------
-  // Positions “réelles” (temps->y)
-  // ------------------------------------------------------------
   const itemPositions = useMemo(() => {
-    return events.map(event => {
-      const y = dateToY(event.createdAt)
-      return { id: event.id, y, event }
-    })
-  }, [events, dateToY])
+  return eventsMetadata.map(event => ({
+    id: event.id,
+    y: dateToY(event.createdAt),
+    metadata: event
+  }))
+}, [eventsMetadata, dateToY])
 
-// ------------------------------------------------------------
-  // MODE: DISCRETE (zoom max)
-  // - packing vertical pour éviter overlap (time becomes elastic)
-  // ------------------------------------------------------------
-  const packedDiscrete = useMemo(() => {
+// ✨ NOUVEAU : Packing en mode discrete pour éviter overlap
+// ✨ TEMPORAIRE : Désactiver le packing pour tester l'ancrage
+// ✨ Packing en mode discrete pour éviter overlap
+const packedPositions = useMemo(() => {
   if (visualizationMode !== 'discrete') {
-    return { rows: [], totalHeight: totalHeightNatural }
+    return itemPositions // Pas de packing en bars/mini
   }
 
   const sorted = [...itemPositions].sort((a, b) => a.y - b.y)
+  const packed = []
+  let lastY = -Infinity
 
-  let currentY = 0
-  const rows: Array<{ y: number; event: TimelineEvent }> = []
-
-  for (let i = 0; i < sorted.length; i++) {
-    const current = sorted[i]
-    
-    if (i > 0) {
-      const prev = sorted[i - 1]
-      const timeDiffMs = current.event.createdAt.getTime() - prev.event.createdAt.getTime()
-      
-      // ✨ Espacement TRÈS LARGE pour séparer visuellement
-// ✨ Espacement MASSIF pour séparer visuellement
-let extraSpace = 0
-
-if (timeDiffMs > 86400000) {
-  extraSpace = 1500  // ÷ 2
-} else if (timeDiffMs > 3600000) {
-  extraSpace = 1000  // ÷ 2
-} else if (timeDiffMs > 600000) {
-  extraSpace = 600   // ÷ 2
-} else if (timeDiffMs > 60000) {
-  extraSpace = 300   // ÷ 2
-} else if (timeDiffMs > 10000) {
-  extraSpace = 100   // ÷ 2
-}
-// < 10 secondes → Collés (0px)
-// < 10 secondes → Collés (0px)
-
-      // Sinon (< 1 minute) → Pas d'espace extra
-      
-      currentY += extraSpace
+  for (const item of sorted) {
+    // Si overlap avec le précédent
+    if (item.y < lastY + DISCRETE_ITEM_HEIGHT) {
+      // Pousser vers le bas
+      const newY = lastY + DISCRETE_ITEM_HEIGHT
+      packed.push({ ...item, y: newY })
+      lastY = newY
+    } else {
+      packed.push(item)
+      lastY = item.y
     }
-
-    rows.push({ y: currentY, event: current.event })
-    currentY += DISCRETE_ITEM_HEIGHT
   }
 
-  const totalHeight = currentY + 40
-
-  return { rows, totalHeight }
-}, [visualizationMode, itemPositions])
-
-
-const renderDiscrete = useCallback(() => {
-  return (
-    <>
-      {packedDiscrete.rows.map(({ y, event }) => {
-        const isSelected = selectedEventIds.includes(event.id)
-
-        return (
-          <div
-            key={event.id}
-            style={{
-  position: 'absolute',
-  top: y,
-  left: 0,
-  right: 0,
-  paddingLeft: 16,
-  paddingRight: 16,
-}}
-
-          >
-            {renderEvent(event)}
-          </div>
-        )
-      })}
-    </>
-  )
-}, [packedDiscrete, selectedEventIds, renderEvent])
-
-
-// ------------------------------------------------------------
-// MODE: MINI-CONTAINERS (même dynamique que bars)
-// ------------------------------------------------------------
-const renderMiniContainers = useCallback(() => {
-  return (
-    <>
-      {itemPositions.map(({ y, event }) => {
-        const isSelected = selectedEventIds.includes(event.id)
-
-        return (
-          <div
-            key={event.id}
-            style={{
-              position: 'absolute',
-              top: y,              // ✅ MÊME Y QUE BARS
-              left: 0,
-              right: 0,
-              height: Math.max(28, 32 * densityRatio),
-              paddingLeft: 12,
-              paddingRight: 12,
-              pointerEvents: 'auto',
-            }}
-            className="cursor-pointer"
-            onClick={async () => {
-              if (typeof window !== 'undefined' && (window as any).loadThread) {
-                await (window as any).loadThread(event.threadId)
-              }
-            }}
-          >
-            <div
-              className={`
-                ml-6 h-full flex items-center gap-2
-                rounded-md border px-3
-                transition-colors duration-150
-                ${isSelected
-                  ? 'bg-bandhu-primary/15 border-bandhu-primary'
-                  : event.role === 'user'
-                    ? 'bg-blue-500/5 border-blue-500/30'
-                    : 'bg-purple-500/5 border-purple-500/30'
-                }
-              `}
-            >
-              {/* dot */}
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  event.role === 'user' ? 'bg-blue-400' : 'bg-purple-400'
-                }`}
-              />
-
-              {/* time */}
-              <span className="text-[10px] text-gray-400">
-                {event.createdAt.toLocaleTimeString('fr-FR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-
-              {/* preview */}
-              <span className="text-xs text-gray-300 truncate flex-1">
-                {event.contentPreview}
-              </span>
-            </div>
-          </div>
-        )
-      })}
-    </>
-  )
-}, [itemPositions, selectedEventIds])
-
-
-// ============================================
-// RENDER — Discrete par minute (empilement réel)
-// ============================================
-
+  return packed
+}, [itemPositions, visualizationMode])
 
   const itemPositionsMap = useMemo(() => {
-  return new Map(itemPositions.map(p => [p.id, p]))
-}, [itemPositions])
+  return new Map(packedPositions.map(p => [p.id, p]))
+}, [packedPositions])
 
-const handleEventClick = useCallback((eventId: string, threadId: string) => {
-  // Protection en ultra-dense
-  if (densityRatio < 0.25) return
+  /* -------------------- Virtual Scrolling -------------------- */
 
-  if (typeof window !== 'undefined' && (window as any).loadThread) {
-    ;(window as any).loadThread(threadId)
-  }
-}, [densityRatio])
+  const visibleEvents = useMemo(() => {
+    const container = scrollContainerRef.current
+    if (!container) return eventsMetadata
 
+    const scrollTop = container.scrollTop
+    const clientHeight = container.clientHeight
+    const scrollBottom = scrollTop + clientHeight
 
-  // ------------------------------------------------------------
-// ÉVÉNEMENTS VISIBLES À L'ÉCRAN (filtrage par position Y)
-// ------------------------------------------------------------
-const visibleEvents = useMemo(() => {
-  const container = scrollContainerRef.current
-  if (!container) return events
+    const buffer = 800
 
-  const scrollTop = container.scrollTop
-  const clientHeight = container.clientHeight
-  const scrollBottom = scrollTop + clientHeight
+    return eventsMetadata.filter(event => {
+      const pos = itemPositionsMap.get(event.id)
+      if (!pos) return false
 
-  const buffer = 800 // px de marge avant / après l'écran
+      return (
+        pos.y >= scrollTop - buffer &&
+        pos.y <= scrollBottom + buffer
+      )
+    })
+  }, [eventsMetadata, itemPositionsMap, scrollState])
 
-  return events.filter(event => {
-    const pos = itemPositionsMap.get(event.id)
-    if (!pos) return false
+  /* -------------------- Load Details for Discrete Mode -------------------- */
 
-    return (
-      pos.y >= scrollTop - buffer &&
-      pos.y <= scrollBottom + buffer
-    )
-  })
-}, [events, itemPositionsMap])
+  useEffect(() => {
+    if (visualizationMode === 'discrete' && visibleEvents.length > 0) {
+      const visibleIds = visibleEvents.map(e => e.id)
+      loadDetails(visibleIds)
+    }
+  }, [visualizationMode, visibleEvents, loadDetails])
 
-  // ------------------------------------------------------------
-  // Visible window (scroll)
-  // ------------------------------------------------------------
-  
+  /* -------------------- Scroll Handling -------------------- */
 
   const handleScroll = useCallback(() => {
     const c = scrollContainerRef.current
@@ -613,69 +239,18 @@ const visibleEvents = useMemo(() => {
     return () => c.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  // ------------------------------------------------------------
-  // Ctrl+Wheel zoom keep date under cursor
-  // ------------------------------------------------------------
-  // ------------------------------------------------------------
-// Ctrl + Wheel ZOOM (SOURCE DE VÉRITÉ)
-// ------------------------------------------------------------
-const handleWheel = useCallback(
-  (e: WheelEvent) => {
-    if (!(e.ctrlKey || e.metaKey)) return
-
-    e.preventDefault()
-    e.stopPropagation()
-
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    // ✨ En mode discret, pas d'ancrage (positions artificielles)
-    if (visualizationMode === 'discrete') {
-      if (e.deltaY < 0) zoomIn()
-      else zoomOut()
-      return
-    }
-
-    // ✨ Ancrage normal pour les autres modes
-    const rect = container.getBoundingClientRect()
-    const cursorY = e.clientY - rect.top
-    const scrollY = container.scrollTop + cursorY
-
-    const dateAtCursor = yToDate(scrollY)
-
-    if (e.deltaY < 0) zoomIn()
-    else zoomOut()
-
-    requestAnimationFrame(() => {
-      const newY = dateToY(dateAtCursor)
-      container.scrollTop = newY - cursorY
-    })
-  },
-  [zoomIn, zoomOut, yToDate, dateToY, visualizationMode]
-)
-
+  /* -------------------- Scroll to Bottom on Mount -------------------- */
 
 useEffect(() => {
   const container = scrollContainerRef.current
-  if (!container) return
-
-  const onWheel = (e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      handleWheel(e)
-    }
+  if (container && eventsMetadata.length > 0) {
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight
+      console.log('📍 [TIMELINE] Scrolled to bottom')
+    }, 100)
   }
+}, [eventsMetadata.length])
 
-  container.addEventListener('wheel', onWheel, {
-    passive: false,
-    capture: true
-  })
-
-  return () => {
-    container.removeEventListener('wheel', onWheel, {
-      capture: true
-    } as any)
-  }
-}, [handleWheel])
 
 useEffect(() => {
   const style = document.createElement('style')
@@ -701,245 +276,345 @@ useEffect(() => {
   }
 }, [])
 
-
-const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-  if (visualizationMode !== 'discrete') return
-  if (isMinuteZoom) return
-
+  useEffect(() => {
   const container = scrollContainerRef.current
   if (!container) return
 
-  const rect = container.getBoundingClientRect()
-  const cursorY = e.clientY - rect.top + container.scrollTop
-
-  let closestId: string | null = null
-  let minDist = Infinity
-
-  for (const { y, event } of packedDiscrete.rows) {
-    const d = Math.abs(y - cursorY)
-    if (d < minDist) {
-      minDist = d
-      closestId = event.id
-    }
-  }
-
-  setHoveredEventId(closestId)
-}
-
-
-  // ------------------------------------------------------------
-  // MODE: HEATMAP
-  // ------------------------------------------------------------
-  const heatmapData = useMemo(() => {
-    if (visualizationMode !== 'heatmap') return []
-    const periods: Array<{ startY: number; count: number; intensity: number }> = []
-
-    const stepY = PERIOD_MS / msPerPixel
-
-    for (let y = 0; y < totalHeightNatural; y += stepY) {
-      const endY = y + stepY
-      let count = 0
-      for (const p of itemPositions) {
-        if (p.y >= y && p.y < endY) count++
+  const onWheel = (e: WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      // ✨ Throttle - Ignorer si déjà en train de zoomer
+      if (isZoomingRef.current) {
+        console.log('⏭️ Zoom ignoré (trop rapide)')
+        return
       }
-      if (count > 0) {
-        const intensity = Math.min(count / 50, 1)
-        periods.push({ startY: y, count, intensity })
-      }
-    }
-    return periods
-  }, [visualizationMode, itemPositions, msPerPixel, totalHeightNatural])
 
-  const renderHeatmap = useCallback(() => (
-    <>
-      {heatmapData.map((period, idx) => (
-        <div
-          key={idx}
-          style={{
-            position: 'absolute',
-            top: period.startY,
-            left: '10%',
-            width: '80%',
-            height: Math.max(20, PERIOD_MS / msPerPixel),
-            borderRadius: 4,
-            backgroundColor: `rgba(168, 85, 247, ${0.2 + period.intensity * 0.6})`,
-            border: `1px solid rgba(168, 85, 247, ${0.3 + period.intensity * 0.5})`,
-            cursor: 'pointer'
-          }}
-          title={`${period.count} événements`}
-          onClick={() => zoomIn()}
-        >
-          <div className="absolute bottom-1 left-2 text-xs text-white/80 font-medium">{period.count}</div>
-        </div>
-      ))}
-    </>
-  ), [heatmapData, msPerPixel, zoomIn])
+      isZoomingRef.current = true
+      
+      // Capturer AVANT le zoom
+      const scrollTopBefore = container.scrollTop
+      const totalHeightBefore = container.scrollHeight
+      const scrollRatioBefore = scrollTopBefore / totalHeightBefore
 
-  // ------------------------------------------------------------
-  // MODE: CLUSTERS
-  // ------------------------------------------------------------
-  const clusters = useMemo(() => {
-    if (visualizationMode !== 'clusters') return []
-    const sorted = [...itemPositions].sort((a, b) => a.y - b.y)
+      console.log('🎯 AVANT ZOOM:', {
+        scrollTopBefore,
+        scrollHeight: totalHeightBefore,
+        scrollRatioBefore,
+        msPerPixel
+      })
 
-    const CLUSTER_THRESHOLD = baseItemHeight * 2
-    const out: Array<{ centerY: number; count: number }> = []
-
-    let bucket: typeof sorted = []
-    let lastY = -Infinity
-
-    for (const p of sorted) {
-      if (bucket.length === 0 || p.y - lastY > CLUSTER_THRESHOLD) {
-        if (bucket.length > 0) {
-          const centerY = bucket.reduce((s, x) => s + x.y, 0) / bucket.length
-          out.push({ centerY, count: bucket.length })
-        }
-        bucket = [p]
+      if (e.deltaY < 0) {
+        zoomIn()
       } else {
-        bucket.push(p)
+        zoomOut()
       }
-      lastY = p.y
+
+      // ✨ Double RAF pour attendre le re-render de React
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const totalHeightAfter = container.scrollHeight
+          const newScrollTopCompensated = scrollRatioBefore * totalHeightAfter
+
+          console.log('🔄 APRÈS ZOOM:', {
+            scrollHeight: totalHeightAfter,
+            heightDelta: totalHeightAfter - totalHeightBefore,
+            scrollRatioBefore,
+            oldScrollTop: container.scrollTop,
+            newScrollTopCompensated,
+            msPerPixel
+          })
+          
+          container.scrollTop = Math.max(0, newScrollTopCompensated)
+          
+          // Débloquer après un délai
+          setTimeout(() => {
+            isZoomingRef.current = false
+          }, 100)
+        })
+      })
     }
-
-    if (bucket.length > 0) {
-      const centerY = bucket.reduce((s, x) => s + x.y, 0) / bucket.length
-      out.push({ centerY, count: bucket.length })
-    }
-
-    return out
-  }, [visualizationMode, itemPositions, baseItemHeight])
-
-  const renderClusters = useCallback(() => (
-    <>
-      {clusters.map((c, idx) => (
-        <div
-          key={idx}
-          style={{
-            position: 'absolute',
-            top: c.centerY - baseItemHeight / 2,
-            left: '20%',
-            width: '60%',
-            height: baseItemHeight,
-            cursor: 'pointer'
-          }}
-          className="group"
-          title={`${c.count} événements groupés`}
-          onClick={() => zoomIn()}
-        >
-          <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bandhu-primary/50 bg-bandhu-primary/20 transition-transform duration-200 group-hover:scale-110"
-            style={{ width: Math.min(44, 18 + c.count * 2), height: Math.min(44, 18 + c.count * 2) }}
-          >
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-bold text-white">
-              {c.count}
-            </div>
-          </div>
-        </div>
-      ))}
-    </>
-  ), [clusters, baseItemHeight, zoomIn])
-
-  // ------------------------------------------------------------
-  // MODE: BARS  (bâtonnets)
-  // - bars: 1 bucket / px
-  // - bars-count: identique mais plus “épais”
-  // ------------------------------------------------------------
-  const barsData = useMemo(() => {
-  if (visualizationMode !== 'bars') return []
-
-  const bucketSizePx = 1 // 1 bucket = 1px vertical
-  const buckets = new Map<number, number>()
-
-  for (const p of itemPositions) {
-    const bucketY = Math.floor(p.y / bucketSizePx) * bucketSizePx
-    buckets.set(bucketY, (buckets.get(bucketY) ?? 0) + 1)
   }
 
-  return Array.from(buckets.entries())
-    .map(([y, count]) => ({ y, count }))
-    .sort((a, b) => a.y - b.y)
-}, [visualizationMode, itemPositions])
+  container.addEventListener('wheel', onWheel, {
+    passive: false,
+    capture: true
+  })
 
+  return () => {
+    container.removeEventListener('wheel', onWheel, { capture: true } as any)
+  }
+}, [zoomIn, zoomOut, yToDate, dateToY, msPerPixel])
+
+  /* -------------------- Bars Data -------------------- */
+
+  const barsData = useMemo(() => {
+    if (visualizationMode !== 'bars') return []
+
+    const buckets = new Map<number, number>()
+
+    for (const p of packedPositions) {
+      const bucketY = Math.floor(p.y)
+      buckets.set(bucketY, (buckets.get(bucketY) ?? 0) + 1)
+    }
+
+    return Array.from(buckets.entries())
+      .map(([y, count]) => ({ y, count }))
+      .sort((a, b) => a.y - b.y)
+  }, [visualizationMode, itemPositions])
+
+  /* -------------------- Render Bars -------------------- */
 
   const renderBars = useCallback(() => {
-  const thick = tier === 'bars-count'
-  const maxCount = Math.max(...barsData.map(b => b.count), 1)
+    const maxCount = Math.max(...barsData.map(b => b.count), 1)
 
+    return (
+      <>
+        {barsData.map((b) => {
+          const widthPct = 8 + (b.count / maxCount) * 20
+
+          return (
+            <div
+              key={b.y}
+              style={{
+                position: 'absolute',
+                top: b.y,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: `${widthPct}%`,
+                height: 6,
+                background: 'rgba(96,165,250,0.8)',
+                borderRadius: 3,
+                cursor: 'pointer',
+              }}
+              className="group"
+              title={`${b.count} événements`}
+              onClick={() => {
+                const container = scrollContainerRef.current
+                if (!container) return
+
+                container.scrollTop = b.y - container.clientHeight / 2
+                setTimeout(() => zoomIn(), 80)
+              }}
+            />
+          )
+        })}
+      </>
+    )
+  }, [barsData, zoomIn])
+
+  /* -------------------- Render Mini -------------------- */
+
+  const renderMini = useCallback(() => {
+    return (
+      <>
+        {visibleEvents.map((event) => {
+          const pos = itemPositionsMap.get(event.id)
+          if (!pos) return null
+
+          const isSelected = selectedEventIds.includes(event.id)
+
+          return (
+            <div
+              key={event.id}
+              style={{
+                position: 'absolute',
+                top: pos.y,
+                left: 0,
+                right: 0,
+                height: MINI_ITEM_HEIGHT,
+                paddingLeft: 12,
+                paddingRight: 12,
+              }}
+              className="cursor-pointer"
+              onClick={async () => {
+                if (typeof window !== 'undefined' && (window as any).loadThread) {
+                  await (window as any).loadThread(event.threadId)
+                }
+              }}
+            >
+              <div
+                className={`
+                  h-full px-3 py-1 rounded-md border transition-all duration-200
+                  flex items-center gap-2
+                  ${isSelected
+                    ? 'bg-bandhu-primary/10 border-bandhu-primary'
+                    : event.role === 'user'
+                      ? 'bg-blue-500/5 border-blue-500/30 hover:border-blue-500/50'
+                      : 'bg-purple-500/5 border-purple-500/30 hover:border-purple-500/50'
+                  }
+                `}
+              >
+                <div className={`w-2 h-2 rounded-full ${
+                  event.role === 'user' ? 'bg-blue-400' : 'bg-purple-400'
+                }`} />
+                
+                <span className="text-xs text-gray-400">
+                  {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </>
+    )
+  }, [visibleEvents, itemPositionsMap, selectedEventIds])
+
+  /* -------------------- Render Discrete -------------------- */
+
+  const renderDiscrete = useCallback(() => {
   return (
     <>
-      {barsData.map((b) => {
-        // Calcul de la hauteur en fonction du niveau
-        let height = thick ? 10 : 6
-        if (discreteLevel === 'minute') {
-          height = 18 + b.count * 2  // Container visible
-        } else if (discreteLevel === 'expanded-minute') {
-          height = Math.max(20, 25 + b.count * 3)  // Container plus grand
+      {visibleEvents.map((event, index) => {
+        const pos = itemPositionsMap.get(event.id)
+        if (!pos) return null
+
+        // ✨ Calculer opacity pour overlap
+        let opacity = 1
+        if (index > 0) {
+          const prevEvent = visibleEvents[index - 1]
+          const prevPos = itemPositionsMap.get(prevEvent.id)
+          
+          if (prevPos) {
+            const gap = pos.y - prevPos.y
+            
+            if (gap < DISCRETE_ITEM_HEIGHT) {
+              // Overlap → Réduire opacité
+              const overlapRatio = gap / DISCRETE_ITEM_HEIGHT
+              opacity = 0.3 + (overlapRatio * 0.7) // 0.3 à 1.0
+            }
+          }
         }
 
-        const widthPct = thick
-          ? 8 + (b.count / maxCount) * 20
-          : discreteLevel === 'bars' ? 6 : 80  // Pleine largeur pour containers
+          const details = getEventDetails(event.id)
+          const isSelected = selectedEventIds.includes(event.id)
+          const isHovered = hoveredEventId === event.id
 
-        return (
-          <div
-            key={b.y}
-            style={{
-              position: 'absolute',
-              top: b.y,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: `${widthPct}%`,
-              height: height,
-              background: discreteLevel === 'bars' 
-                ? 'rgba(96,165,250,0.8)' 
-                : 'rgba(168,85,247,0.25)',
-              border: discreteLevel === 'bars'
-                ? 'none'
-                : '1px solid rgba(168,85,247,0.4)',
-              borderRadius: discreteLevel === 'bars' ? 3 : 8,
-              cursor: 'pointer',
-              transition: 'all 200ms ease',
-            }}
-            className="group"
-            title={`${b.count} événements`}
-            onClick={() => {
-              const container = scrollContainerRef.current
-              if (!container) return
+          const colorConfig = {
+            user: { bg: 'rgba(59,130,246,0.1)', border: 'rgba(96,165,250,0.5)', dot: 'rgb(96,165,250)' },
+            assistant: { bg: 'rgba(168,85,247,0.1)', border: 'rgba(192,132,252,0.5)', dot: 'rgb(192,132,252)' },
+            system: { bg: 'rgba(75,85,99,0.1)', border: 'rgba(107,114,128,0.5)', dot: 'rgb(107,114,128)' }
+          } as const
 
-              // centrer le bucket
-              container.scrollTop = b.y - container.clientHeight / 2
+          const colors = colorConfig[event.role]
 
-              // zoom in progressif
-              setTimeout(() => zoomIn(), 80)
-            }}
-          >
-            {(thick || discreteLevel !== 'bars') && (
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-white/90 font-medium">
-                {b.count}
+          return (
+            <div
+  key={event.id}
+  style={{
+    position: 'absolute',
+    top: pos.y,
+    left: 0,
+    right: 0,
+    height: DISCRETE_ITEM_HEIGHT,
+    paddingLeft: 16,
+    paddingRight: 16,
+    opacity,
+    transition: 'opacity 0.2s ease-out'
+  }}
+  className="cursor-pointer"
+  onClick={async () => {
+  // ✨ Navigation vers le thread + scroll vers le message
+  if (typeof window !== 'undefined' && (window as any).loadThread) {
+    await (window as any).loadThread(event.threadId) // ✨ Corrigé
+  }
+    
+    // ✨ Scroll vers le message + highlight
+    setTimeout(() => {
+      const targetElement = document.querySelector(`[data-message-id="${event.id}"]`)
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        targetElement.classList.add('timeline-event-highlight')
+        setTimeout(() => {
+          targetElement.classList.remove('timeline-event-highlight')
+        }, 1500)
+      }
+    }, 500)
+  }}
+  onMouseEnter={() => setHoveredEventId(event.id)}
+  onMouseLeave={() => setHoveredEventId(null)}
+>
+              <div className="relative pl-6 h-full">
+                {/* Dot */}
+                <div
+                  className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleEventSelection(event.id)
+                  }}
+                >
+                  <div
+                    className="relative rounded-full border-2 transition-all duration-200"
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderColor: isSelected ? 'rgb(168,85,247)' : colors.dot,
+                      backgroundColor: isSelected ? 'rgb(168,85,247)' : colors.dot
+                    }}
+                  />
+                </div>
+
+                {/* Container */}
+                <div
+                  className="ml-6 h-full flex flex-col transition-all duration-200 p-3 rounded-lg"
+                  style={{
+                    border: isSelected
+                      ? '2px solid rgb(168,85,247)'
+                      : isHovered
+                      ? '2px solid rgba(168,85,247,0.6)'
+                      : `1px solid ${colors.border}`,
+                    backgroundColor: colors.bg
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-gray-400">
+                      {event.createdAt.toLocaleDateString('fr-FR', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
+
+                  {details && (
+                    <>
+                      <p className="text-sm text-gray-200 line-clamp-2 flex-1">
+                        {details.contentPreview}
+                      </p>
+                      <div className="text-xs text-gray-500 truncate">{details.threadLabel}</div>
+                    </>
+                  )}
+
+                  {!details && (
+                    <div className="flex items-center justify-center flex-1">
+                      <div className="text-xs text-gray-500">Chargement...</div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        )
-      })}
-    </>
-  )
-}, [barsData, tier, zoomIn, discreteLevel])
+            </div>
+          )
+        })}
+      </>
+    )
+  }, [visibleEvents, itemPositionsMap, selectedEventIds, hoveredEventId, getEventDetails, toggleEventSelection])
 
-  // ------------------------------------------------------------
-  // UI states
-  // ------------------------------------------------------------
-  if (isLoading && events.length === 0) {
+  /* -------------------- UI States -------------------- */
+
+  if (isLoading && eventsMetadata.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bandhu-primary" />
-          <p className="mt-2 text-sm text-gray-500">Chargement...</p>
+          <p className="mt-2 text-sm text-gray-500">Chargement de la timeline...</p>
         </div>
       </div>
     )
   }
 
-  if (events.length === 0 && !isLoading) {
+  if (eventsMetadata.length === 0 && !isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center p-6">
@@ -950,132 +625,67 @@ const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     )
   }
 
-const totalHeight =
-  visualizationMode === 'discrete'
-    ? packedDiscrete.totalHeight
-    : totalHeightNatural
+  const totalHeight = getTotalHeight()
 
+  /* -------------------- Render -------------------- */
 
-  // ------------------------------------------------------------
-  // RENDER
-  // ------------------------------------------------------------
   return (
     <div className="h-full flex flex-col">
+      {/* Header */}
       <div className="text-xs text-gray-500 mb-4">
-        {events.length} événements •{' '}
+        {eventsMetadata.length} événements •{' '}
         <span className="text-bandhu-primary ml-1">
-          {msPerPixel < 3600000 * 24 ? `${Math.round(msPerPixel / 3600000)}h/px` :
-            msPerPixel < 3600000 * 24 * 30 ? `${Math.round(msPerPixel / (3600000 * 24))}j/px` :
-              `${Math.round(msPerPixel / (3600000 * 24 * 30))}m/px`}
+          {msPerPixel < 1000 ? `${Math.round(msPerPixel)}ms/px` :
+            msPerPixel < 60000 ? `${Math.round(msPerPixel / 1000)}s/px` :
+            msPerPixel < 3600000 ? `${Math.round(msPerPixel / 60000)}min/px` :
+            msPerPixel < 86400000 ? `${Math.round(msPerPixel / 3600000)}h/px` :
+              `${Math.round(msPerPixel / 86400000)}j/px`}
         </span>{' '}
         • <span className="ml-2 px-2 py-0.5 rounded bg-gray-800/50 text-xs">
-          {visualizationMode === 'heatmap' ? '🌡️ Heatmap' :
-  visualizationMode === 'clusters' ? '🗂️ Clusters' :
-    visualizationMode === 'bars' ? '🪵 Bars' :
-      visualizationMode === 'mini-containers' ? '📦 Mini' :
-        '📋 Détaillé'}
+          {visualizationMode === 'bars' ? '🪵 Bars' :
+            visualizationMode === 'mini' ? '📦 Mini' :
+              '📋 Détaillé'}
         </span>
       </div>
 
+      {/* Timeline Container */}
       <div
-  ref={scrollContainerRef}
-  className="flex-1 overflow-y-auto relative timeline-scroll-container"
-  style={{ height: '100%', maxHeight: 'calc(100% - 2rem)' }}
-  onMouseMove={handleMouseMove}
-  onMouseLeave={() => setHoveredEventId(null)}
->
-
-        <div style={{ 
-  height: totalHeight, 
-  minHeight: '100%', 
-  position: 'relative',
-  transition: 'all 200ms ease'  // ← AJOUTE CETTE LIGNE
-}}>
-          {/* Ruler (on le garde; en discrete il sera “un peu” non-linéaire à cause du packing) */}
-          {visualizationMode !== 'discrete' && (
-  <TemporalRuler
-    scrollTop={scrollState.scrollTop}
-    clientHeight={scrollState.clientHeight}
-    totalHeight={totalHeightNatural}
-    yToDate={yToDate}
-    dateToY={dateToY}
-    msPerPixel={msPerPixel}
-  />
-)}
-
-
-          {/* Ligne centrale */}
-          {visualizationMode !== 'discrete' && (
-  <div
-    className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30"
-    style={{ opacity: 0.35 }}
-  />
-)}
-
-
-          {/* Rendu selon mode */}
-          {visualizationMode === 'heatmap' && renderHeatmap()}
-          {visualizationMode === 'clusters' && renderClusters()}
-          {visualizationMode === 'bars' && renderBars()}
-          {visualizationMode === 'mini-containers' && renderMiniContainers()}
-          {visualizationMode === 'discrete' && !isMinuteZoom && renderDiscrete()}
-
-          {/* Mode discret : afficher les belles cards */}
-{visualizationMode === 'discrete' && (
-  <>
-    {packedDiscrete.rows.map(({ y, event }) => (
-      <div
-        key={event.id}
-        style={{
-          position: 'absolute',
-          top: y,
-          left: 0,
-          right: 0,
-          height: DISCRETE_ITEM_HEIGHT,
-          paddingLeft: 16,
-          paddingRight: 16,
-        }}
-        className="cursor-pointer" // ✨ Curseur pointer
-        onClick={async () => {
-          // ✨ Navigation comme dans ThreadsView
-          if (typeof window !== 'undefined' && (window as any).loadThread) {
-            await (window as any).loadThread(event.threadId)
-          }
-          
-          setTimeout(() => {
-            const targetElement = document.querySelector(`[data-message-id="${event.id}"]`)
-            if (targetElement) {
-              targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              targetElement.classList.add('timeline-event-highlight')
-              setTimeout(() => {
-                targetElement.classList.remove('timeline-event-highlight')
-              }, 1500)
-            }
-          }, 500)
-        }}
-        onMouseEnter={() => setHoveredEventId(event.id)} // ✨ Hover effect
-        onMouseLeave={() => setHoveredEventId(null)}
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto relative timeline-scroll-container"
+        style={{ height: '100%', maxHeight: 'calc(100% - 2rem)' }}
       >
-        {renderEvent(event, true)}
-      </div>
-    ))}
-  </>
-)}
+        <div style={{ 
+          height: totalHeight, 
+          minHeight: '100%', 
+          position: 'relative'
+        }}>
+          {/* Ruler */}
+          <TemporalRuler
+            scrollTop={scrollState.scrollTop}
+            clientHeight={scrollState.clientHeight}
+            totalHeight={totalHeight}
+            yToDate={yToDate}
+            dateToY={dateToY}
+            msPerPixel={msPerPixel}
+          />
 
+          {/* Center Line */}
+          <div
+            className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30"
+            style={{ opacity: 0.35 }}
+          />
 
+          {/* Render according to mode */}
+          {visualizationMode === 'bars' && renderBars()}
+          {visualizationMode === 'mini' && renderMini()}
+          {visualizationMode === 'discrete' && renderDiscrete()}
         </div>
       </div>
 
+      {/* Footer */}
       <div className="text-xs text-gray-600 text-center py-1 border-t border-gray-800/30">
         <span className="opacity-70">Ctrl+Molette pour zoomer</span>
       </div>
-
-      {isLoading && (
-        <div className="p-2 flex items-center justify-center border-t border-gray-800/50">
-          <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-bandhu-primary mr-2" />
-          <span className="text-xs text-gray-500">Chargement...</span>
-        </div>
-      )}
     </div>
   )
 }
