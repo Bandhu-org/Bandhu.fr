@@ -13,6 +13,7 @@ import React, {
 import type {
   EventMetadata,
   EventDetails,
+  TimelineEvent,
   ThreadData,
   ViewMode,
   TimelineRange,
@@ -95,9 +96,11 @@ interface TimelineContextType {
   loadMetadata: () => Promise<void>
   loadDetails: (eventIds: string[]) => Promise<void>
   getEventDetails: (eventId: string) => EventDetails | undefined
+  addEvent: (event: TimelineEvent) => void 
 
   /* Selection */
   selectedEventIds: string[]
+  setSelectedEventIds: React.Dispatch<React.SetStateAction<string[]>>
   toggleEventSelection: (id: string) => void
   clearSelection: () => void
 }
@@ -279,6 +282,36 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     }
   }, [eventsDetailsCache])
 
+  /* -------------------- Add Event -------------------- */
+
+const addEvent = useCallback((event: TimelineEvent) => {
+  // Ajouter aux métadonnées
+  setEventsMetadata(prev => {
+    // Vérifier si déjà existant
+    if (prev.some(e => e.id === event.id)) return prev
+    
+    // Ajouter et trier par date
+    return [...prev, {
+      id: event.id,
+      createdAt: event.createdAt,
+      role: event.role,
+      threadId: event.threadId
+    }].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+  })
+
+  // Ajouter aux détails du cache aussi
+  setEventsDetailsCache(prev => {
+    const newCache = new Map(prev)
+    newCache.set(event.id, {
+      id: event.id,
+      contentPreview: event.contentPreview,
+      threadLabel: event.threadLabel,
+      userName: event.userName
+    })
+    return newCache
+  })
+}, [])
+
   /* -------------------- Get Event Details -------------------- */
 
   const getEventDetails = useCallback((eventId: string): EventDetails | undefined => {
@@ -324,8 +357,10 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     loadMetadata,
     loadDetails,
     getEventDetails,
+    addEvent,
 
     selectedEventIds,
+    setSelectedEventIds,
     toggleEventSelection,
     clearSelection,
   }

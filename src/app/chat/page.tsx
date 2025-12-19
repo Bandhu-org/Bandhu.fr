@@ -30,7 +30,8 @@ import { SendIcon } from '@/app/components/icons/SendIcon'
 import Image from 'next/image'
 import { ExportIcon } from '@/app/components/icons/ExportIcon'
 
-import { TimelineProvider, useTimeline, type TimelineEvent } from '@/contexts/TimelineContext'
+import { TimelineProvider, useTimeline } from '@/contexts/TimelineContext'
+import type { TimelineEvent } from '@/types/timeline'
 import TimelineSidebar from '@/app/components/TimelineSidebar/TimelineSidebar'
 // En haut avec les autres imports :
 import TimelineToggleButton from '@/app/components/TimelineSidebar/TimelineToggleButton'
