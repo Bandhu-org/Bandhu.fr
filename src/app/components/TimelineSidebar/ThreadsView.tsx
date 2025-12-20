@@ -259,9 +259,9 @@ useEffect(() => {
 
                 {/* Events */}
                 {isExpanded && (
-                  <div className="bg-gray-900/20 relative">
-                    {/* Ligne verticale */}
-                    <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
+  <div className="bg-gray-900/20 relative px-4"> {/* ✨ AJOUTE px-4 */}
+    {/* Ligne verticale */}
+    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
 
                     {/* Liste des events */}
                     {thread.events.map((event) => {
@@ -309,7 +309,7 @@ useEffect(() => {
                           {/* Container event */}
                           <div
   className={`
-    ml-8 min-h-full flex flex-col p-3 rounded-lg border transition-all duration-200
+    ml-4 min-h-full flex flex-col p-3 rounded-lg border transition-all duration-200
     ${isSelected
       ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
       : isHovered
