@@ -309,7 +309,8 @@ useEffect(() => {
                           {/* Container event */}
                           <div
   className={`
-    ml-4 min-h-full flex flex-col p-3 rounded-lg border transition-all duration-200
+    ml-4 min-h-full flex flex-col rounded-lg border transition-all duration-200
+    ${eventHeight > 64 ? 'p-3' : eventHeight > 32 ? 'p-2' : 'p-1'}
     ${isSelected
       ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
       : isHovered
@@ -318,24 +319,49 @@ useEffect(() => {
     }
   `}
 >
-  {/* Heure + role */}
-  <div className="flex items-center gap-2 mb-1">
-    <span className="text-xs text-gray-400">
-      {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-    </span>
-    <span className={`text-xs px-1.5 py-0.5 rounded ${
-      event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
-    }`}>
-      {event.role === 'user' ? 'Vous' : 'Assistant'}
-    </span>
-  </div>
+  {/* Vue DÉTAILLÉE (> 64px) */}
+  {eventHeight > 64 && (
+    <>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xs text-gray-400">
+          {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        <span className={`text-xs px-1.5 py-0.5 rounded ${
+          event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
+        }`}>
+          {event.role === 'user' ? 'Vous' : 'Assistant'}
+        </span>
+      </div>
+      {details && (
+        <p className="text-sm text-gray-200 line-clamp-2 h-10">
+          {details.contentPreview}
+        </p>
+      )}
+    </>
+  )}
 
-  {/* Preview */}
-  {details && (
-  <p className="text-sm text-gray-200 line-clamp-2 h-10">
-    {details.contentPreview}
-  </p>
-)}
+  {/* Vue CONDENSÉE (32-64px) */}
+  {eventHeight > 32 && eventHeight <= 64 && (
+    <div className="flex items-center gap-2 h-full">
+      <span className="text-xs text-gray-400 flex-shrink-0">
+        {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+      </span>
+      {details && (
+        <span className="text-xs text-gray-300 truncate flex-1">
+          {details.contentPreview}
+        </span>
+      )}
+    </div>
+  )}
+
+  {/* Vue ULTRA-DENSE (< 32px) */}
+  {eventHeight <= 32 && (
+    <div className="h-full flex items-center">
+      <span className="text-[10px] text-gray-400 truncate w-full">
+        {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+      </span>
+    </div>
+  )}
 </div>
                         </div>
                       )
