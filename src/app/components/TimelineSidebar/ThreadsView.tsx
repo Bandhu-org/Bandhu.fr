@@ -8,9 +8,12 @@ import type { EventMetadata } from '@/types/timeline'
    CONSTANTS
 ============================================================ */
 
-const THREAD_HEADER_HEIGHT = 48 // Hauteur fixe du header de thread
-const EVENT_MIN_HEIGHT = 8      // Hauteur minimale d'un event (ultra-zoomé)
-const EVENT_MAX_HEIGHT = 96     // Hauteur maximale d'un event (zoomé max)
+const THREAD_HEADER_HEIGHT_NORMAL = 48  // Header normal 2 lignes
+const THREAD_HEADER_HEIGHT_COMPACT = 24 // Header réduit 1 ligne
+const THREAD_HEADER_HEIGHT_STICK = 8    // Header bâtonnet
+
+const EVENT_MIN_HEIGHT = 6    // Bâtonnet ultra-dense
+const EVENT_MAX_HEIGHT = 120  // Preview 10 lignes
 
 /* ============================================================
    TYPES
@@ -72,19 +75,52 @@ export default function ThreadsView() {
   /* -------------------- Calcul hauteur event -------------------- */
 
   const eventHeight = useMemo(() => {
-    // Plus msPerPixel est petit → Plus zoomé → Plus grand
-    // msPerPixel: 100ms/px (max zoom) → 96px
-    // msPerPixel: 1an/px (min zoom) → 8px
+  // Mapping manuel des paliers pour avoir une vraie progression
+  const mappings = [
+    { msPerPixel: 100,           height: 120 }, // Max zoom = 10 lignes
+    { msPerPixel: 500,           height: 110 }, // 8-9 lignes
+    { msPerPixel: 1000,          height: 100 }, // 7-8 lignes
+    { msPerPixel: 2000,          height: 90  }, // 5-6 lignes
+    { msPerPixel: 5000,          height: 80  }, // 4-5 lignes
+    { msPerPixel: 10000,         height: 72  }, // 3-4 lignes
+    { msPerPixel: 15000,         height: 64  }, // 3 lignes
+    { msPerPixel: 30000,         height: 56  }, // 2 lignes
+    { msPerPixel: 60000,         height: 48  }, // 2 lignes
+    { msPerPixel: 120000,        height: 40  }, // 1 ligne
+    { msPerPixel: 300000,        height: 32  }, // 1 ligne compacte
+    { msPerPixel: 600000,        height: 24  }, // Mini-container
+    { msPerPixel: 3600000,       height: 16  }, // Bâtonnet
+    { msPerPixel: 7200000,       height: 12  }, // Bâtonnet compact
+    { msPerPixel: 86400000,      height: 8   }, // Ultra-dense
+    { msPerPixel: 604800000,     height: 6   }, // Ultra-dense
+  ]
 
-    const maxMs = 365 * 24 * 3600 * 1000 // 1 an
-    const minMs = 100 // 100ms
+  // Trouver les 2 points les plus proches
+  let lower = mappings[0]
+  let upper = mappings[mappings.length - 1]
 
-    const ratio = Math.max(0, Math.min(1, 
-      (maxMs - msPerPixel) / (maxMs - minMs)
-    ))
+  for (let i = 0; i < mappings.length - 1; i++) {
+    if (msPerPixel >= mappings[i].msPerPixel && msPerPixel <= mappings[i + 1].msPerPixel) {
+      lower = mappings[i]
+      upper = mappings[i + 1]
+      break
+    }
+  }
 
-    return EVENT_MIN_HEIGHT + (EVENT_MAX_HEIGHT - EVENT_MIN_HEIGHT) * ratio
-  }, [msPerPixel])
+  // Interpolation linéaire entre les 2 points
+  const ratio = (msPerPixel - lower.msPerPixel) / (upper.msPerPixel - lower.msPerPixel)
+  const interpolated = lower.height + (upper.height - lower.height) * ratio
+
+  return Math.round(interpolated)
+}, [msPerPixel])
+
+/* -------------------- Calcul hauteur thread header adaptatif -------------------- */
+
+const threadHeaderHeight = useMemo(() => {
+  if (eventHeight > 20) return THREAD_HEADER_HEIGHT_NORMAL  // Normal
+  if (eventHeight > 12) return THREAD_HEADER_HEIGHT_COMPACT // Compact
+  return THREAD_HEADER_HEIGHT_STICK                         // Bâtonnet
+}, [eventHeight])
 
   /* -------------------- Charger détails des events visibles -------------------- */
 
@@ -234,28 +270,62 @@ useEffect(() => {
                 key={thread.id}
                 className="border border-gray-700/50 rounded-lg overflow-hidden"
               >
-                {/* Thread header */}
-                <div
-                  onClick={() => toggleThread(thread.id)}
-                  className="cursor-pointer p-3 bg-gray-800/40 hover:bg-gray-800/60 transition"
-                  style={{ height: THREAD_HEADER_HEIGHT }}
-                >
-                  <div className="flex items-center justify-between h-full">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-sm ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                          {isExpanded ? '▼' : '▶'}
-                        </span>
-                        <h3 className="font-medium text-gray-200 truncate">{thread.label}</h3>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
-                        <span>{thread.messageCount} messages</span>
-                        <span>•</span>
-                        <span>{thread.lastActivity.toLocaleDateString('fr-FR')}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Thread header ADAPTATIF */}
+<div
+  onClick={() => toggleThread(thread.id)}
+  className={`cursor-pointer transition ${
+    threadHeaderHeight > 30 
+      ? 'p-3 bg-gray-800/40 hover:bg-gray-800/60' 
+      : threadHeaderHeight > 15
+        ? 'px-2 py-1 bg-gray-800/40 hover:bg-gray-800/60'
+        : 'px-1 bg-gray-800/50 hover:bg-gray-800/70'
+  }`}
+  style={{ height: threadHeaderHeight }}
+>
+  {/* Vue NORMALE (> 30px) */}
+  {threadHeaderHeight > 30 && (
+    <div className="flex items-center justify-between h-full">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`text-sm ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
+            {isExpanded ? '▼' : '▶'}
+          </span>
+          <h3 className="font-medium text-gray-200 truncate">{thread.label}</h3>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
+          <span>{thread.messageCount} messages</span>
+          <span>•</span>
+          <span>{thread.lastActivity.toLocaleDateString('fr-FR')}</span>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Vue COMPACTE (15-30px) - 1 ligne */}
+  {threadHeaderHeight > 15 && threadHeaderHeight <= 30 && (
+    <div className="flex items-center justify-between h-full">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <span className={`text-xs flex-shrink-0 ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
+          {isExpanded ? '▼' : '▶'}
+        </span>
+        <span className="text-xs text-gray-200 truncate flex-1">{thread.label}</span>
+        <span className="text-xs text-gray-500 flex-shrink-0">({thread.messageCount})</span>
+      </div>
+    </div>
+  )}
+
+  {/* Vue BÂTONNET (< 15px) */}
+  {threadHeaderHeight <= 15 && (
+    <div 
+      className={`h-full w-full rounded-sm transition-all ${
+        isExpanded 
+          ? 'bg-gradient-to-r from-bandhu-primary/80 to-bandhu-secondary/60' 
+          : 'bg-gray-600/80 hover:bg-gray-500/80'
+      }`}
+      title={`${thread.label} (${thread.messageCount} messages)`}
+    />
+  )}
+</div>
 
                 {/* Events */}
                 {isExpanded && (
@@ -306,22 +376,51 @@ useEffect(() => {
                             />
                           </div>
 
-                          {/* Container event */}
-                          <div
-  className={`
-    ml-4 min-h-full flex flex-col rounded-lg border transition-all duration-200
-    ${eventHeight > 64 ? 'p-3' : eventHeight > 32 ? 'p-2' : 'p-1'}
-    ${isSelected
-      ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
-      : isHovered
-        ? 'bg-gray-800/40 border-gray-600'
-        : 'bg-gray-800/20 border-gray-700/30'
-    }
-  `}
->
-  {/* Vue DÉTAILLÉE (> 64px) */}
-  {eventHeight > 64 && (
-    <>
+                          {/* Container event ADAPTATIF */}
+<div className={`ml-4 transition-all duration-200 ${eventHeight > 12 ? 'min-h-full flex flex-col rounded-lg border' : ''}`}>
+  
+  {/* NIVEAU 1-2 : Preview 10 ou 5 lignes (> 72px) */}
+  {eventHeight > 72 && (
+    <div
+      className={`p-3 rounded-lg border h-full flex flex-col ${
+        isSelected
+          ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
+          : isHovered
+            ? 'bg-gray-800/40 border-gray-600'
+            : 'bg-gray-800/20 border-gray-700/30'
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs text-gray-400">
+          {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+        <span className={`text-xs px-1.5 py-0.5 rounded ${
+          event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
+        }`}>
+          {event.role === 'user' ? 'Vous' : 'Assistant'}
+        </span>
+      </div>
+      {details && (
+        <p className={`text-sm text-gray-200 flex-1 ${
+          eventHeight > 80 ? 'line-clamp-[10]' : 'line-clamp-5'
+        }`}>
+          {details.contentPreview}
+        </p>
+      )}
+    </div>
+  )}
+
+  {/* NIVEAU 3-4 : Preview 3 ou 2 lignes (48-72px) */}
+  {eventHeight > 48 && eventHeight <= 72 && (
+    <div
+      className={`p-3 rounded-lg border h-full flex flex-col ${
+        isSelected
+          ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
+          : isHovered
+            ? 'bg-gray-800/40 border-gray-600'
+            : 'bg-gray-800/20 border-gray-700/30'
+      }`}
+    >
       <div className="flex items-center gap-2 mb-1">
         <span className="text-xs text-gray-400">
           {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -333,34 +432,82 @@ useEffect(() => {
         </span>
       </div>
       {details && (
-        <p className="text-sm text-gray-200 line-clamp-2 h-10">
+        <p className={`text-sm text-gray-200 flex-1 ${
+          eventHeight > 64 ? 'line-clamp-3' : 'line-clamp-2'
+        }`}>
           {details.contentPreview}
         </p>
       )}
-    </>
+    </div>
   )}
 
-  {/* Vue CONDENSÉE (32-64px) */}
-  {eventHeight > 32 && eventHeight <= 64 && (
-    <div className="flex items-center gap-2 h-full">
-      <span className="text-xs text-gray-400 flex-shrink-0">
-        {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-      </span>
-      {details && (
-        <span className="text-xs text-gray-300 truncate flex-1">
-          {details.contentPreview}
+  {/* NIVEAU 5 : Preview 1 ligne (32-48px) */}
+  {eventHeight > 32 && eventHeight <= 48 && (
+    <div
+      className={`p-2 rounded-lg border h-full flex flex-col ${
+        isSelected
+          ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
+          : isHovered
+            ? 'bg-gray-800/40 border-gray-600'
+            : 'bg-gray-800/20 border-gray-700/30'
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-400 flex-shrink-0">
+          {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
         </span>
-      )}
+        {details && (
+          <span className="text-xs text-gray-300 truncate flex-1">
+            {details.contentPreview}
+          </span>
+        )}
+      </div>
     </div>
   )}
 
-  {/* Vue ULTRA-DENSE (< 32px) */}
-  {eventHeight <= 32 && (
-    <div className="h-full flex items-center">
-      <span className="text-[10px] text-gray-400 truncate w-full">
+  {/* NIVEAU 6 : Juste heure - Mini-container (20-32px) */}
+  {eventHeight > 20 && eventHeight <= 32 && (
+    <div
+      className={`p-1.5 rounded border h-full flex items-center ${
+        isSelected
+          ? 'bg-bandhu-primary/10 border-bandhu-primary'
+          : isHovered
+            ? 'bg-gray-800/40 border-gray-600'
+            : 'bg-gray-800/20 border-gray-700/30'
+      }`}
+    >
+      <span className="text-[10px] text-gray-400">
         {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
       </span>
     </div>
+  )}
+
+  {/* NIVEAU 7 : Bâtonnet avec dot (12-20px) */}
+  {eventHeight > 12 && eventHeight <= 20 && (
+    <div
+      className={`h-full rounded-sm transition-all ${
+        isSelected
+          ? 'bg-bandhu-primary'
+          : event.role === 'user'
+            ? 'bg-blue-500/70'
+            : 'bg-purple-500/70'
+      }`}
+      title={`${event.createdAt.toLocaleTimeString()}: ${details?.contentPreview || ''}`}
+    />
+  )}
+
+  {/* NIVEAU 8 : Bâtonnet ultra-dense (< 12px) */}
+  {eventHeight <= 12 && (
+    <div
+      className={`h-full rounded-sm transition-all ${
+        isSelected
+          ? 'bg-bandhu-primary/90'
+          : event.role === 'user'
+            ? 'bg-blue-500/60'
+            : 'bg-purple-500/60'
+      }`}
+      title={details?.contentPreview || event.id}
+    />
   )}
 </div>
                         </div>
