@@ -211,31 +211,47 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   /* -------------------- Loading Metadata -------------------- */
 
   const loadMetadata = useCallback(async () => {
-    setIsLoading(true)
-    console.log('📊 [TIMELINE] Loading metadata...')
+  setIsLoading(true)
+  console.log('📊 [TIMELINE] Loading metadata...')
+  
+  try {
+    const res = await fetch('/api/timeline/metadata')
+    if (!res.ok) throw new Error('Failed to load metadata')
+
+    const data: MetadataResponse = await res.json()
     
-    try {
-      const res = await fetch('/api/timeline/metadata')
-      if (!res.ok) throw new Error('Failed to load metadata')
+    const metadata: EventMetadata[] = data.events.map(e => ({
+      id: e.id,
+      createdAt: new Date(e.createdAt),
+      role: e.role,
+      threadId: e.threadId
+    }))
 
-      const data: MetadataResponse = await res.json()
-      
-      const metadata: EventMetadata[] = data.events.map(e => ({
-        id: e.id,
-        createdAt: new Date(e.createdAt),
-        role: e.role,
-        threadId: e.threadId
-      }))
+    setEventsMetadata(metadata)
+    console.log(`✅ [TIMELINE] Loaded ${metadata.length} metadata`)
 
-      setEventsMetadata(metadata)
-      console.log(`✅ [TIMELINE] Loaded ${metadata.length} metadata`)
+    // ✨ NOUVEAU : Charger threads APRÈS (sans bloquer metadata)
+    fetch('/api/threads')
+      .then(r => r.json())
+      .then(data => {
+        const loadedThreads: ThreadData[] = data.threads.map((t: any) => ({
+          id: t.id,
+          label: t.label,
+          messageCount: t.messageCount,
+          lastActivity: new Date(t.lastActivity),
+          activeDates: t.activeDates || []
+        }))
+        setThreads(loadedThreads)
+        console.log(`✅ [TIMELINE] Loaded ${loadedThreads.length} threads`)
+      })
+      .catch(err => console.error('❌ Error loading threads:', err))
 
-    } catch (error) {
-      console.error('❌ [TIMELINE] Error loading metadata:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  } catch (error) {
+    console.error('❌ [TIMELINE] Error loading metadata:', error)
+  } finally {
+    setIsLoading(false)
+  }
+}, [])
 
   /* -------------------- Loading Details -------------------- */
 

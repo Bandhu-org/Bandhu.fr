@@ -1,70 +1,172 @@
-// src/components/TimelineSidebar/ThreadsView.tsx
 'use client'
 
-import React, { useState, useCallback, useMemo } from 'react'
-import { useTimeline, type TimelineEvent, type ThreadData } from '@/contexts/TimelineContext'
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useTimeline } from '@/contexts/TimelineContext'
+import type { EventMetadata } from '@/types/timeline'
 
-interface ThreadGroup extends ThreadData {
-  events: TimelineEvent[]
+/* ============================================================
+   CONSTANTS
+============================================================ */
+
+const THREAD_HEADER_HEIGHT = 48 // Hauteur fixe du header de thread
+const EVENT_MIN_HEIGHT = 8      // Hauteur minimale d'un event (ultra-zoomé)
+const EVENT_MAX_HEIGHT = 96     // Hauteur maximale d'un event (zoomé max)
+
+/* ============================================================
+   TYPES
+============================================================ */
+
+interface ThreadGroup {
+  id: string
+  label: string
+  messageCount: number
+  lastActivity: Date
+  events: EventMetadata[]
 }
 
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
+
 export default function ThreadsView() {
-  const { 
-    threads, // threads du contexte
-    events,
-    densityLevel, 
-    getItemHeight, 
-    selectedEventIds, 
-    toggleEventSelection 
+  const {
+    threads,
+    eventsMetadata,
+    msPerPixel,
+    zoomIn,
+    zoomOut,
+    selectedEventIds,
+    toggleEventSelection,
+    getEventDetails,
+    loadDetails
   } = useTimeline()
-  
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
-  const itemHeight = getItemHeight()
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
 
-const threadsWithEvents = useMemo(() => {
-  const eventsByThread = new Map<string, TimelineEvent[]>()
-  
-  events.forEach(event => {
-    if (!eventsByThread.has(event.threadId)) {
-      eventsByThread.set(event.threadId, [])
-    }
-    eventsByThread.get(event.threadId)!.push(event)
-  })
-  
-  const result = threads
-    .map(thread => ({
-      ...thread,
-      events: eventsByThread.get(thread.id) || []
-    }))
-    .sort((a, b) => {
-      // Tri par lastActivity : ANCIEN en haut, RÉCENT en bas
-      return a.lastActivity.getTime() - b.lastActivity.getTime()
-    })
-  
-  return result
-}, [threads, events])
+  /* -------------------- Threads avec events -------------------- */
 
-const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
-    // 1. Charge le thread
-    if (typeof window !== 'undefined' && (window as any).loadThread) {
-      await (window as any).loadThread(threadId)
-    }
-    
-    // 2. Scroll après un délai
-    setTimeout(() => {
-      const targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        targetElement.classList.add('timeline-event-highlight')
-        setTimeout(() => {
-          targetElement.classList.remove('timeline-event-highlight')
-        }, 1500)
+  const threadsWithEvents = useMemo(() => {
+    const eventsByThread = new Map<string, EventMetadata[]>()
+
+    eventsMetadata.forEach(event => {
+      if (!eventsByThread.has(event.threadId)) {
+        eventsByThread.set(event.threadId, [])
       }
-    }, 500) // Délai pour laisser le thread se charger
-  }
-, [densityLevel])
+      eventsByThread.get(event.threadId)!.push(event)
+    })
 
-  const toggleThread = (threadId: string) => {
+    return threads
+      .map(thread => ({
+        id: thread.id,
+        label: thread.label,
+        messageCount: thread.messageCount,
+        lastActivity: thread.lastActivity,
+        events: (eventsByThread.get(thread.id) || [])
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) // Plus ancien → Plus récent
+      }))
+      .sort((a, b) => a.lastActivity.getTime() - b.lastActivity.getTime()) // Plus ancien → Plus récent
+  }, [threads, eventsMetadata])
+
+  /* -------------------- Calcul hauteur event -------------------- */
+
+  const eventHeight = useMemo(() => {
+    // Plus msPerPixel est petit → Plus zoomé → Plus grand
+    // msPerPixel: 100ms/px (max zoom) → 96px
+    // msPerPixel: 1an/px (min zoom) → 8px
+
+    const maxMs = 365 * 24 * 3600 * 1000 // 1 an
+    const minMs = 100 // 100ms
+
+    const ratio = Math.max(0, Math.min(1, 
+      (maxMs - msPerPixel) / (maxMs - minMs)
+    ))
+
+    return EVENT_MIN_HEIGHT + (EVENT_MAX_HEIGHT - EVENT_MIN_HEIGHT) * ratio
+  }, [msPerPixel])
+
+  /* -------------------- Charger détails des events visibles -------------------- */
+
+useEffect(() => {
+  const allExpandedEvents = threadsWithEvents
+    .filter(t => expandedThreadIds.has(t.id))
+    .flatMap(t => t.events)
+    .map(e => e.id)
+
+  if (allExpandedEvents.length > 0) {
+    loadDetails(allExpandedEvents)
+  }
+}, [expandedThreadIds, threadsWithEvents, loadDetails])
+
+  /* -------------------- Auto-collapse quand zoom out -------------------- */
+
+  useEffect(() => {
+    // Si eventHeight < 32px → Replier tout
+    if (eventHeight < 32) {
+      setExpandedThreadIds(new Set())
+    }
+  }, [eventHeight])
+
+  useEffect(() => {
+  const container = scrollContainerRef.current
+  if (!container) return
+
+  const onWheel = (e: WheelEvent) => {
+    if (!(e.ctrlKey || e.metaKey)) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (e.deltaY < 0) {
+      zoomIn()
+    } else {
+      zoomOut()
+    }
+  }
+
+  container.addEventListener('wheel', onWheel, {
+    passive: false,
+    capture: true
+  })
+
+  return () => {
+    container.removeEventListener('wheel', onWheel, { capture: true } as any)
+  }
+}, [zoomIn, zoomOut])
+
+  /* -------------------- Zoom handling -------------------- */
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (e.deltaY < 0) {
+        zoomIn()
+      } else {
+        zoomOut()
+      }
+    }
+
+    container.addEventListener('wheel', onWheel, {
+      passive: false,
+      capture: true
+    })
+
+    return () => {
+      container.removeEventListener('wheel', onWheel, { capture: true } as any)
+    }
+  }, [zoomIn, zoomOut])
+
+  /* -------------------- Toggle thread -------------------- */
+
+  const toggleThread = useCallback((threadId: string) => {
     setExpandedThreadIds(prev => {
       const newSet = new Set(prev)
       if (newSet.has(threadId)) {
@@ -74,369 +176,28 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
       }
       return newSet
     })
-  }
+  }, [])
 
-  // Re-calculer les events sélectionnés quand selectedEventIds change
-const selectedEventsSet = useMemo(() => 
-  new Set(selectedEventIds),
-  [selectedEventIds]
-)
+  /* -------------------- Handle event click -------------------- */
 
-  // ============================================================
-  // RENDER HEADER SELON DENSITÉ
-  // ============================================================
-  const renderThreadHeader = useCallback((thread: ThreadGroup, isExpanded: boolean) => {
-    const baseClasses = "cursor-pointer transition"
-    
-    
-    switch (densityLevel) {
-      case 0: // Détaillé (même hauteur qu'un event)
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} p-3 bg-gray-800/40 hover:bg-gray-800/60`}
-            style={{ height: itemHeight }}
-          >
-            <div className="flex items-center justify-between h-full">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-sm ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                    {isExpanded ? '▼' : '▶'}
-                  </span>
-                  <h3 className="font-medium text-gray-200">{thread.label}</h3>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
-                  <span>{thread.messageCount} messages</span>
-                  <span>•</span>
-                  <span>{thread.lastActivity.toLocaleDateString('fr-FR')}</span>
-                </div>
-              </div>
-              <div className="w-2 h-2 rounded-full bg-bandhu-primary/60" />
-            </div>
-          </div>
-        )
-
-      case 1: // Condensé
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} p-2 bg-gray-800/40 hover:bg-gray-800/60`}
-            style={{ height: itemHeight }}
-          >
-            <div className="flex items-center justify-between h-full">
-              <div className="flex items-center gap-2 flex-1">
-                <span className={`text-xs ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                  {isExpanded ? '▼' : '▶'}
-                </span>
-                <span className="font-medium text-sm text-gray-200 truncate">{thread.label}</span>
-                <span className="text-xs text-gray-500">({thread.messageCount})</span>
-              </div>
-              <div className="w-1.5 h-1.5 rounded-full bg-bandhu-primary/60" />
-            </div>
-          </div>
-        )
-
-      case 2: // Dense
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} px-2 py-1 bg-gray-800/40 hover:bg-gray-800/60 flex items-center justify-between`}
-            style={{ height: itemHeight }}
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={`text-xs ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                {isExpanded ? '▼' : '▶'}
-              </span>
-              <span className="text-xs text-gray-300 truncate">{thread.label}</span>
-              <span className="text-xs text-gray-500">({thread.messageCount})</span>
-            </div>
-          </div>
-        )
-
-      case 3: // Bâtonnets
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} px-2 bg-gray-800/50 hover:bg-gray-800/70 flex items-center gap-1`}
-            style={{ height: itemHeight }}
-          >
-            <span className={`text-[10px] ${isExpanded ? 'text-bandhu-primary' : 'text-gray-500'}`}>
-              {isExpanded ? '▼' : '▶'}
-            </span>
-            <span className="text-[10px] text-gray-400 truncate flex-1">
-              {thread.label}
-            </span>
-            <span className="text-[10px] text-gray-600">{thread.messageCount}</span>
-          </div>
-        )
-
-      case 4: // Ultra-dense
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} px-1 bg-gray-800/60 hover:bg-gray-800/80`}
-            style={{ height: itemHeight }}
-            title={`${thread.label} (${thread.messageCount} messages)`}
-          >
-            <div className={`h-full w-full rounded-sm ${
-              isExpanded ? 'bg-bandhu-primary/80' : 'bg-gray-600/80'
-            }`} />
-          </div>
-        )
+  const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
+    if (typeof window !== 'undefined' && (window as any).loadThread) {
+      await (window as any).loadThread(threadId)
     }
-  }, [densityLevel, itemHeight])
 
-  // ============================================================
-  // RENDER EVENT SELON DENSITÉ
-  // ============================================================
-  const renderEvent = useCallback((event: TimelineEvent) => {
-    const isSelected = selectedEventIds.includes(event.id)
-    switch (densityLevel) {
-      case 0:
-  return (
-    <div 
-      className="relative pl-6 h-full cursor-pointer"
-      onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
-    >
-            {/* Barre latérale cliquable avec tooltip et animations */}
-<div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {/* Effet de halo pulse quand sélectionné */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
-  )}
-  
-  {/* Le point principal */}
-  <div className={`
-    relative w-3 h-3 rounded-full border-2 transition-all duration-300
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-125 shadow-lg shadow-bandhu-primary/30' 
-      : event.role === 'user' 
-        ? 'bg-blue-500/20 border-blue-400 hover:border-blue-300 hover:scale-110' 
-        : event.role === 'assistant' 
-          ? 'bg-purple-500/20 border-purple-400 hover:border-purple-300 hover:scale-110'
-          : 'bg-gray-500/20 border-gray-400 hover:scale-110'
-    }
-  `} />
-  
-  {/* Animation d'onde quand sélectionné */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-2 rounded-full bg-bandhu-primary/20 animate-pulse" />
-  )}
-  
-  {/* Tooltip */}
-  <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
-    {isSelected ? 'Désélectionner' : 'Sélectionner'}
-    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-  </div>
-</div>
-            <div className={`
-  ml-6 p-3 rounded-lg border-2 transition-all duration-300 h-full flex flex-col
-  ${isSelected
-    ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-md shadow-bandhu-primary/20'
-    : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600/70'
-  }
-`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  event.role === 'user' ? 'bg-blue-900/30 text-blue-300' : 'bg-purple-900/30 text-purple-300'
-                }`}>
-                  {event.role === 'user' ? '👤' : '🌑'}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {event.createdAt.toLocaleDateString('fr-FR', {
-                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                  })}
-                </span>
-              </div>
-              <p className="text-sm text-gray-200 line-clamp-2 flex-1">{event.contentPreview}</p>
-            </div>
-          </div>
-        )
+    setTimeout(() => {
+      const targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        targetElement.classList.add('timeline-event-highlight')
+        setTimeout(() => {
+          targetElement.classList.remove('timeline-event-highlight')
+        }, 1500)
+      }
+    }, 500)
+  }, [])
 
-      case 1:
-        case 1:
-  return (
-    <div 
-      className="relative pl-6 h-full cursor-pointer"
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-            <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {/* Halo pulse quand sélectionné */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
-  )}
-  
-  {/* Halo statique */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-0.5 rounded-full bg-bandhu-primary/20" />
-  )}
-  
-  {/* Le point principal */}
-  <div className={`
-    relative w-2 h-2 rounded-full border transition-all duration-300
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-150 shadow-lg shadow-bandhu-primary/40' 
-      : event.role === 'user' 
-        ? 'bg-blue-500/40 border-blue-400/60 hover:border-blue-300 hover:scale-125' 
-        : event.role === 'assistant' 
-          ? 'bg-purple-500/40 border-purple-400/60 hover:border-purple-300 hover:scale-125'
-          : 'bg-gray-500/40 border-gray-400/60 hover:scale-125'
-    }
-  `} />
-  
-  {/* Animation d'onde au survol */}
-  <div className="absolute inset-0 -m-1 rounded-full bg-current opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-  
-  {/* Tooltip */}
-  <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
-    {isSelected ? 'Désélectionner ✓' : 'Sélectionner'}
-    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-  </div>
-</div>
-            <div className={`
-  ml-6 p-2 rounded-lg border transition-all duration-200 h-full flex flex-col
-  ${isSelected
-    ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm shadow-bandhu-primary/20'
-    : 'bg-gray-800/20 border-gray-700/30'
-  }
-`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs text-gray-400">
-                  {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                  event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
-                }`}>
-                  {event.role === 'user' ? 'Vous' : 'Assistant'}
-                </span>
-              </div>
-              <p className="text-xs text-gray-300 truncate flex-1">{event.contentPreview}</p>
-            </div>
-          </div>
-        )
-
-      case 2:
-  return (
-    <div 
-      className="relative pl-4 h-full flex items-center cursor-pointer"
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-            <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {isSelected && (
-    <>
-      <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/20 animate-pulse" />
-      <div className="absolute inset-0 -m-0.5 rounded-full bg-bandhu-primary/40" />
-    </>
-  )}
-  <div className={`
-    relative w-1.5 h-1.5 rounded-full border transition-all duration-200
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-150 shadow-md shadow-bandhu-primary/30' 
-      : event.role === 'user' ? 'bg-blue-500/60 border-blue-400/50' 
-      : event.role === 'assistant' ? 'bg-purple-500/60 border-purple-400/50' 
-      : 'bg-gray-500/60 border-gray-400/50'
-    }
-  `} />
-</div>
-            <div className={`
-  ml-4 flex items-center justify-between w-full pr-2 transition-all duration-200
-  ${isSelected
-    ? 'px-2 py-1 rounded bg-bandhu-primary/5 border-l-2 border-bandhu-primary'
-    : ''
-  }
-`}>
-              <span className="text-xs text-gray-400 truncate">
-                {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-              <span className="text-xs text-gray-300 truncate max-w-[60%]">{event.contentPreview}</span>
-            </div>
-          </div>
-        )
-
-      case 3:
-  return (
-    <div 
-      className="relative pl-3 h-full flex items-center cursor-pointer"
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-            <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {isSelected && (
-    <div className="absolute inset-0 -m-0.5 rounded-sm bg-bandhu-primary/30 animate-pulse" />
-  )}
-  <div className={`
-    relative w-1 h-6 rounded-sm border transition-all duration-200
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary shadow-sm shadow-bandhu-primary/40' 
-      : event.role === 'user' ? 'bg-blue-500/70 border-blue-400/60' 
-      : event.role === 'assistant' ? 'bg-purple-500/70 border-purple-400/60' 
-      : 'bg-gray-500/70 border-gray-400/60'
-    }
-  `} />
-</div>
-            <div className={`
-  ml-3 text-[10px] truncate w-full pr-2 px-1 py-0.5 rounded transition-all duration-200
-  ${isSelected
-    ? 'text-bandhu-primary bg-bandhu-primary/10 font-medium'
-    : 'text-gray-400'
-  }
-`}>
-              {event.contentPreview.substring(0, 40)}
-            </div>
-          </div>
-        )
-
-      case 4:
-        return (
-          <div 
-  className={`absolute left-0 right-0 mx-2 rounded-sm cursor-pointer group transition-all duration-200 ${
-    isSelected 
-      ? 'bg-bandhu-primary shadow-md shadow-bandhu-primary/40 h-2 -my-0.5' 
-      : event.role === 'user' ? 'bg-blue-500/80' 
-      : event.role === 'assistant' ? 'bg-purple-500/80' 
-      : 'bg-gray-500/80'
-  }`}
-  style={{ height: isSelected ? '8px' : '6px' }}
-  title={isSelected ? "Désélectionner" : `${event.createdAt.toLocaleString()}: ${event.contentPreview}`}
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
->
-  {isSelected && (
-    <div className="absolute inset-0 rounded-sm bg-white/20 animate-pulse" />
-  )}
-</div>
-        )
-    }
-  }, [densityLevel, selectedEventIds, handleEventClick, toggleEventSelection])  // ← AJOUTE LES DÉPENDANCES
+  /* -------------------- Render -------------------- */
 
   if (threadsWithEvents.length === 0) {
     return (
@@ -450,42 +211,147 @@ const selectedEventsSet = useMemo(() =>
   }
 
   return (
-    <div className="space-y-0.5">
-      {threadsWithEvents.map(thread => {
-        const isExpanded = expandedThreadIds.has(thread.id)
-        const threadHeight = isExpanded ? thread.events.length * itemHeight : 0
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="text-xs text-gray-500 mb-4">
+        {threadsWithEvents.length} threads •{' '}
+        <span className="text-bandhu-primary ml-1">
+          {eventHeight.toFixed(0)}px/event
+        </span>
+      </div>
 
-        return (
-          <div key={thread.id} className="border border-gray-700/50 rounded overflow-hidden">
-            {/* Header adaptatif */}
-            {renderThreadHeader(thread, isExpanded)}
+      {/* Scroll container */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto pl-2"
+      >
+        <div className="space-y-2">
+          {threadsWithEvents.map(thread => {
+            const isExpanded = expandedThreadIds.has(thread.id)
 
-            {/* Events du thread */}
-            {isExpanded && (
-              <div style={{ height: threadHeight }} className="relative bg-gray-900/20">
-                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
-                {thread.events.map((event, idx) => (
-                  <div
+            return (
+              <div
+                key={thread.id}
+                className="border border-gray-700/50 rounded-lg overflow-hidden"
+              >
+                {/* Thread header */}
+                <div
+                  onClick={() => toggleThread(thread.id)}
+                  className="cursor-pointer p-3 bg-gray-800/40 hover:bg-gray-800/60 transition"
+                  style={{ height: THREAD_HEADER_HEIGHT }}
+                >
+                  <div className="flex items-center justify-between h-full">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-sm ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
+                          {isExpanded ? '▼' : '▶'}
+                        </span>
+                        <h3 className="font-medium text-gray-200 truncate">{thread.label}</h3>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
+                        <span>{thread.messageCount} messages</span>
+                        <span>•</span>
+                        <span>{thread.lastActivity.toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Events */}
+                {isExpanded && (
+                  <div className="bg-gray-900/20 relative">
+                    {/* Ligne verticale */}
+                    <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
+
+                    {/* Liste des events */}
+                    {thread.events.map((event) => {
+                      const isSelected = selectedEventIds.includes(event.id)
+                      const isHovered = hoveredEventId === event.id
+                      const details = getEventDetails(event.id)
+
+                      return (
+                        <div
   key={event.id}
-  style={{
-    position: 'absolute',
-    top: idx * itemHeight,
-    height: itemHeight,
-    width: '100%'
+  style={{ 
+    height: eventHeight,
+    minHeight: eventHeight // ✨ FORCE la hauteur min
   }}
-  className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'} ${
-    densityLevel === 0 ? 'cursor-pointer' : ''
-  }`}
-  onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
+  className="relative pl-8 cursor-pointer py-2" // ✨ pl-6 → pl-8
+  onClick={() => handleEventClick(event.id, event.threadId)}
+  onMouseEnter={() => setHoveredEventId(event.id)}
+  onMouseLeave={() => setHoveredEventId(null)}
 >
-  {renderEvent(event)}
+                          {/* Dot cliquable */}
+                          <div
+                            className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleEventSelection(event.id)
+                            }}
+                          >
+                            {isSelected && (
+                              <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
+                            )}
+
+                            <div
+                              className={`
+                                relative rounded-full border-2 transition-all duration-200
+                                ${isSelected
+                                  ? 'w-3 h-3 bg-bandhu-primary border-bandhu-primary scale-125'
+                                  : event.role === 'user'
+                                    ? 'w-2 h-2 bg-blue-500/20 border-blue-400 hover:scale-110'
+                                    : 'w-2 h-2 bg-purple-500/20 border-purple-400 hover:scale-110'
+                                }
+                              `}
+                            />
+                          </div>
+
+                          {/* Container event */}
+                          <div
+  className={`
+    ml-8 min-h-full flex flex-col p-3 rounded-lg border transition-all duration-200
+    ${isSelected
+      ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
+      : isHovered
+        ? 'bg-gray-800/40 border-gray-600'
+        : 'bg-gray-800/20 border-gray-700/30'
+    }
+  `}
+>
+  {/* Heure + role */}
+  <div className="flex items-center gap-2 mb-1">
+    <span className="text-xs text-gray-400">
+      {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+    </span>
+    <span className={`text-xs px-1.5 py-0.5 rounded ${
+      event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
+    }`}>
+      {event.role === 'user' ? 'Vous' : 'Assistant'}
+    </span>
+  </div>
+
+  {/* Preview */}
+  {details && (
+  <p className="text-sm text-gray-200 line-clamp-2 h-10">
+    {details.contentPreview}
+  </p>
+)}
 </div>
-                ))}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-xs text-gray-600 text-center py-1 border-t border-gray-800/30">
+        <span className="opacity-70">Ctrl+Molette pour zoomer</span>
+      </div>
     </div>
   )
 }
