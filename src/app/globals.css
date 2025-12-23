@@ -137,3 +137,14 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
 .chat-area-margin {
   transition: margin-right 300ms ease-in-out;
 }
+
+@layer utilities {
+  .break-safe {
+    /* Coupe uniquement si le mot dépasse la largeur du conteneur */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: normal; 
+    /* Force la rupture pour les chaînes sans espaces (le BIIIIIM) */
+    line-break: strict;
+  }
+}

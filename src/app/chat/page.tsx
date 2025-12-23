@@ -1734,8 +1734,8 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
   : ''
 }`}>
                     
-                    {/* Message AI */}
-                    <div className="px-4 py-5 bg-transparent text-gray-100 relative">
+                    {/* Message AI avec sécurité anti-débordement */}
+<div className="px-4 py-5 bg-transparent text-gray-100 relative break-words [word-break:break-word] overflow-hidden">
                       <ReactMarkdown
                         rehypePlugins={[rehypeHighlight]}
                         components={{
