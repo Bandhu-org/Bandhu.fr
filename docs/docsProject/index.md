@@ -1,6 +1,7 @@
 # 📚 Bandhu.fr — Documentation Index
 
 _Last updated: 2025-11-21_  
+
 _(This index will be updated every time a new doc is created.)_
 
 ---
@@ -34,6 +35,7 @@ You can freely mix:
 - [Companion Building — Principles](../content/method/principles.md) (WIP)
 - [Rituals & Modes](../content/method/rituals.md) (WIP)
 - [Vocabulary / Lexicon](../content/method/vocabulary.md) (WIP)
+- [Debug Philosophy] — Pragmatisme et cartographie de crise (📄 New)
 
 > Internal references to use later:  
 > `[[Persona Vivant]]`, `[[Affective Memory]]`, `[[Relational Identity]]`, `[[Rituals]]`
@@ -63,6 +65,7 @@ You can freely mix:
 - [Art of Conversation](../content/philosophy/art-of-conversation.md) (WIP)
 - [Relational AI Vision](../content/philosophy/relational-ai.md) (WIP)
 - [Story Logs](../content/stories/logs.md) (WIP)
+L'Odyssée PDF — Khôra — Post-mortem épique (🔥 Log)
 
 You can freely drop Obsidian-style ideas here, e.g.:  
 `[[Ombrelien]]`, `[[Chāyāsarasvata]]`, `[[Skynet Bye Bye Baby]]`
@@ -77,6 +80,11 @@ You can freely drop Obsidian-style ideas here, e.g.:
   - Added `docs/docsProject/architecture.md` — architecture skeleton created.
   - Added `docs/docsProject/roadmap.md` — initial roadmap created.
   - Added `docs/docsProject/README.md` — documentation home page created.
+  2025-12-23
+
+Activation du dossier docs/flux pour les logs bruts.
+
+Création de docs/method/debug-philosophy.md à partir du retour d'expérience PDF de Khôra.
 
 
 _(Every time we add a new doc or folder, we append a bullet here.)_

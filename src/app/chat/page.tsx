@@ -1434,17 +1434,17 @@ const renderThreadCard = (thread: Thread) => {
               </p>
             ),
             code: ({ node, inline, className, children, ...props }: any) => {
-              const isInline = !className?.includes('language-')
-              return !isInline ? (
-                <pre className="bg-black/70 p-5 rounded-xl overflow-auto my-6 border border-bandhu-primary/30 font-mono text-[14px] leading-6">
-                  <code className={className} {...props}>{children}</code>
-                </pre>
-              ) : (
-                <code className="bg-bandhu-primary/30 px-2.5 py-1 rounded-md text-[15px] text-bandhu-primary font-mono border border-bandhu-primary/20" {...props}>
-                  {children}
-                </code>
-              )
-            },
+  const isInline = !className?.includes('language-')
+  return !isInline ? (
+    <pre className="bg-black/70 p-5 rounded-xl overflow-auto my-6 border border-bandhu-primary/30 font-mono text-[14px] leading-6">
+      <code className={className} {...props}>{children}</code>
+    </pre>
+  ) : (
+    <code className="bg-bandhu-primary/30 px-2.5 py-1 rounded-md text-[15px] text-bandhu-primary font-mono border border-bandhu-primary/20 break-words whitespace-pre-wrap inline-block max-w-full" {...props}>
+      {children}
+    </code>
+  )
+},
             h1: ({ children, ...props }: any) => (
               <h1 className="text-2xl font-bold mt-8 mb-5 text-bandhu-primary border-b border-bandhu-primary/30 pb-2" {...props}>
                 {children}
@@ -1605,7 +1605,7 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
                                   <code className={className} {...props}>{children}</code>
                                 </pre>
                               ) : (
-                                <code className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200 break-words whitespace-pre-wrap" {...props}>
+                                <code className="bg-blue-400/20 px-2 py-0.5 rounded text-sm text-blue-200 break-words whitespace-pre-wrap inline-block max-w-full" {...props}>
                                   {children}
                                 </code>
                               )
@@ -1745,17 +1745,17 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
                             </p>
                           ),
                           code: ({ node, inline, className, children, ...props }: any) => {
-                            const isInline = !className?.includes('language-')
-                            return !isInline ? (
-                              <pre className="bg-black/70 p-5 rounded-xl overflow-auto my-6 border border-bandhu-primary/30 font-mono text-[14px] leading-6">
-                                <code className={className} {...props}>{children}</code>
-                              </pre>
-                            ) : (
-                              <code className="bg-bandhu-primary/30 px-2.5 py-1 rounded-md text-[15px] text-bandhu-primary font-mono border border-bandhu-primary/20" {...props}>
-                                {children}
-                              </code>
-                            )
-                          },
+              const isInline = !className?.includes('language-')
+              return !isInline ? (
+                <pre className="bg-black/70 p-5 rounded-xl overflow-auto my-6 border border-bandhu-primary/30 font-mono text-[14px] leading-6">
+                  <code className={className} {...props}>{children}</code>
+                </pre>
+              ) : (
+                <code className="bg-bandhu-primary/30 px-2.5 py-1 rounded-md text-[15px] text-bandhu-primary font-mono border border-bandhu-primary/20 break-words whitespace-pre-wrap inline-block max-w-full" {...props}>
+                  {children}
+                </code>
+              )
+            },
                           h1: ({ children, ...props }: any) => (
                             <h1 className="text-2xl font-bold mt-8 mb-5 text-bandhu-primary border-b border-bandhu-primary/30 pb-2" {...props}>
                               {children}
