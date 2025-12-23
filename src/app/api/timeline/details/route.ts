@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
-  console.log('📝 [DETAILS API] Route called')
+export async function POST(request: NextRequest) {
+  console.log('📝 [DETAILS API] Route called (POST)')
   
   try {
     const session = await getServerSession()
@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { id: true }
@@ -30,18 +29,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Récupérer les IDs demandés
-    const searchParams = request.nextUrl.searchParams
-    const idsParam = searchParams.get('ids')
+    const body = await request.json()
+    const ids = body.ids
     
-    if (!idsParam) {
+    if (!ids || !Array.isArray(ids)) {
       return NextResponse.json(
-        { error: 'Paramètre ids requis' },
+        { error: 'Tableau ids requis dans le body' },
         { status: 400 }
       )
     }
-
-    const ids = idsParam.split(',').filter(Boolean)
     
     if (ids.length === 0) {
       return NextResponse.json({ details: {} })

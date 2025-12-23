@@ -276,22 +276,28 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
       }
 
       for (const batch of batches) {
-        const res = await fetch(`/api/timeline/details?ids=${batch.join(',')}`)
-        if (!res.ok) throw new Error('Failed to load details')
+  // On utilise POST pour envoyer les IDs dans le body (pas de limite de taille)
+  const res = await fetch('/api/timeline/details', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: batch })
+  })
+  
+  if (!res.ok) throw new Error('Failed to load details')
 
-        const data: DetailsResponse = await res.json()
+  const data: DetailsResponse = await res.json()
 
-        // Ajouter au cache
-        setEventsDetailsCache(prev => {
-          const newCache = new Map(prev)
-          Object.entries(data.details).forEach(([id, details]) => {
-            newCache.set(id, { id, ...details })
-          })
-          return newCache
-        })
+  // Ajouter au cache (inchangé)
+  setEventsDetailsCache(prev => {
+    const newCache = new Map(prev)
+    Object.entries(data.details).forEach(([id, details]) => {
+      newCache.set(id, { id, ...details })
+    })
+    return newCache
+  })
 
-        console.log(`✅ [TIMELINE] Loaded ${Object.keys(data.details).length} details`)
-      }
+  console.log(`✅ [TIMELINE] Loaded ${Object.keys(data.details).length} details`)
+}
 
     } catch (error) {
       console.error('❌ [TIMELINE] Error loading details:', error)
