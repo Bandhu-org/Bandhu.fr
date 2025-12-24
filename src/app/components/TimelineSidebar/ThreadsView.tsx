@@ -343,10 +343,11 @@ useEffect(() => {
                         <div
   key={event.id}
   style={{ 
-    height: eventHeight,
-    minHeight: eventHeight // ✨ FORCE la hauteur min
+    height: `${eventHeight}px`, 
+    minHeight: `${eventHeight}px`,
+    maxHeight: `${eventHeight}px` // ✨ AJOUT : Empêche le contenu de pousser
   }}
-  className="relative pl-8 cursor-pointer py-2" // ✨ pl-6 → pl-8
+  className="relative pl-8 cursor-pointer overflow-hidden group border-b border-white/5 last:border-0" // ✨ AJOUT : overflow-hidden
   onClick={() => handleEventClick(event.id, event.threadId)}
   onMouseEnter={() => setHoveredEventId(event.id)}
   onMouseLeave={() => setHoveredEventId(null)}
@@ -377,7 +378,7 @@ useEffect(() => {
                           </div>
 
                           {/* Container event ADAPTATIF */}
-<div className={`ml-4 transition-all duration-200 ${eventHeight > 12 ? 'min-h-full flex flex-col rounded-lg border' : ''}`}>
+<div className={`ml-4 h-full flex flex-col justify-start overflow-hidden transition-all duration-200 ${eventHeight > 20 ? 'rounded-lg border bg-gray-800/20 border-gray-700/30' : ''}`}>
   
   {/* NIVEAU 1-2 : Preview 10 ou 5 lignes (> 72px) */}
   {eventHeight > 72 && (
@@ -401,11 +402,11 @@ useEffect(() => {
         </span>
       </div>
       {details && (
-        <p className={`text-sm text-gray-200 flex-1 ${
-          eventHeight > 80 ? 'line-clamp-[10]' : 'line-clamp-5'
-        }`}>
-          {details.contentPreview}
-        </p>
+        <p className={`text-sm text-gray-200 flex-1 break-words [word-break:break-word] overflow-hidden ${
+  eventHeight > 80 ? 'line-clamp-[10]' : 'line-clamp-5'
+}`}>
+  {details.contentPreview}
+</p>
       )}
     </div>
   )}
