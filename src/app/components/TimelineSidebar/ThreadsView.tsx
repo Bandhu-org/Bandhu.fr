@@ -75,27 +75,21 @@ export default function ThreadsView() {
   /* -------------------- Calcul hauteur event -------------------- */
 
   const eventHeight = useMemo(() => {
-  // Mapping manuel des paliers pour avoir une vraie progression
   const mappings = [
-    { msPerPixel: 100,           height: 120 }, // Max zoom = 10 lignes
-    { msPerPixel: 500,           height: 110 }, // 8-9 lignes
-    { msPerPixel: 1000,          height: 100 }, // 7-8 lignes
-    { msPerPixel: 2000,          height: 90  }, // 5-6 lignes
-    { msPerPixel: 5000,          height: 80  }, // 4-5 lignes
-    { msPerPixel: 10000,         height: 72  }, // 3-4 lignes
-    { msPerPixel: 15000,         height: 64  }, // 3 lignes
-    { msPerPixel: 30000,         height: 56  }, // 2 lignes
-    { msPerPixel: 60000,         height: 48  }, // 2 lignes
-    { msPerPixel: 120000,        height: 40  }, // 1 ligne
-    { msPerPixel: 300000,        height: 32  }, // 1 ligne compacte
-    { msPerPixel: 600000,        height: 24  }, // Mini-container
-    { msPerPixel: 3600000,       height: 16  }, // Bâtonnet
-    { msPerPixel: 7200000,       height: 12  }, // Bâtonnet compact
-    { msPerPixel: 86400000,      height: 8   }, // Ultra-dense
-    { msPerPixel: 604800000,     height: 6   }, // Ultra-dense
+    { msPerPixel: 20,          height: 400 }, // ✨ NOUVEAU : Zoom Ultra (Full message)
+    { msPerPixel: 50,          height: 250 }, // ✨ NOUVEAU : Zoom Très Large
+    { msPerPixel: 100,         height: 150 }, // Max précédent
+    { msPerPixel: 500,         height: 110 },
+    { msPerPixel: 1000,        height: 100 },
+    { msPerPixel: 5000,        height: 80  },
+    { msPerPixel: 15000,       height: 64  },
+    { msPerPixel: 60000,       height: 48  },
+    { msPerPixel: 300000,      height: 32  },
+    { msPerPixel: 3600000,     height: 16  },
+    { msPerPixel: 86400000,    height: 8   },
+    { msPerPixel: 604800000,   height: 6   },
   ]
 
-  // Trouver les 2 points les plus proches
   let lower = mappings[0]
   let upper = mappings[mappings.length - 1]
 
@@ -107,7 +101,6 @@ export default function ThreadsView() {
     }
   }
 
-  // Interpolation linéaire entre les 2 points
   const ratio = (msPerPixel - lower.msPerPixel) / (upper.msPerPixel - lower.msPerPixel)
   const interpolated = lower.height + (upper.height - lower.height) * ratio
 
@@ -117,9 +110,9 @@ export default function ThreadsView() {
 /* -------------------- Calcul hauteur thread header adaptatif -------------------- */
 
 const threadHeaderHeight = useMemo(() => {
-  if (eventHeight > 20) return THREAD_HEADER_HEIGHT_NORMAL  // Normal
-  if (eventHeight > 12) return THREAD_HEADER_HEIGHT_COMPACT // Compact
-  return THREAD_HEADER_HEIGHT_STICK                         // Bâtonnet
+  if (eventHeight >= 21) return THREAD_HEADER_HEIGHT_NORMAL  // Normal (48px)
+  if (eventHeight > 10) return THREAD_HEADER_HEIGHT_COMPACT  // Compact (24px)
+  return THREAD_HEADER_HEIGHT_STICK                          // Bâtonnet (8px)
 }, [eventHeight])
 
   /* -------------------- Charger détails des events visibles -------------------- */
@@ -134,15 +127,6 @@ useEffect(() => {
     loadDetails(allExpandedEvents)
   }
 }, [expandedThreadIds, threadsWithEvents, loadDetails])
-
-  /* -------------------- Auto-collapse quand zoom out -------------------- */
-
-  useEffect(() => {
-    // Si eventHeight < 32px → Replier tout
-    if (eventHeight < 32) {
-      setExpandedThreadIds(new Set())
-    }
-  }, [eventHeight])
 
   useEffect(() => {
   const container = scrollContainerRef.current
@@ -335,185 +319,84 @@ useEffect(() => {
 
                     {/* Liste des events */}
                     {thread.events.map((event) => {
-                      const isSelected = selectedEventIds.includes(event.id)
-                      const isHovered = hoveredEventId === event.id
-                      const details = getEventDetails(event.id)
+  const isSelected = selectedEventIds.includes(event.id)
+  const details = getEventDetails(event.id)
 
-                      return (
-                        <div
-  key={event.id}
-  style={{ 
-    height: `${eventHeight}px`, 
-    minHeight: `${eventHeight}px`,
-    maxHeight: `${eventHeight}px` // ✨ AJOUT : Empêche le contenu de pousser
+  return (
+    <div
+      key={event.id}
+      style={{ 
+        height: eventHeight >= 21 ? 'auto' : `${eventHeight}px`,
+        minHeight: `${eventHeight}px`,
+        maxHeight: eventHeight >= 21 ? 'none' : `${eventHeight}px`
+      }}
+      className="relative cursor-pointer group pb-4" // On enlève pl-8 ici pour mieux contrôler
+      onClick={() => handleEventClick(event.id, event.threadId)}
+    >
+      {/* 1. LE DOT (Cercle) - Toujours centré sur le bâtonnet */}
+<div
+  className="absolute left-0 top-1/2 -translate-y-1/2 w-8 flex justify-center z-20" 
+  onClick={(e) => {
+    e.stopPropagation()
+    toggleEventSelection(event.id)
   }}
-  className="relative pl-8 cursor-pointer overflow-hidden group border-b border-white/5 last:border-0" // ✨ AJOUT : overflow-hidden
-  onClick={() => handleEventClick(event.id, event.threadId)}
-  onMouseEnter={() => setHoveredEventId(event.id)}
-  onMouseLeave={() => setHoveredEventId(null)}
 >
-                          {/* Dot cliquable */}
-                          <div
-                            className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleEventSelection(event.id)
-                            }}
-                          >
-                            {isSelected && (
-                              <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
-                            )}
-
-                            <div
-                              className={`
-                                relative rounded-full border-2 transition-all duration-200
-                                ${isSelected
-                                  ? 'w-3 h-3 bg-bandhu-primary border-bandhu-primary scale-125'
-                                  : event.role === 'user'
-                                    ? 'w-2 h-2 bg-blue-500/20 border-blue-400 hover:scale-110'
-                                    : 'w-2 h-2 bg-purple-500/20 border-purple-400 hover:scale-110'
-                                }
-                              `}
-                            />
-                          </div>
-
-                          {/* Container event ADAPTATIF */}
-<div className={`ml-4 h-full flex flex-col justify-start overflow-hidden transition-all duration-200 ${eventHeight > 20 ? 'rounded-lg border bg-gray-800/20 border-gray-700/30' : ''}`}>
-  
-  {/* NIVEAU 1-2 : Preview 10 ou 5 lignes (> 72px) */}
-  {eventHeight > 72 && (
-    <div
-      className={`p-3 rounded-lg border h-full flex flex-col ${
-        isSelected
-          ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
-          : isHovered
-            ? 'bg-gray-800/40 border-gray-600'
-            : 'bg-gray-800/20 border-gray-700/30'
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-gray-400">
-          {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-        </span>
-        <span className={`text-xs px-1.5 py-0.5 rounded ${
-          event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
-        }`}>
-          {event.role === 'user' ? 'Vous' : 'Assistant'}
-        </span>
-      </div>
-      {details && (
-        <p className={`text-sm text-gray-200 flex-1 break-words [word-break:break-word] overflow-hidden ${
-  eventHeight > 80 ? 'line-clamp-[10]' : 'line-clamp-5'
-}`}>
-  {details.contentPreview}
-</p>
-      )}
-    </div>
+  {isSelected && (
+    <div className="absolute inset-0 rounded-full bg-bandhu-primary/30 animate-ping scale-75" />
   )}
+  <div
+    className={`rounded-full border transition-all duration-200 flex-shrink-0 ${
+      isSelected
+        ? 'w-2.5 h-2.5 bg-bandhu-primary border-bandhu-primary shadow-[0_0_8px_rgba(var(--bandhu-primary-rgb),0.6)]'
+        : event.role === 'user'
+          ? 'w-1.5 h-1.5 bg-blue-500/40 border-blue-400'
+          : 'w-1.5 h-1.5 bg-purple-500/40 border-purple-400'
+    }`}
+    style={{ 
+      // ✨ On adapte la taille du point pour qu'il ne dépasse pas du bâtonnet de 6px
+      minWidth: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px', 
+      minHeight: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px' 
+    }}
+  />
+</div>
 
-  {/* NIVEAU 3-4 : Preview 3 ou 2 lignes (48-72px) */}
-  {eventHeight > 48 && eventHeight <= 72 && (
-    <div
-      className={`p-3 rounded-lg border h-full flex flex-col ${
-        isSelected
-          ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
-          : isHovered
-            ? 'bg-gray-800/40 border-gray-600'
-            : 'bg-gray-800/20 border-gray-700/30'
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs text-gray-400">
-          {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-        </span>
-        <span className={`text-xs px-1.5 py-0.5 rounded ${
-          event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
-        }`}>
-          {event.role === 'user' ? 'Vous' : 'Assistant'}
-        </span>
-      </div>
-      {details && (
-        <p className={`text-sm text-gray-200 flex-1 ${
-          eventHeight > 64 ? 'line-clamp-3' : 'line-clamp-2'
-        }`}>
-          {details.contentPreview}
-        </p>
-      )}
-    </div>
-  )}
+      {/* 2. LE CONTAINER DE TEXTE (Repoussé vers la droite) */}
+      <div className={`ml-10 mr-2 transition-all duration-200 ${
+        eventHeight >= 21 
+          ? 'rounded-lg border p-3 bg-gray-800/20 border-gray-700/30 shadow-sm' 
+          : 'border-l-2 border-white/10 px-2'
+      } ${
+        isSelected ? 'border-bandhu-primary/50 bg-bandhu-primary/5' : ''
+      }`}>
+        
+        {/* Infos (Heure + Badge) */}
+        {eventHeight > 48 && (
+          <div className="flex items-center gap-2 mb-2 flex-shrink-0">
+            <span className="text-[10px] text-gray-500 font-medium">
+              {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase ${
+              event.role === 'user' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
+            }`}>
+              {event.role === 'user' ? 'Vous' : 'AI'}
+            </span>
+          </div>
+        )}
 
-  {/* NIVEAU 5 : Preview 1 ligne (32-48px) */}
-  {eventHeight > 32 && eventHeight <= 48 && (
-    <div
-      className={`p-2 rounded-lg border h-full flex flex-col ${
-        isSelected
-          ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm'
-          : isHovered
-            ? 'bg-gray-800/40 border-gray-600'
-            : 'bg-gray-800/20 border-gray-700/30'
-      }`}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-400 flex-shrink-0">
-          {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-        </span>
+        {/* Le Texte (Full Rush intelligent) */}
         {details && (
-          <span className="text-xs text-gray-300 truncate flex-1">
+          <p className={`text-gray-200 leading-tight break-words [word-break:break-word] ${
+            eventHeight >= 150 ? 'text-base line-clamp-none' : // ✨ On libère tout à partir de 150px
+  eventHeight >= 72  ? 'text-sm line-clamp-5' : 
+  'text-[9px] line-clamp-1 opacity-70'
+          }`}>
             {details.contentPreview}
-          </span>
+          </p>
         )}
       </div>
     </div>
-  )}
-
-  {/* NIVEAU 6 : Juste heure - Mini-container (20-32px) */}
-  {eventHeight > 20 && eventHeight <= 32 && (
-    <div
-      className={`p-1.5 rounded border h-full flex items-center ${
-        isSelected
-          ? 'bg-bandhu-primary/10 border-bandhu-primary'
-          : isHovered
-            ? 'bg-gray-800/40 border-gray-600'
-            : 'bg-gray-800/20 border-gray-700/30'
-      }`}
-    >
-      <span className="text-[10px] text-gray-400">
-        {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-      </span>
-    </div>
-  )}
-
-  {/* NIVEAU 7 : Bâtonnet avec dot (12-20px) */}
-  {eventHeight > 12 && eventHeight <= 20 && (
-    <div
-      className={`h-full rounded-sm transition-all ${
-        isSelected
-          ? 'bg-bandhu-primary'
-          : event.role === 'user'
-            ? 'bg-blue-500/70'
-            : 'bg-purple-500/70'
-      }`}
-      title={`${event.createdAt.toLocaleTimeString()}: ${details?.contentPreview || ''}`}
-    />
-  )}
-
-  {/* NIVEAU 8 : Bâtonnet ultra-dense (< 12px) */}
-  {eventHeight <= 12 && (
-    <div
-      className={`h-full rounded-sm transition-all ${
-        isSelected
-          ? 'bg-bandhu-primary/90'
-          : event.role === 'user'
-            ? 'bg-blue-500/60'
-            : 'bg-purple-500/60'
-      }`}
-      title={details?.contentPreview || event.id}
-    />
-  )}
-</div>
-                        </div>
-                      )
-                    })}
+  )
+})}
                   </div>
                 )}
               </div>
