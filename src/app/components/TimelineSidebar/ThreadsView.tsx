@@ -75,42 +75,39 @@ export default function ThreadsView() {
   /* -------------------- Calcul hauteur event (Lissage VØR) -------------------- */
 const eventHeight = useMemo(() => {
   const mappings = [
-    { msPerPixel: 20,          height: 400 }, // Zoom Ultra
+    { msPerPixel: 20,          height: 400 },
     { msPerPixel: 50,          height: 250 }, 
     { msPerPixel: 100,         height: 150 }, 
     { msPerPixel: 500,         height: 110 },
     { msPerPixel: 1000,        height: 100 },
-    { msPerPixel: 5000,        height: 85  }, // Amorti haut
-    { msPerPixel: 10000,       height: 72  }, // Point de passage pour le texte 3 lignes
-    { msPerPixel: 15000,       height: 64 }, 
-    // ✨ MICRO-PALIERS (1 palier par pixel pour un contrôle total)
-    { msPerPixel: 17500,       height: 63 }, 
-    { msPerPixel: 20000,       height: 62 },
-    { msPerPixel: 22500,       height: 61 },
-    { msPerPixel: 25000,       height: 60 },
-    { msPerPixel: 27500,       height: 59 },
-    { msPerPixel: 30000,       height: 58 },
-    { msPerPixel: 35000,       height: 56 },
-    { msPerPixel: 45000,       height: 52  }, // Frein intermédiaire
-    { msPerPixel: 60000,       height: 48  }, // 1 min / px
-    
-    // ✨ SAS DE DÉCOMPRESSION (Transition Bâtonnet <-> Bulle)
+    { msPerPixel: 5000,        height: 85  },
+    { msPerPixel: 10000,       height: 72  },
+    { msPerPixel: 15000,       height: 64  }, 
+    { msPerPixel: 17500,       height: 63  }, 
+    { msPerPixel: 20000,       height: 62  },
+    { msPerPixel: 22500,       height: 61  },
+    { msPerPixel: 25000,       height: 60  },
+    { msPerPixel: 27500,       height: 59  },
+    { msPerPixel: 30000,       height: 58  },
+    { msPerPixel: 35000,       height: 56  },
+    { msPerPixel: 45000,       height: 52  },
+    { msPerPixel: 60000,       height: 48  },
     { msPerPixel: 120000,      height: 42  }, 
     { msPerPixel: 240000,      height: 36  },
-    { msPerPixel: 300000,      height: 32  }, // 5 min / px
-    { msPerPixel: 600000,      height: 28  }, // Frein 10 min
-    { msPerPixel: 900000,      height: 25  }, // 15 min / px
-    { msPerPixel: 1125000,     height: 23.5}, // ~18 min / px
-    { msPerPixel: 1350000,     height: 22  }, // 22.5 min / px
-    { msPerPixel: 1575000,     height: 21  }, // ~26 min / px
-    { msPerPixel: 1800000,     height: 20  }, // 30 min / px
-    { msPerPixel: 3600000,     height: 16  }, // 1 heure / px
-    
-    { msPerPixel: 21600000,    height: 12  }, // 6 heures / px
-    { msPerPixel: 86400000,    height: 8   }, // 1 jour / px
+    { msPerPixel: 300000,      height: 32  },
+    { msPerPixel: 600000,      height: 28  },
+    { msPerPixel: 900000,      height: 25  }, 
+    // ✨ LISSAGE CRITIQUE 16-25
+    { msPerPixel: 1125000,     height: 23.5}, 
+    { msPerPixel: 1350000,     height: 22  }, 
+    { msPerPixel: 1800000,     height: 20  }, 
+    { msPerPixel: 2700000,     height: 18  }, // Nouveau palier
+    { msPerPixel: 3600000,     height: 16  }, 
+    { msPerPixel: 21600000,    height: 12  },
+    { msPerPixel: 86400000,    height: 8   },
     { msPerPixel: 432000000,   height: 6.5 }, 
-    { msPerPixel: 604800000,   height: 6   }, // 1 semaine / px
-  ]
+    { msPerPixel: 604800000,   height: 6   },
+]
 
   // Sécurité bornes mini/maxi
   if (msPerPixel <= mappings[0].msPerPixel) return mappings[0].height
@@ -172,93 +169,44 @@ const threadHeaderHeight = useMemo(() => {
     }
   }, [expandedThreadIds, threadsWithEvents, loadDetails]);
 
-  /* -------------------- 2. Zoom handling & Scroll Anchoring -------------------- */
+  /* -------------------- GESTION DU ZOOM AVEC VERROUILLAGE PERSISTANT -------------------- */
 useEffect(() => {
   const container = scrollContainerRef.current;
   if (!container) return;
 
-  const onWheel = (e: WheelEvent) => {
+  const handleWheel = (e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       e.stopPropagation();
 
-      // 1. CAPTURE : On fige le ratio du centre de l'écran avant le changement
-      const scrollTopBefore = container.scrollTop;
-      const clientHeight = container.clientHeight;
-      const totalHeightBefore = container.scrollHeight;
-      const centerYBefore = scrollTopBefore + clientHeight / 2;
-      const centerRatioBefore = centerYBefore / totalHeightBefore;
+      const currentHeight = container.scrollHeight;
+      const relativeCenter = (container.scrollTop + container.clientHeight / 2) / currentHeight;
 
-      // 2. ACTION : Zoom via tes fonctions du context
-      if (e.deltaY < 0) {
-        zoomIn();
-      } else {
-        zoomOut();
-      }
+      if (e.deltaY < 0) zoomIn();
+      else zoomOut();
 
-      // 3. COMPENSATION : On utilise requestAnimationFrame pour attendre le rendu
-      requestAnimationFrame(() => {
-        // On attend un deuxième frame pour être sûr que le scrollHeight a été mis à jour par React
-        requestAnimationFrame(() => {
-          const totalHeightAfter = container.scrollHeight;
-          
-          // On repositionne pour que le centre visuel reste au même ratio (Ancrage magnétique)
-          const newCenterY = centerRatioBefore * totalHeightAfter;
-          const newScrollTop = newCenterY - clientHeight / 2;
+      // On crée une boucle qui va ajuster le scroll plusieurs fois 
+      // pour "coller" à la transition CSS des bulles
+      let start: number | null = null;
+      const step = (timestamp: number) => {
+        if (!start) start = timestamp;
+        const progress = timestamp - start;
 
-          container.scrollTop = newScrollTop;
-        });
-      });
+        const target = (relativeCenter * container.scrollHeight) - (container.clientHeight / 2);
+        container.scrollTop = target;
+
+        if (progress < 350) { // On suit pendant 350ms (la durée de ta transition + marge)
+          requestAnimationFrame(step);
+        }
+      };
+      requestAnimationFrame(step);
     }
   };
 
-  container.addEventListener('wheel', onWheel, { passive: false });
-  return () => container.removeEventListener('wheel', onWheel);
-}, [zoomIn, zoomOut, msPerPixel, threadsWithEvents]);
-
-  /* -------------------- 2. Zoom handling & Scroll Anchoring -------------------- */
-  useEffect(() => {
-  const container = scrollContainerRef.current;
-  if (!container) return;
-
-  const onWheel = (e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // 1. CAPTURE : On fige le ratio du centre de l'écran
-      const scrollTopBefore = container.scrollTop;
-      const clientHeight = container.clientHeight;
-      const totalHeightBefore = container.scrollHeight;
-      const centerYBefore = scrollTopBefore + clientHeight / 2;
-      const centerRatioBefore = centerYBefore / totalHeightBefore;
-
-      // 2. ACTION : Zoom
-      if (e.deltaY < 0) {
-        zoomIn();
-      } else {
-        zoomOut();
-      }
-
-      // 3. COMPENSATION : Double RAF pour attendre la mutation des Threads
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const totalHeightAfter = container.scrollHeight;
-          
-          // On repositionne pour que le centre visuel reste au même ratio
-          const newCenterY = centerRatioBefore * totalHeightAfter;
-          const newScrollTop = newCenterY - clientHeight / 2;
-
-          container.scrollTop = Math.max(0, newScrollTop);
-        });
-      });
-    }
-  };
-
-  container.addEventListener('wheel', onWheel, { passive: false, capture: true });
-  return () => container.removeEventListener('wheel', onWheel, { capture: true } as any);
-}, [zoomIn, zoomOut, msPerPixel, threadsWithEvents]); // ✨ On écoute les threads pour compenser leur réduction
-
+  container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+  return () => container.removeEventListener('wheel', handleWheel, { capture: true } as any);
+}, [zoomIn, zoomOut, msPerPixel]);
+// 👆 On ne dépend PLUS de threadsWithEvents pour éviter les boucles de calcul infinies
   /* -------------------- Toggle thread -------------------- */
 
   const toggleThread = useCallback((threadId: string) => {
@@ -316,12 +264,13 @@ useEffect(() => {
       </div>
 
       {/* Scroll container */}
-      <div
+<div
   ref={scrollContainerRef}
-  className="flex-1 overflow-y-auto pl-2 overscroll-none touch-none" // ✨ overscroll-none empêche de faire bouger le parent
+  className="flex-1 overflow-y-auto pl-2 overscroll-none" // On retire touch-none pour laisser le scroll fluide
   style={{ 
     overflowAnchor: 'none', 
-    scrollBehavior: 'auto' 
+    scrollBehavior: 'auto', // Indispensable pour que l'ancrage soit instantané (pas de "smooth")
+    WebkitOverflowScrolling: 'touch' // Pour la fluidité sur iOS si besoin
   }}
 >
         <div className="space-y-2 pb-10">
@@ -479,7 +428,7 @@ useEffect(() => {
     </div>
   </div>
 
-  {/* 3. LE TEXTE DU MESSAGE */}
+{/* 3. LE TEXTE DU MESSAGE (Version optimisée 16-25px) */}
 {details && (
   <p 
     className="text-gray-200 leading-tight break-words transition-all duration-300"
@@ -488,18 +437,20 @@ useEffect(() => {
                 eventHeight <= 40  ? '11px' : 
                 `${11 + (eventHeight - 40) * (4 / 80)}px`,
       
-      display: '-webkit-box',
+      // ✨ AMÉLIORATION : On cache le texte sous 20px pour une transition propre vers le bâtonnet
+      display: eventHeight < 20 ? 'none' : '-webkit-box',
       WebkitBoxOrient: 'vertical',
       
-      // ✨ LE DÉCALAGE MAGIQUE :
-      // 1 ligne jusqu'à 72px (laisse la date s'afficher seule)
-      // 2 lignes entre 72px et 82px
-      // 3 lignes à partir de 82px
       WebkitLineClamp: eventHeight >= 150 ? 10 : 
                        eventHeight >= 120 ? 6 : 
                        eventHeight >= 95  ? 5 :
                        eventHeight >= 82  ? 4 :
                        eventHeight >= 72  ? 2 : 1, 
+
+      // ✨ FADEOUT : Le texte s'efface progressivement entre 25px et 20px
+      opacity: eventHeight >= 25 ? 1 : 
+               eventHeight <= 20 ? 0 : (eventHeight - 20) / 5,
+      
       overflow: 'hidden'
     }}
   >
