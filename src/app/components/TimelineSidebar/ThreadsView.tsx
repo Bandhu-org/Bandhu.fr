@@ -145,131 +145,101 @@ export default function ThreadsView() {
     }
   }, [expandedThreadIds, threadsWithEvents, loadDetails])
 
-  /* -------------------- GESTION DU ZOOM (FUSION VØR-KHÔRA) -------------------- */
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
+  /* -------------------- GESTION DU ZOOM (VERSION STABILISÉE) -------------------- */
+useEffect(() => {
+  const container = scrollContainerRef.current;
+  if (!container) return;
 
-    let pendingZoomTimeout: NodeJS.Timeout | null = null
+  const handleWheel = (e: WheelEvent) => {
+    // ✨ On ne réagit QUE si Ctrl/Cmd est pressé
+    if (!(e.ctrlKey || e.metaKey)) return;
 
-    const handleWheel = (e: WheelEvent) => {
-      if (!(e.ctrlKey || e.metaKey)) {
-        if (isZooming) setIsZooming(false)
-        return
-      }
+    e.preventDefault();
+    e.stopPropagation();
 
-      e.preventDefault()
-      e.stopPropagation()
+    // 1. Verrouillage du moteur de zoom (Throttle interne)
+    if (isZoomingRef.current) return;
+    isZoomingRef.current = true;
+    
+    // UI simple sans déclencher de re-render massif
+    setIsZooming(true);
 
-      // 1. THROTTLE & UI
-      if (isZoomingRef.current) {
-        if (pendingZoomTimeout) clearTimeout(pendingZoomTimeout)
-        pendingZoomTimeout = setTimeout(() => { isZoomingRef.current = false }, 200)
-        return
-      }
+    // 2. CAPTURE DE L'ANCRE (Méthode Khôra)
+    if (!anchorElementRef.current) {
+      const containerRect = container.getBoundingClientRect();
+      const viewportCenterY = containerRect.top + containerRect.height / 2;
 
-      isZoomingRef.current = true
-      setIsZooming(true)
-      setFrozenHeaderHeight(threadHeaderHeight)
+      // Chercher l'élément le plus proche du centre
+      const elements = Array.from(container.querySelectorAll('[data-message-id], .thread-header-item'));
+      let closest = null;
+      let minDistance = Infinity;
 
-      // 2. CAPTURE DE L'ANCRE (Logique Khôra : Chercher un event ou un header)
-      if (!anchorElementRef.current) {
-        const containerRect = container.getBoundingClientRect()
-        const viewportCenterY = containerRect.top + containerRect.height / 2
-
-        // Chercher d'abord un EVENT
-        const eventElements = Array.from(container.querySelectorAll('[data-message-id]'))
-        let closestElement: Element | null = null
-        let closestDistance = Infinity
-
-        for (const el of eventElements) {
-          const rect = el.getBoundingClientRect()
-          const elementTopY = rect.top
-          const distance = Math.abs(elementTopY - viewportCenterY)
-          if (distance < closestDistance) {
-            closestDistance = distance
-            closestElement = el
-          }
-        }
-
-        // Backup sur un Header de Thread si pas d'event
-        if (!closestElement) {
-          closestElement = container.querySelector('.thread-header-item') || container.firstElementChild
-        }
-
-        if (closestElement) {
-          anchorElementRef.current = closestElement
-          const elementRect = closestElement.getBoundingClientRect()
-          // On mémorise la distance exacte entre le haut de l'élément et le haut du container
-          anchorOffsetRef.current = elementRect.top - containerRect.top
-          console.log('🔒 ANCRE FIXÉE:', closestElement.getAttribute('data-message-id') || 'header')
+      for (const el of elements) {
+        const rect = el.getBoundingClientRect();
+        const dist = Math.abs((rect.top + rect.height / 2) - viewportCenterY);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closest = el;
         }
       }
 
-      // 3. ACTION DE ZOOM
-      if (e.deltaY < 0) zoomIn()
-      else zoomOut()
+      if (closest) {
+        anchorElementRef.current = closest;
+        anchorOffsetRef.current = closest.getBoundingClientRect().top - containerRect.top;
+      }
+    }
 
-      // 4. CORRECTION PHYSIQUE (Triple Frame pour garantir le Layout)
+    // 3. ZOOM
+    if (e.deltaY < 0) zoomIn();
+    else zoomOut();
+
+    // 4. COMPENSATION (Physique Pure)
+    // On utilise un double RAF pour laisser le temps au layout de s'étirer
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (anchorElementRef.current && container) {
-              const containerRect = container.getBoundingClientRect()
-              const elementRect = anchorElementRef.current.getBoundingClientRect()
+        if (anchorElementRef.current && container) {
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = anchorElementRef.current.getBoundingClientRect();
+          
+          const currentOffset = elementRect.top - containerRect.top;
+          const diff = currentOffset - anchorOffsetRef.current;
+          
+          // On applique la correction directement sur le DOM (pas via l'état React)
+          container.scrollTop += diff;
+          
+          // On met à jour l'offset pour le prochain cran de molette
+          anchorOffsetRef.current = anchorElementRef.current.getBoundingClientRect().top - containerRect.top;
+        }
+        
+        // On libère le verrou après un court délai
+        setTimeout(() => {
+          isZoomingRef.current = false;
+        }, 50); 
+      });
+    });
+  };
 
-              // Calcul de la dérive (où est l'élément - où il devrait être)
-              const currentOffset = elementRect.top - containerRect.top
-              const offsetDiff = currentOffset - anchorOffsetRef.current
+  // ✨ Reset de l'ancre quand on arrête de zoomer (Inactivité)
+  const stopZooming = () => {
+    setIsZooming(false);
+    isZoomingRef.current = false;
+    anchorElementRef.current = null;
+  };
 
-              // Correction du scroll
-              if (Math.abs(offsetDiff) > 0.5) {
-                container.scrollTop += offsetDiff
-                // ✨ Mise à jour de l'offset pour la frame suivante (Recalibrage Khôra)
-                const updatedRect = anchorElementRef.current.getBoundingClientRect()
-                anchorOffsetRef.current = updatedRect.top - containerRect.top
-                console.log('🔧 Scroll corrigé, diff:', offsetDiff.toFixed(1), 'px')
-              }
-            }
+  let timer: NodeJS.Timeout;
+  const onWheelEnd = () => {
+    clearTimeout(timer);
+    timer = setTimeout(stopZooming, 200);
+  };
 
-            // Déverrouillage progressif
-            setTimeout(() => {
-              setFrozenHeaderHeight(null)
-              isZoomingRef.current = false
-              setIsZooming(false)
-              
-              // Libération de l'ancre après une pause (évite de recalculer l'ancre en plein zoom)
-              setTimeout(() => {
-                if (!isZoomingRef.current) {
-                  anchorElementRef.current = null
-                  console.log('🔓 ANCRE LIBÉRÉE')
-                }
-              }, 300)
-            }, 50)
-          })
-        })
-      })
-    }
+  container.addEventListener('wheel', handleWheel, { passive: false });
+  container.addEventListener('wheel', onWheelEnd);
 
-    // Listeners
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) setIsZooming(true)
-    }
-    const handleKeyUp = () => setIsZooming(false)
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-    window.addEventListener('blur', () => setIsZooming(false))
-    container.addEventListener('wheel', handleWheel, { passive: false, capture: true })
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-      window.removeEventListener('blur', () => setIsZooming(false))
-      container.removeEventListener('wheel', handleWheel, { capture: true } as any)
-      if (pendingZoomTimeout) clearTimeout(pendingZoomTimeout)
-    }
-  }, [zoomIn, zoomOut, msPerPixel, threadHeaderHeight, isZooming])
+  return () => {
+    container.removeEventListener('wheel', handleWheel);
+    container.removeEventListener('wheel', onWheelEnd);
+  };
+}, [zoomIn, zoomOut]); // ✨ DÉPENDANCES MINIMALES : Plus de stroboscope
 
   /* -------------------- Toggle thread -------------------- */
 
