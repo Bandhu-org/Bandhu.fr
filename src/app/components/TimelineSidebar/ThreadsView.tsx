@@ -157,9 +157,20 @@ useEffect(() => {
   const container = scrollContainerRef.current;
   if (!container) return;
 
+  // ✨ THROTTLE GLOBAL
+  let lastWheelTime = 0;
+  const WHEEL_THROTTLE_MS = 50; // 50ms entre chaque traitement wheel
+
   const handleWheel = (e: WheelEvent) => {
     // ✨ On ne réagit QUE si Ctrl/Cmd est pressé
     if (!(e.ctrlKey || e.metaKey)) return;
+
+    // ✨ THROTTLE : ignorer les wheels trop rapprochés
+    const now = Date.now();
+    if (now - lastWheelTime < WHEEL_THROTTLE_MS) {
+      return;
+    }
+    lastWheelTime = now;
 
     e.preventDefault();
     e.stopPropagation();
