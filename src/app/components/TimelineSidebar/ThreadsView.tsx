@@ -241,6 +241,36 @@ useEffect(() => {
   };
 }, [zoomIn, zoomOut]); // ✨ DÉPENDANCES MINIMALES : Plus de stroboscope
 
+
+/* -------------------- GESTION UI CTRL/CMD -------------------- */
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      setIsZooming(true);
+    }
+  };
+  
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      setIsZooming(false);
+    }
+  };
+  
+  const handleBlur = () => {
+    setIsZooming(false);
+  };
+  
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+  window.addEventListener('blur', handleBlur);
+  
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
+    window.removeEventListener('blur', handleBlur);
+  };
+}, []);
+
   /* -------------------- Toggle thread -------------------- */
 
   const toggleThread = useCallback((threadId: string) => {
@@ -463,12 +493,12 @@ useEffect(() => {
                               <p 
                                 className="text-gray-200 leading-tight break-words"
                                 style={{
-                                  fontSize: eventHeight >= 120 ? '15px' : eventHeight <= 40 ? '11px' : `${11 + (eventHeight - 40) * (4 / 80)}px`,
-                                  display: '-webkit-box',
-                                  WebkitBoxOrient: 'vertical',
-                                  WebkitLineClamp: eventHeight >= 150 ? 10 : eventHeight >= 120 ? 6 : eventHeight >= 95 ? 5 : eventHeight >= 82 ? 4 : eventHeight >= 72 ? 2 : 1,
-                                  overflow: 'hidden'
-                                }}
+  fontSize: eventHeight >= 120 ? '15px' : eventHeight <= 40 ? '11px' : `${11 + (eventHeight - 40) * (4 / 80)}px`,
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: Math.floor(eventHeight / 16),
+  overflow: 'hidden'
+}}
                               >
                                 {details.contentPreview}
                               </p>

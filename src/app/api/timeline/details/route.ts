@@ -84,14 +84,17 @@ export async function POST(request: NextRequest) {
     }> = {}
 
     events.forEach(event => {
-      details[event.id] = {
-        contentPreview: event.content && event.content.length > 150
-          ? event.content.substring(0, 150) + '...'
-          : event.content || '',
-        threadLabel: event.thread?.label || 'Sans titre',
-        userName: event.user?.name || undefined
-      }
-    })
+  const maxLength = 400 // ✨ Augmenté à 400 caractères
+  const content = event.content || ''
+  
+  details[event.id] = {
+    contentPreview: content.length > maxLength
+      ? content.substring(0, maxLength) + '...'
+      : content,
+    threadLabel: event.thread?.label || 'Sans titre',
+    userName: event.user?.name || undefined
+  }
+})
 
     return NextResponse.json({ details })
 
