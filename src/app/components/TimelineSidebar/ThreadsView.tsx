@@ -159,11 +159,16 @@ useEffect(() => {
 
   // ✨ THROTTLE GLOBAL
   let lastWheelTime = 0;
-  const WHEEL_THROTTLE_MS = 50; // 50ms entre chaque traitement wheel
+  const WHEEL_THROTTLE_MS = 5; // 50ms entre chaque traitement wheel
 
   const handleWheel = (e: WheelEvent) => {
-    // ✨ On ne réagit QUE si Ctrl/Cmd est pressé
-    if (!(e.ctrlKey || e.metaKey)) return;
+    // ✨ BLOQUAGE IMMÉDIAT si Ctrl/Cmd (empêche le zoom navigateur)
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      return; // Pas Ctrl, on laisse passer
+    }
 
     // ✨ THROTTLE : ignorer les wheels trop rapprochés
     const now = Date.now();
@@ -171,9 +176,6 @@ useEffect(() => {
       return;
     }
     lastWheelTime = now;
-
-    e.preventDefault();
-    e.stopPropagation();
 
     // 1. Verrouillage du moteur de zoom (Throttle interne)
     if (isZoomingRef.current) return;
@@ -250,7 +252,7 @@ useEffect(() => {
     timer = setTimeout(stopZooming, 200);
   };
 
-  container.addEventListener('wheel', handleWheel, { passive: false });
+  container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
   container.addEventListener('wheel', onWheelEnd);
 
   return () => {
