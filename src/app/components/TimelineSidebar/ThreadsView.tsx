@@ -49,6 +49,7 @@ export default function ThreadsView() {
   const isZoomingRef = useRef(false)
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
   const [frozenHeaderHeight, setFrozenHeaderHeight] = useState<number | null>(null)
+  const [isMouseOver, setIsMouseOver] = useState(false)
   
   // ✨ NOUVEAU : Verrouillage de l'élément d'ancrage
   const anchorElementRef = useRef<Element | null>(null)
@@ -359,7 +360,11 @@ useEffect(() => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+  <div 
+    className="h-full flex flex-col"
+    onMouseEnter={() => setIsMouseOver(true)}
+    onMouseLeave={() => setIsMouseOver(false)}
+  >
       {/* Header */}
       <div className="text-xs text-gray-500 mb-4 px-2">
         {threadsWithEvents.length} threads •{' '}
@@ -383,7 +388,7 @@ useEffect(() => {
         {/* Viseur de zoom */}
         <div 
           className={`sticky top-1/2 left-0 right-0 -translate-y-1/2 pointer-events-none z-50 flex items-center justify-between transition-all duration-500 ${
-            isZooming ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+            isMouseOver && isZooming ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
           style={{ height: '0px' }} 
         >
