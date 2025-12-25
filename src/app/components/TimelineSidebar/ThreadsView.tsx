@@ -45,8 +45,14 @@ export default function ThreadsView() {
   } = useTimeline()
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isZooming, setIsZooming] = useState(false)
+  const isZoomingRef = useRef(false)
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
-  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
+  const [frozenHeaderHeight, setFrozenHeaderHeight] = useState<number | null>(null)
+  
+  // ✨ NOUVEAU : Verrouillage de l'élément d'ancrage
+  const anchorElementRef = useRef<Element | null>(null)
+  const anchorOffsetRef = useRef<number>(0)
 
   /* -------------------- Threads avec events -------------------- */
 
@@ -67,146 +73,204 @@ export default function ThreadsView() {
         messageCount: thread.messageCount,
         lastActivity: thread.lastActivity,
         events: (eventsByThread.get(thread.id) || [])
-          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) // Plus ancien → Plus récent
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
       }))
-      .sort((a, b) => a.lastActivity.getTime() - b.lastActivity.getTime()) // Plus ancien → Plus récent
+      .sort((a, b) => a.lastActivity.getTime() - b.lastActivity.getTime())
   }, [threads, eventsMetadata])
 
-  /* -------------------- Calcul hauteur event (Lissage VØR) -------------------- */
-const eventHeight = useMemo(() => {
-  const mappings = [
-    { msPerPixel: 20,          height: 400 },
-    { msPerPixel: 50,          height: 250 }, 
-    { msPerPixel: 100,         height: 150 }, 
-    { msPerPixel: 500,         height: 110 },
-    { msPerPixel: 1000,        height: 100 },
-    { msPerPixel: 5000,        height: 85  },
-    { msPerPixel: 10000,       height: 72  },
-    { msPerPixel: 15000,       height: 64  }, 
-    { msPerPixel: 17500,       height: 63  }, 
-    { msPerPixel: 20000,       height: 62  },
-    { msPerPixel: 22500,       height: 61  },
-    { msPerPixel: 25000,       height: 60  },
-    { msPerPixel: 27500,       height: 59  },
-    { msPerPixel: 30000,       height: 58  },
-    { msPerPixel: 35000,       height: 56  },
-    { msPerPixel: 45000,       height: 52  },
-    { msPerPixel: 60000,       height: 48  },
-    { msPerPixel: 120000,      height: 42  }, 
-    { msPerPixel: 240000,      height: 36  },
-    { msPerPixel: 300000,      height: 32  },
-    { msPerPixel: 600000,      height: 28  },
-    { msPerPixel: 900000,      height: 25  }, 
-    // ✨ LISSAGE CRITIQUE 16-25
-    { msPerPixel: 1125000,     height: 23.5}, 
-    { msPerPixel: 1350000,     height: 22  }, 
-    { msPerPixel: 1800000,     height: 20  }, 
-    { msPerPixel: 2700000,     height: 18  }, // Nouveau palier
-    { msPerPixel: 3600000,     height: 16  }, 
-    { msPerPixel: 21600000,    height: 12  },
-    { msPerPixel: 86400000,    height: 8   },
-    { msPerPixel: 432000000,   height: 6.5 }, 
-    { msPerPixel: 604800000,   height: 6   },
-]
+  /* -------------------- Calcul hauteur event -------------------- */
 
-  // Sécurité bornes mini/maxi
-  if (msPerPixel <= mappings[0].msPerPixel) return mappings[0].height
-  if (msPerPixel >= mappings[mappings.length - 1].msPerPixel) return mappings[mappings.length - 1].height
+  const eventHeight = useMemo(() => {
+    const mappings = [
+      { msPerPixel: 20,          height: 400 },
+      { msPerPixel: 1000,        height: 100 },
+      { msPerPixel: 5000,        height: 85  },
+      { msPerPixel: 15000,       height: 64  }, 
+      { msPerPixel: 60000,       height: 48  },
+      { msPerPixel: 120000,      height: 42  },
+      { msPerPixel: 300000,      height: 20  },
+      { msPerPixel: 1000000,     height: 15  },
+      { msPerPixel: 3600000,     height: 12  }, 
+      { msPerPixel: 604800000,   height: 6   },
+    ]
 
-  // Recherche des deux paliers pour l'interpolation
-  let lower = mappings[0]
-  let upper = mappings[mappings.length - 1]
+    if (msPerPixel <= mappings[0].msPerPixel) return mappings[0].height
+    if (msPerPixel >= mappings[mappings.length - 1].msPerPixel) return mappings[mappings.length - 1].height
 
-  for (let i = 0; i < mappings.length - 1; i++) {
-    if (msPerPixel >= mappings[i].msPerPixel && msPerPixel <= mappings[i + 1].msPerPixel) {
-      lower = mappings[i]
-      upper = mappings[i + 1]
-      break
+    let lower = mappings[0]
+    let upper = mappings[mappings.length - 1]
+
+    for (let i = 0; i < mappings.length - 1; i++) {
+      if (msPerPixel >= mappings[i].msPerPixel && msPerPixel <= mappings[i + 1].msPerPixel) {
+        lower = mappings[i]
+        upper = mappings[i + 1]
+        break
+      }
     }
-  }
 
-  // Calcul du ratio de progression entre les deux points
-  const ratio = (msPerPixel - lower.msPerPixel) / (upper.msPerPixel - lower.msPerPixel)
-  
-  // Interpolation linéaire mathématique
-  const interpolated = lower.height + (upper.height - lower.height) * ratio
+    const ratio = (msPerPixel - lower.msPerPixel) / (upper.msPerPixel - lower.msPerPixel)
+    const interpolated = lower.height + (upper.height - lower.height) * ratio
 
-  return Math.round(interpolated)
-}, [msPerPixel])
+    return Math.round(interpolated * 10) / 10
+  }, [msPerPixel])
 
-/* -------------------- Calcul hauteur thread header adaptatif -------------------- */
+  /* -------------------- Calcul hauteur thread header -------------------- */
 
-const threadHeaderHeight = useMemo(() => {
-  // 1. Zone Stick -> Compact (12px à 32px d'eventHeight)
-  if (eventHeight <= 12) return 8; 
-  
-  if (eventHeight < 64) {
-    // Transition fluide entre le bâtonnet (8px) et le mode Compact (24px)
-    const ratio = (eventHeight - 12) / (64 - 12);
-    return Math.round(8 + (24 - 8) * ratio);
-  }
+  const threadHeaderHeight = useMemo(() => {
+    if (eventHeight <= 12) return 8
+    
+    if (eventHeight < 64) {
+      const ratio = (eventHeight - 12) / (64 - 12)
+      return Math.round(8 + (24 - 8) * ratio)
+    }
 
-  // 2. Zone Compact -> Full (64px à 150px d'eventHeight)
-  if (eventHeight < 150) {
-    // Transition fluide entre le mode Compact (24px) et le mode Grand (48px)
-    const ratio = (eventHeight - 64) / (150 - 64);
-    return Math.round(24 + (48 - 24) * ratio);
-  }
+    if (eventHeight < 150) {
+      const ratio = (eventHeight - 64) / (150 - 64)
+      return Math.round(24 + (48 - 24) * ratio)
+    }
 
-  // 3. Plafond final (au-delà de 150px d'eventHeight)
-  return 48; 
-}, [eventHeight]);
+    return 48
+  }, [eventHeight])
 
-  /* -------------------- 1. Charger détails des events visibles -------------------- */
+  /* -------------------- Charger détails des events visibles -------------------- */
+
   useEffect(() => {
     const allExpandedEvents = threadsWithEvents
       .filter(t => expandedThreadIds.has(t.id))
       .flatMap(t => t.events)
-      .map(e => e.id);
+      .map(e => e.id)
 
     if (allExpandedEvents.length > 0) {
-      loadDetails(allExpandedEvents);
+      loadDetails(allExpandedEvents)
     }
-  }, [expandedThreadIds, threadsWithEvents, loadDetails]);
+  }, [expandedThreadIds, threadsWithEvents, loadDetails])
 
-  /* -------------------- GESTION DU ZOOM AVEC VERROUILLAGE PERSISTANT -------------------- */
-useEffect(() => {
-  const container = scrollContainerRef.current;
-  if (!container) return;
+  /* -------------------- GESTION DU ZOOM (FUSION VØR-KHÔRA) -------------------- */
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
 
-  const handleWheel = (e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      e.stopPropagation();
+    let pendingZoomTimeout: NodeJS.Timeout | null = null
 
-      const currentHeight = container.scrollHeight;
-      const relativeCenter = (container.scrollTop + container.clientHeight / 2) / currentHeight;
+    const handleWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) {
+        if (isZooming) setIsZooming(false)
+        return
+      }
 
-      if (e.deltaY < 0) zoomIn();
-      else zoomOut();
+      e.preventDefault()
+      e.stopPropagation()
 
-      // On crée une boucle qui va ajuster le scroll plusieurs fois 
-      // pour "coller" à la transition CSS des bulles
-      let start: number | null = null;
-      const step = (timestamp: number) => {
-        if (!start) start = timestamp;
-        const progress = timestamp - start;
+      // 1. THROTTLE & UI
+      if (isZoomingRef.current) {
+        if (pendingZoomTimeout) clearTimeout(pendingZoomTimeout)
+        pendingZoomTimeout = setTimeout(() => { isZoomingRef.current = false }, 200)
+        return
+      }
 
-        const target = (relativeCenter * container.scrollHeight) - (container.clientHeight / 2);
-        container.scrollTop = target;
+      isZoomingRef.current = true
+      setIsZooming(true)
+      setFrozenHeaderHeight(threadHeaderHeight)
 
-        if (progress < 350) { // On suit pendant 350ms (la durée de ta transition + marge)
-          requestAnimationFrame(step);
+      // 2. CAPTURE DE L'ANCRE (Logique Khôra : Chercher un event ou un header)
+      if (!anchorElementRef.current) {
+        const containerRect = container.getBoundingClientRect()
+        const viewportCenterY = containerRect.top + containerRect.height / 2
+
+        // Chercher d'abord un EVENT
+        const eventElements = Array.from(container.querySelectorAll('[data-message-id]'))
+        let closestElement: Element | null = null
+        let closestDistance = Infinity
+
+        for (const el of eventElements) {
+          const rect = el.getBoundingClientRect()
+          const elementTopY = rect.top
+          const distance = Math.abs(elementTopY - viewportCenterY)
+          if (distance < closestDistance) {
+            closestDistance = distance
+            closestElement = el
+          }
         }
-      };
-      requestAnimationFrame(step);
-    }
-  };
 
-  container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-  return () => container.removeEventListener('wheel', handleWheel, { capture: true } as any);
-}, [zoomIn, zoomOut, msPerPixel]);
-// 👆 On ne dépend PLUS de threadsWithEvents pour éviter les boucles de calcul infinies
+        // Backup sur un Header de Thread si pas d'event
+        if (!closestElement) {
+          closestElement = container.querySelector('.thread-header-item') || container.firstElementChild
+        }
+
+        if (closestElement) {
+          anchorElementRef.current = closestElement
+          const elementRect = closestElement.getBoundingClientRect()
+          // On mémorise la distance exacte entre le haut de l'élément et le haut du container
+          anchorOffsetRef.current = elementRect.top - containerRect.top
+          console.log('🔒 ANCRE FIXÉE:', closestElement.getAttribute('data-message-id') || 'header')
+        }
+      }
+
+      // 3. ACTION DE ZOOM
+      if (e.deltaY < 0) zoomIn()
+      else zoomOut()
+
+      // 4. CORRECTION PHYSIQUE (Triple Frame pour garantir le Layout)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (anchorElementRef.current && container) {
+              const containerRect = container.getBoundingClientRect()
+              const elementRect = anchorElementRef.current.getBoundingClientRect()
+
+              // Calcul de la dérive (où est l'élément - où il devrait être)
+              const currentOffset = elementRect.top - containerRect.top
+              const offsetDiff = currentOffset - anchorOffsetRef.current
+
+              // Correction du scroll
+              if (Math.abs(offsetDiff) > 0.5) {
+                container.scrollTop += offsetDiff
+                // ✨ Mise à jour de l'offset pour la frame suivante (Recalibrage Khôra)
+                const updatedRect = anchorElementRef.current.getBoundingClientRect()
+                anchorOffsetRef.current = updatedRect.top - containerRect.top
+                console.log('🔧 Scroll corrigé, diff:', offsetDiff.toFixed(1), 'px')
+              }
+            }
+
+            // Déverrouillage progressif
+            setTimeout(() => {
+              setFrozenHeaderHeight(null)
+              isZoomingRef.current = false
+              setIsZooming(false)
+              
+              // Libération de l'ancre après une pause (évite de recalculer l'ancre en plein zoom)
+              setTimeout(() => {
+                if (!isZoomingRef.current) {
+                  anchorElementRef.current = null
+                  console.log('🔓 ANCRE LIBÉRÉE')
+                }
+              }, 300)
+            }, 50)
+          })
+        })
+      })
+    }
+
+    // Listeners
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) setIsZooming(true)
+    }
+    const handleKeyUp = () => setIsZooming(false)
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', () => setIsZooming(false))
+    container.addEventListener('wheel', handleWheel, { passive: false, capture: true })
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', () => setIsZooming(false))
+      container.removeEventListener('wheel', handleWheel, { capture: true } as any)
+      if (pendingZoomTimeout) clearTimeout(pendingZoomTimeout)
+    }
+  }, [zoomIn, zoomOut, msPerPixel, threadHeaderHeight, isZooming])
+
   /* -------------------- Toggle thread -------------------- */
 
   const toggleThread = useCallback((threadId: string) => {
@@ -255,24 +319,43 @@ useEffect(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header Statistique */}
+      {/* Header */}
       <div className="text-xs text-gray-500 mb-4 px-2">
         {threadsWithEvents.length} threads •{' '}
         <span className="text-bandhu-primary ml-1">
           {eventHeight.toFixed(0)}px/event
         </span>
+        <span className="text-purple-400 ml-2">
+          • header: {threadHeaderHeight}px
+        </span>
       </div>
 
       {/* Scroll container */}
-<div
-  ref={scrollContainerRef}
-  className="flex-1 overflow-y-auto pl-2 overscroll-none" // On retire touch-none pour laisser le scroll fluide
-  style={{ 
-    overflowAnchor: 'none', 
-    scrollBehavior: 'auto', // Indispensable pour que l'ancrage soit instantané (pas de "smooth")
-    WebkitOverflowScrolling: 'touch' // Pour la fluidité sur iOS si besoin
-  }}
->
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto pl-2 overscroll-none relative"
+        style={{ 
+          overflowAnchor: 'none', 
+          scrollBehavior: 'auto',
+        }}
+      >
+        {/* Viseur de zoom */}
+        <div 
+          className={`sticky top-1/2 left-0 right-0 -translate-y-1/2 pointer-events-none z-50 flex items-center justify-between transition-all duration-500 ${
+            isZooming ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+          }`}
+          style={{ height: '0px' }} 
+        >
+          <div className="absolute left-0 right-0 h-[60px] bg-blue-600/10 blur-2xl -translate-y-1/2" />
+          <div className="absolute left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+          <div className="absolute left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
+          <div className="flex justify-between w-full px-2">
+            <div className="text-[14px] text-blue-400 animate-pulse font-black drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">▶</div>
+            <div className="text-[14px] text-blue-400 animate-pulse font-black drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">◀</div>
+          </div>
+        </div>
+
+        {/* Threads list */}
         <div className="space-y-2 pb-10">
           {threadsWithEvents.map(thread => {
             const isExpanded = expandedThreadIds.has(thread.id)
@@ -282,12 +365,12 @@ useEffect(() => {
                 key={thread.id}
                 className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-900/10"
               >
-                {/* Thread header ADAPTATIF */}
+                {/* Thread header */}
                 <div
                   onClick={() => toggleThread(thread.id)}
-                  className="thread-header-item cursor-pointer transition-colors bg-gray-800/40 hover:bg-gray-800/60 overflow-hidden relative"
+                  className="cursor-pointer transition-colors bg-gray-800/40 hover:bg-gray-800/60 overflow-hidden relative"
                   style={{ 
-                    height: threadHeaderHeight,
+                    height: frozenHeaderHeight ?? threadHeaderHeight,
                     paddingLeft: threadHeaderHeight > 15 ? '0.75rem' : '0.25rem',
                     paddingRight: threadHeaderHeight > 15 ? '0.75rem' : '0.25rem'
                   }}
@@ -314,14 +397,12 @@ useEffect(() => {
                       {thread.label}
                     </span>
 
-                    {/* Badge de compte */}
                     {threadHeaderHeight > 30 && (
                       <span className="text-[10px] text-gray-500 opacity-60">
                         ({thread.messageCount})
                       </span>
                     )}
 
-                    {/* MODE BÂTONNET : Couleur pleine */}
                     <div 
                       className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${
                         isExpanded ? 'bg-gradient-to-r from-bandhu-primary/40 to-bandhu-secondary/20' : 'bg-gray-700/40'
@@ -331,136 +412,101 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Events list (si ouvert) */}
+                {/* Events */}
                 {isExpanded && (
-                  <div className="bg-gray-900/20 relative px-4 py-2">
-                    {/* Ligne verticale de connexion */}
+                  <div className="bg-gray-900/20 relative px-4 py-2 space-y-2">
                     <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
 
                     {thread.events.map((event) => {
-  const isSelected = selectedEventIds.includes(event.id)
-  const details = getEventDetails(event.id)
+                      const isSelected = selectedEventIds.includes(event.id)
+                      const details = getEventDetails(event.id)
 
-  return (
-    <div
-      key={event.id}
-      data-message-id={event.id} // ✨ IMPORTANT pour le scrollIntoView
-      style={{ 
-        height: eventHeight >= 21 ? 'auto' : `${eventHeight}px`,
-        minHeight: `${eventHeight}px`,
-      }}
-      className={`relative cursor-pointer group pb-4 transition-colors duration-300 ${
-        isSelected ? 'z-30' : 'z-10'
-      }`}
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-      {/* 1. LE DOT (Cercle) AVEC SÉLECTION SYNCHRO */}
-      <div 
-        className="absolute left-0 top-1/2 -translate-y-1/2 w-8 flex justify-center z-20"
-        onClick={(e) => {
-          e.stopPropagation() // Empêche de charger le thread quand on clique juste sur le point
-          toggleEventSelection(event.id) // ✨ LA SYNCHRO CHAT
-        }}
-      >
-        {isSelected && (
-          <div className="absolute inset-0 rounded-full bg-bandhu-primary/30 animate-ping scale-75" />
-        )}
-        <div
-          className={`rounded-full border transition-all duration-200 flex-shrink-0 ${
-            isSelected
-              ? 'w-2.5 h-2.5 bg-bandhu-primary border-bandhu-primary shadow-[0_0_8px_rgba(var(--bandhu-primary-rgb),0.6)]'
-              : event.role === 'user'
-                ? 'w-1.5 h-1.5 bg-blue-500/40 border-blue-400'
-                : 'w-1.5 h-1.5 bg-purple-500/40 border-purple-400'
-          }`}
-          style={{ 
-            minWidth: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px', 
-            minHeight: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px' 
-          }}
-        />
-      </div>
+                      return (
+                        <div
+                          key={event.id}
+                          data-message-id={event.id}
+                          style={{ 
+                            height: `${eventHeight}px`,
+                            minHeight: `${eventHeight}px`,
+                          }}
+                          className={`relative cursor-pointer group transition-colors duration-300 ${
+                            isSelected ? 'z-30' : 'z-10'
+                          }`}
+                          onClick={() => handleEventClick(event.id, event.threadId)}
+                        >
+                          {/* Dot */}
+                          <div 
+                            className="absolute left-0 top-1/2 -translate-y-1/2 w-8 flex justify-center z-20"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleEventSelection(event.id)
+                            }}
+                          >
+                            {isSelected && (
+                              <div className="absolute inset-0 rounded-full bg-bandhu-primary/30 animate-ping scale-75" />
+                            )}
+                            <div
+                              className={`rounded-full border transition-all duration-200 flex-shrink-0 ${
+                                isSelected
+                                  ? 'w-2.5 h-2.5 bg-bandhu-primary border-bandhu-primary shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+                                  : event.role === 'user'
+                                    ? 'w-1.5 h-1.5 bg-blue-500/40 border-blue-400'
+                                    : 'w-1.5 h-1.5 bg-purple-500/40 border-purple-400'
+                              }`}
+                              style={{ 
+                                minWidth: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px', 
+                                minHeight: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px' 
+                              }}
+                            />
+                          </div>
 
-      {/* 2. LA BULLE (CONTAINER) */}
-<div 
-  className={`ml-10 mr-2 transition-all duration-300 flex flex-col justify-center ${
-    eventHeight >= 32 ? 'rounded-lg border bg-gray-800/20 border-gray-700/30' : 'border-l-2 border-white/5'
-  }`}
-  style={{
-    // ✨ ON STABILISE LE PADDING : Il ne bouge plus pendant l'ouverture du header
-    paddingTop: eventHeight >= 58 ? '12px' : 
-                eventHeight <= 25 ? '2px' : 
-                `${2 + (eventHeight - 25) * (10 / 33)}px`,
-    paddingBottom: eventHeight >= 58 ? '12px' : 
-                   eventHeight <= 25 ? '2px' : 
-                   `${2 + (eventHeight - 25) * (10 / 33)}px`,
-    
-    opacity: eventHeight <= 18 ? 0.3 : 
-             eventHeight <= 25 ? (eventHeight - 18) / 7 : 1,
-    minHeight: `${eventHeight}px`
-  }}
->
-  {/* Header (Heure/Rôle) : Ouverture au millimètre près */}
-  <div 
-    className="overflow-hidden transition-all duration-500"
-    style={{ 
-      // ✨ SYNC PARFAITE : On utilise une rampe de 58 à 64px
-      height: eventHeight >= 64 ? '18px' : 
-              eventHeight <= 58 ? '0px' : 
-              `${(eventHeight - 58) * (18 / 6)}px`, 
-              
-      opacity: eventHeight >= 64 ? 1 : 
-               eventHeight <= 58 ? 0 : (eventHeight - 58) / 6,
-               
-      marginBottom: eventHeight >= 64 ? '6px' : 
-                    eventHeight <= 58 ? '0px' : 
-                    `${(eventHeight - 58) * (6 / 6)}px`
-    }}
-  >
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <span className="text-[10px] text-gray-500 font-medium">
-        {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-      </span>
-      <span className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold ${
-        event.role === 'user' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
-      }`}>
-        {event.role === 'user' ? 'Vous' : 'AI'}
-      </span>
-    </div>
-  </div>
+                          {/* Container event */}
+                          <div 
+                            className={`ml-10 mr-2 flex flex-col transition-colors duration-200 ${
+                              eventHeight >= 32 
+                                ? 'rounded-lg border bg-gray-800/20 border-gray-700/30 shadow-sm' 
+                                : 'border-l-2 border-white/10'
+                            }`}
+                            style={{
+                              height: `${eventHeight}px`,
+                              padding: eventHeight > 48 ? '12px' : eventHeight > 32 ? '8px' : '4px',
+                              opacity: eventHeight <= 10 ? 0 : eventHeight <= 20 ? (eventHeight - 10) / 10 : 1,
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {/* Header (heure/role) */}
+                            {eventHeight >= 58 && (
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] text-gray-500 font-medium">
+                                  {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold ${
+                                  event.role === 'user' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
+                                }`}>
+                                  {event.role === 'user' ? 'Vous' : 'AI'}
+                                </span>
+                              </div>
+                            )}
 
-{/* 3. LE TEXTE DU MESSAGE (Version optimisée 16-25px) */}
-{details && (
-  <p 
-    className="text-gray-200 leading-tight break-words transition-all duration-300"
-    style={{
-      fontSize: eventHeight >= 120 ? '15px' : 
-                eventHeight <= 40  ? '11px' : 
-                `${11 + (eventHeight - 40) * (4 / 80)}px`,
-      
-      // ✨ AMÉLIORATION : On cache le texte sous 20px pour une transition propre vers le bâtonnet
-      display: eventHeight < 20 ? 'none' : '-webkit-box',
-      WebkitBoxOrient: 'vertical',
-      
-      WebkitLineClamp: eventHeight >= 150 ? 10 : 
-                       eventHeight >= 120 ? 6 : 
-                       eventHeight >= 95  ? 5 :
-                       eventHeight >= 82  ? 4 :
-                       eventHeight >= 72  ? 2 : 1, 
-
-      // ✨ FADEOUT : Le texte s'efface progressivement entre 25px et 20px
-      opacity: eventHeight >= 25 ? 1 : 
-               eventHeight <= 20 ? 0 : (eventHeight - 20) / 5,
-      
-      overflow: 'hidden'
-    }}
-  >
-    {details.contentPreview}
-  </p>
-)}
-</div>
-    </div>
-  )
-})}
+                            {/* Preview */}
+                            {details && eventHeight >= 20 && (
+                              <p 
+                                className="text-gray-200 leading-tight break-words"
+                                style={{
+                                  fontSize: eventHeight >= 120 ? '15px' : eventHeight <= 40 ? '11px' : `${11 + (eventHeight - 40) * (4 / 80)}px`,
+                                  display: '-webkit-box',
+                                  WebkitBoxOrient: 'vertical',
+                                  WebkitLineClamp: eventHeight >= 150 ? 10 : eventHeight >= 120 ? 6 : eventHeight >= 95 ? 5 : eventHeight >= 82 ? 4 : eventHeight >= 72 ? 2 : 1,
+                                  overflow: 'hidden'
+                                }}
+                              >
+                                {details.contentPreview}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
