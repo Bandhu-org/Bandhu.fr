@@ -291,6 +291,27 @@ useEffect(() => {
   };
 }, []);
 
+/* -------------------- CURSEUR ZOOM CTRL/CMD -------------------- */
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) setIsZooming(true)
+  }
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) setIsZooming(false)
+  }
+  const handleBlur = () => setIsZooming(false)
+
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+  window.addEventListener('blur', handleBlur)
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
+    window.removeEventListener('blur', handleBlur)
+  }
+}, [])
+
   /* -------------------- Toggle thread -------------------- */
 
   const toggleThread = useCallback((threadId: string) => {

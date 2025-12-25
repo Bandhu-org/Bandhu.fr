@@ -143,6 +143,8 @@ export default function TimelineView() {
   const [scrollState, setScrollState] = useState({ scrollTop: 0, clientHeight: 0 })
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
   const isZoomingRef = useRef(false)
+  const [isZooming, setIsZooming] = useState(false)
+  const [isMouseOver, setIsMouseOver] = useState(false) // Souris dans la zone ?
 
   /* -------------------- Visualization Mode -------------------- */
 
@@ -249,10 +251,32 @@ useEffect(() => {
   if (container && eventsMetadata.length > 0) {
     setTimeout(() => {
       container.scrollTop = container.scrollHeight
+      setIsZooming(false)
       console.log('📍 [TIMELINE] Scrolled to bottom')
     }, 100)
   }
 }, [eventsMetadata.length])
+
+/* -------------------- DÉTECTION CTRL/CMD -------------------- */
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) setIsZooming(true)
+  }
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) setIsZooming(false)
+  }
+  const handleBlur = () => setIsZooming(false)
+
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+  window.addEventListener('blur', handleBlur)
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
+    window.removeEventListener('blur', handleBlur)
+  }
+}, [])
 
 
 useEffect(() => {
@@ -287,6 +311,8 @@ useEffect(() => {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault()
     e.stopPropagation()
+    // UI du viseur
+setIsZooming(true)
     
     // ✨ Throttle - Ignorer si déjà en train de zoomer
     if (isZoomingRef.current) {
@@ -658,7 +684,11 @@ console.log('🎯 AVANT ZOOM:', {
   /* -------------------- Render -------------------- */
 
   return (
-    <div className="h-full flex flex-col">
+  <div 
+    className="h-full flex flex-col"
+    onMouseEnter={() => setIsMouseOver(true)}
+    onMouseLeave={() => setIsMouseOver(false)}
+  >
       {/* Header */}
       <div className="text-xs text-gray-500 mb-4">
         {eventsMetadata.length} événements •{' '}
@@ -682,6 +712,23 @@ console.log('🎯 AVANT ZOOM:', {
         className="flex-1 overflow-y-auto relative timeline-scroll-container"
         style={{ height: '100%', maxHeight: 'calc(100% - 2rem)' }}
       >
+
+{/* Viseur de zoom */}
+<div 
+  className={`sticky top-1/2 left-0 right-0 -translate-y-1/2 pointer-events-none z-50 flex items-center justify-between transition-all duration-500 ${
+    (isMouseOver && isZooming) ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+  }`}
+  style={{ height: '0px' }} 
+>
+  <div className="absolute left-0 right-0 h-[60px] bg-blue-600/10 blur-2xl -translate-y-1/2" />
+  <div className="absolute left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+  <div className="absolute left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
+  <div className="flex justify-between w-full px-2">
+    <div className="text-[14px] text-blue-400 animate-pulse font-black drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">▶</div>
+    <div className="text-[14px] text-blue-400 animate-pulse font-black drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">◀</div>
+  </div>
+</div>
+
         <div style={{ 
           height: totalHeight, 
           minHeight: '100%', 
