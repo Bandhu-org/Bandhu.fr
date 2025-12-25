@@ -82,17 +82,24 @@ export default function ThreadsView() {
 
   const eventHeight = useMemo(() => {
     const mappings = [
-      { msPerPixel: 20,          height: 400 },
-      { msPerPixel: 1000,        height: 100 },
-      { msPerPixel: 5000,        height: 85  },
-      { msPerPixel: 15000,       height: 64  }, 
-      { msPerPixel: 60000,       height: 48  },
-      { msPerPixel: 120000,      height: 42  },
-      { msPerPixel: 300000,      height: 20  },
-      { msPerPixel: 1000000,     height: 15  },
-      { msPerPixel: 3600000,     height: 12  }, 
-      { msPerPixel: 604800000,   height: 6   },
-    ]
+  // --- ZOOM EXTRÊME (plafond réduit à 280px) ---
+  { msPerPixel: 20,          height: 280 }, 
+  { msPerPixel: 100,         height: 200 }, 
+  { msPerPixel: 500,         height: 140 },
+  { msPerPixel: 1000,        height: 100 },
+
+  // --- TRANSITION DOUCE ---
+  { msPerPixel: 2000,        height: 95 },
+  { msPerPixel: 3500,        height: 90 },
+  { msPerPixel: 5000,        height: 85 },
+  { msPerPixel: 15000,       height: 64 },
+  { msPerPixel: 60000,       height: 48 },
+  { msPerPixel: 120000,      height: 42 },
+  { msPerPixel: 300000,      height: 20 },
+  { msPerPixel: 1000000,     height: 15 },
+  { msPerPixel: 3600000,     height: 12 },
+  { msPerPixel: 604800000,   height: 6 },
+]
 
     if (msPerPixel <= mappings[0].msPerPixel) return mappings[0].height
     if (msPerPixel >= mappings[mappings.length - 1].msPerPixel) return mappings[mappings.length - 1].height
@@ -496,7 +503,7 @@ useEffect(() => {
   fontSize: eventHeight >= 120 ? '15px' : eventHeight <= 40 ? '11px' : `${11 + (eventHeight - 40) * (4 / 80)}px`,
   display: '-webkit-box',
   WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: Math.floor(eventHeight / 16),
+  WebkitLineClamp: Math.floor(eventHeight / 20),
   overflow: 'hidden'
 }}
                               >
