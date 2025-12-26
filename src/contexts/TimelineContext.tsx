@@ -96,7 +96,8 @@ interface TimelineContextType {
   loadMetadata: () => Promise<void>
   loadDetails: (eventIds: string[]) => Promise<void>
   getEventDetails: (eventId: string) => EventDetails | undefined
-  addEvent: (event: TimelineEvent) => void 
+  addEvent: (event: TimelineEvent) => void
+  addThread: (thread: ThreadData) => void
 
   /* Selection */
   selectedEventIds: string[]
@@ -334,6 +335,23 @@ const addEvent = useCallback((event: TimelineEvent) => {
   })
 }, [])
 
+/* -------------------- Add Thread -------------------- */
+
+const addThread = useCallback((thread: ThreadData) => {
+  setThreads(prev => {
+    // Vérifier si déjà existant
+    if (prev.some(t => t.id === thread.id)) {
+      // Thread existe → mettre à jour
+      return prev.map(t => t.id === thread.id ? thread : t)
+    }
+    
+    // Nouveau thread → ajouter et trier par lastActivity
+    return [...prev, thread].sort((a, b) => 
+      b.lastActivity.getTime() - a.lastActivity.getTime()
+    )
+  })
+}, [])
+
   /* -------------------- Get Event Details -------------------- */
 
   const getEventDetails = useCallback((eventId: string): EventDetails | undefined => {
@@ -380,6 +398,7 @@ const addEvent = useCallback((event: TimelineEvent) => {
     loadDetails,
     getEventDetails,
     addEvent,
+    addThread,
 
     selectedEventIds,
     setSelectedEventIds,

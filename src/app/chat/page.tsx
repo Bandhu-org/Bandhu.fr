@@ -77,7 +77,8 @@ export default function ChatPage() {
   toggleEventSelection,
   setSelectedEventIds,
   clearSelection,
-  addEvent
+  addEvent,
+  addThread
 } = useTimeline()
 
   // ========== ÉTATS ==========
@@ -613,10 +614,19 @@ const sendMessage = async () => {
     }
 
     const data = await response.json()
-    threadToUse = data.threadId
-    setActiveThreadId(threadToUse)
-  }
+threadToUse = data.threadId
+setActiveThreadId(threadToUse)
 
+// ✨ NOUVEAU : Ajouter le thread à la Timeline immédiatement
+if (threadToUse) {
+  addThread({
+    id: threadToUse,
+    label: autoLabel,
+    messageCount: 0,
+    lastActivity: new Date()
+  })
+}
+  }
   // Optimistic update
   const tempEvent: Event = {
     id: 'temp-' + Date.now(),
