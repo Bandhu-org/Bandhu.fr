@@ -73,6 +73,7 @@ export default function ChatPage() {
   const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
   const { 
   isTimelineOpen,
+  toggleTimeline,
   selectedEventIds,
   toggleEventSelection,
   setSelectedEventIds,
@@ -1065,9 +1066,6 @@ const renderThreadCard = (thread: Thread) => {
   overflow-hidden
 `}>
   <div className="w-80 h-full bg-gray-900/50 backdrop-blur-sm p-5 border-r border-gray-800 flex flex-col">
-
-  {/* BOUTON TOGGLE TIMELINE */}
-        <TimelineToggleButton />
     
     {/* ========== NOUVEAU HEADER BRANDING ========== */}
 <div className="flex-shrink-0 mb-4 px-2">
@@ -1372,6 +1370,39 @@ const renderThreadCard = (thread: Thread) => {
     {isSidebarCollapsed ? '→' : '←'}
   </span>
 </button>
+
+
+{/* ========== BOUTON OUVRIR TIMELINE (visible seulement si fermée) ========== */}
+{!isTimelineOpen && (
+  <button
+    onClick={toggleTimeline}
+    className="absolute top-4 right-4 z-50 p-1.5 rounded-full bg-gradient-to-br from-gray-900/90 via-blue-800/90 to-blue-800/90 border border-gray-700 text-bandhu-primary hover:text-white hover:bg-gradient-to-r hover:from-bandhu-primary hover:to-bandhu-secondary transition-all duration-300 hover:scale-110"
+    title="Afficher la timeline"
+  >
+    {/* Rose des vents (identique) */}
+    <svg 
+      width="20" 
+      height="20" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="1.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" opacity="0.3"/>
+      <path d="M12 2 L12 6" strokeWidth="2"/>
+      <path d="M12 18 L12 22" strokeWidth="2"/>
+      <path d="M2 12 L6 12" strokeWidth="2"/>
+      <path d="M18 12 L22 12" strokeWidth="2"/>
+      <path d="M5 5 L8 8" opacity="0.6"/>
+      <path d="M19 5 L16 8" opacity="0.6"/>
+      <path d="M5 19 L8 16" opacity="0.6"/>
+      <path d="M19 19 L16 16" opacity="0.6"/>
+      <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    </svg>
+  </button>
+)}
 
       {/* ========== CHAT AREA ========== */}
       <div 
