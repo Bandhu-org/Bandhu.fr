@@ -708,10 +708,10 @@ console.log('🎯 AVANT ZOOM:', {
 
       {/* Timeline Container */}
       <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto relative timeline-scroll-container"
-        style={{ height: '100%', maxHeight: 'calc(100% - 2rem)' }}
-      >
+  ref={scrollContainerRef}
+  className="flex-1 overflow-y-auto relative timeline-scroll-container scrollbar-bandhu"
+  style={{ height: '100%', maxHeight: 'calc(100% - 2rem)' }}
+>
 
 {/* Viseur de zoom */}
 <div 

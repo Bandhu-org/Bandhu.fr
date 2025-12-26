@@ -378,13 +378,13 @@ useEffect(() => {
 
       {/* Scroll container */}
       <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto pl-2 overscroll-none relative"
-        style={{ 
-          overflowAnchor: 'none', 
-          scrollBehavior: 'auto',
-        }}
-      >
+  ref={scrollContainerRef}
+  className="flex-1 overflow-y-auto pl-2 overscroll-none relative scrollbar-bandhu"
+  style={{ 
+    overflowAnchor: 'none', 
+    scrollBehavior: 'auto',
+  }}
+>
         {/* Viseur de zoom */}
         <div 
           className={`sticky top-1/2 left-0 right-0 -translate-y-1/2 pointer-events-none z-50 flex items-center justify-between transition-all duration-500 ${
