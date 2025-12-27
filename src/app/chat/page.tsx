@@ -79,7 +79,11 @@ export default function ChatPage() {
   setSelectedEventIds,
   clearSelection,
   addEvent,
-  addThread
+  addThread,
+  pinnedEventIds,
+  pinnedEventsColors,
+  toggleEventPin,
+  setPinColor
 } = useTimeline()
 
   // ========== ÉTATS ==========
@@ -1622,17 +1626,21 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
         <div className="mb-5 flex justify-center">
           <div className="w-full max-w-[780px]">
             <MessageItem
-              event={event}
-              session={session}
-              isSelected={selectedMessageIds.has(event.id)}
-              isExpanded={expandedMessages[event.id] || false}
-              isCopied={copiedMessageId === event.id}
-              onToggleSelect={toggleMessageSelection}
-              onToggleExpand={handleToggleExpand}
-              onCopy={handleCopyMessage}
-              formatDiscordDate={formatDiscordDate}
-              COLLAPSE_HEIGHT={COLLAPSE_HEIGHT}
-            />
+  event={event}
+  session={session}
+  isSelected={selectedMessageIds.has(event.id)}
+  isExpanded={expandedMessages[event.id] || false}
+  isCopied={copiedMessageId === event.id}
+  isPinned={pinnedEventIds.includes(event.id)}
+  pinColor={pinnedEventsColors.get(event.id) || 'yellow'}
+  onToggleSelect={toggleMessageSelection}
+  onToggleExpand={handleToggleExpand}
+  onCopy={handleCopyMessage}
+  onTogglePin={toggleEventPin}
+  onSetPinColor={setPinColor}
+  formatDiscordDate={formatDiscordDate}
+  COLLAPSE_HEIGHT={COLLAPSE_HEIGHT}
+/>
           </div>
         </div>
       </React.Fragment>

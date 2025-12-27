@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useTimeline } from '@/contexts/TimelineContext'
 import type { EventMetadata } from '@/types/timeline'
+import { getPinColor } from '@/constants/pinColors'
 
 /* ============================================================
    CONSTANTS
@@ -46,7 +47,9 @@ export default function ThreadsView({ activeThreadId, currentVisibleEventId }: T
     selectedEventIds,
     toggleEventSelection,
     getEventDetails,
-    loadDetails
+    loadDetails,
+    pinnedEventIds,
+    pinnedEventsColors
   } = useTimeline()
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -582,8 +585,10 @@ marker.innerHTML = `
     <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
 
     {thread.events.map((event, index) => {
-      const isSelected = selectedEventIds.includes(event.id)
-      const details = getEventDetails(event.id)
+  const isSelected = selectedEventIds.includes(event.id)
+  const isPinned = pinnedEventIds.includes(event.id)
+  const pinColor = getPinColor(pinnedEventsColors.get(event.id) || 'yellow')
+  const details = getEventDetails(event.id)
 
       // Détecter si on change de jour
       const showDateSeparator = index === 0 || (() => {
@@ -660,6 +665,17 @@ marker.innerHTML = `
                               }}
                             />
                           </div>
+
+                          {/* Bâtonnet PIN - À DROITE, COULEUR DYNAMIQUE */}
+{isPinned && (
+  <div 
+    className="absolute -right-1 top-0 bottom-0 w-1 rounded-full"
+    style={{
+      background: `linear-gradient(to bottom, ${pinColor.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')')}, ${pinColor.glow.replace('0.6)', '0.8)')}, ${pinColor.glow.replace('0.6)', '1)')})`,
+      boxShadow: `0 0 8px ${pinColor.glow}`
+    }}
+  />
+)}
 
                           {/* Container event */}
                           <div 

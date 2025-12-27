@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
+import { PIN_COLORS, getPinColor } from '@/constants/pinColors'
 
 interface MessageItemProps {
   event: {
@@ -16,9 +17,13 @@ interface MessageItemProps {
   isSelected: boolean
   isExpanded: boolean
   isCopied: boolean
+  isPinned?: boolean
+  pinColor?: string
   onToggleSelect: (id: string) => void
   onToggleExpand: (id: string, expanded: boolean) => void
   onCopy: (content: string, id: string) => void
+  onTogglePin?: (id: string, color?: string) => void
+  onSetPinColor?: (id: string, color: string) => void
   formatDiscordDate: (dateString: string) => string
   COLLAPSE_HEIGHT: string
 }
@@ -29,14 +34,36 @@ const MessageItem = React.memo(({
   isSelected,
   isExpanded,
   isCopied,
+  isPinned = false,
+  pinColor = 'yellow',
   onToggleSelect,
   onToggleExpand,
   onCopy,
+  onTogglePin,
+  onSetPinColor,
   formatDiscordDate,
   COLLAPSE_HEIGHT
 }: MessageItemProps) => {
   
-  const selectedMessageIds = new Set([event.id]) // Pour la compatibilité avec le code existant
+  const [showColorPicker, setShowColorPicker] = useState(false)
+  const currentColor = getPinColor(pinColor)
+
+  // Fermer le menu au clic externe
+React.useEffect(() => {
+  if (!showColorPicker) return
+
+  const handleClickOutside = (e: MouseEvent) => {
+    const target = e.target as Element
+    if (!target.closest('.pin-color-picker')) {
+      setShowColorPicker(false)
+    }
+  }
+
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, [showColorPicker])
+  
+  const selectedMessageIds = new Set([event.id])
   
   if (event.role === 'user') {
     return (
@@ -146,7 +173,78 @@ const MessageItem = React.memo(({
             </div>
           )}
 
-          <div className="mt-2 flex justify-end items-center gap-3">
+          <div className="mt-4 flex justify-end items-center gap-3">
+            {/* Bouton PIN avec sélecteur de couleur */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  if (isPinned) {
+                    setShowColorPicker(!showColorPicker)
+                  } else {
+                    onTogglePin?.(event.id, 'yellow')
+                  }
+                }}
+                className="group relative p-2 rounded transition-all hover:scale-110 hover:shadow-lg border"
+                style={isPinned ? {
+                  color: currentColor.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')'),
+                  backgroundColor: currentColor.glow.replace('0.6)', '0.2)'),
+                  borderColor: currentColor.glow.replace('0.6)', '0.3)')
+                } : {
+                  color: 'rgb(156, 163, 175)',
+                  backgroundColor: 'rgba(31, 41, 55, 0.4)',
+                  borderColor: 'transparent'
+                }}
+                title={isPinned ? "Changer la couleur" : "Épingler"}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={isPinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 3l-4 4-4-4"/>
+                  <path d="M12 7v13"/>
+                  <path d="m8 17 4 4 4-4"/>
+                </svg>
+                <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-50">
+                  {isPinned ? 'Changer la couleur' : 'Épingler'}
+                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+                </div>
+              </button>
+
+              {/* Menu sélecteur de couleurs */}
+{isPinned && showColorPicker && (
+  <div className="pin-color-picker absolute top-full mt-2 left-0 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-5 shadow-2xl z-[100] min-w-[240px]">
+  <div className="grid grid-cols-5 gap-4 mb-3">
+                  {PIN_COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSetPinColor?.(event.id, color.value)
+                        setShowColorPicker(false)
+                      }}
+                      className="w-10 h-10 rounded-full hover:scale-125 transition-transform border-2"
+                      style={{
+                        backgroundColor: color.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')'),
+                        borderColor: currentColor.value === color.value ? 'white' : 'transparent',
+                        boxShadow: `0 0 8px ${color.glow}`
+                      }}
+                      title={color.name}
+                    />
+                  ))}
+    </div>
+                  
+                  {/* Bouton désépingler */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onTogglePin?.(event.id)
+                      setShowColorPicker(false)
+                    }}
+                    className="col-span-5 mt-1 text-xs text-red-300 hover:text-red-200 py-1 hover:bg-red-900/30 rounded transition"
+                  >
+                    Désépingler
+                </button>
+            </div>
+          )}
+        </div>
+
             <label className="relative inline-flex items-center cursor-pointer group/checkbox">
               <input
                 type="checkbox"
@@ -190,7 +288,7 @@ const MessageItem = React.memo(({
     )
   }
   
-  // Message AI
+  // Message AI - IDENTIQUE MAIS POUR AI
   return (
     <div className="max-w-[800px] relative mb-8" data-message-id={event.id}>
       <div className={`bg-transparent rounded-2xl ${
@@ -199,7 +297,7 @@ const MessageItem = React.memo(({
           : ''
       }`}>
         
-        <div className="px-4 py-5 bg-transparent text-gray-100 relative break-words [word-break:break-word] overflow-hidden">
+        <div className="px-4 py-5 pb-12 bg-transparent text-gray-100 relative break-words [word-break:break-word] overflow-hidden">
           <ReactMarkdown
             rehypePlugins={[rehypeHighlight]}
             components={{
@@ -279,7 +377,77 @@ const MessageItem = React.memo(({
           </ReactMarkdown>
         </div>
 
-        <div className="absolute bottom-4 right-4 flex items-center gap-3">
+        <div className="absolute bottom-1 right-4 flex items-center gap-3">
+          {/* Bouton PIN avec sélecteur de couleur - IDENTIQUE */}
+          <div className="relative">
+            <button 
+              onClick={() => {
+                if (isPinned) {
+                  setShowColorPicker(!showColorPicker)
+                } else {
+                  onTogglePin?.(event.id, 'yellow')
+                }
+              }}
+              className="group relative p-2 rounded transition-all hover:scale-110 hover:shadow-lg border"
+              style={isPinned ? {
+                color: currentColor.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')'),
+                backgroundColor: currentColor.glow.replace('0.6)', '0.2)'),
+                borderColor: currentColor.glow.replace('0.6)', '0.3)')
+              } : {
+                color: 'rgb(156, 163, 175)',
+                backgroundColor: 'rgba(31, 41, 55, 0.4)',
+                borderColor: 'transparent'
+              }}
+              title={isPinned ? "Changer la couleur" : "Épingler"}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={isPinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 3l-4 4-4-4"/>
+                <path d="M12 7v13"/>
+                <path d="m8 17 4 4 4-4"/>
+              </svg>
+              <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-50">
+                {isPinned ? 'Changer la couleur' : 'Épingler'}
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
+              </div>
+            </button>
+
+            {/* Menu sélecteur de couleurs */}
+            {isPinned && showColorPicker && (
+  <div className="pin-color-picker absolute bottom-full mb-2 left-0 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-5 shadow-2xl z-[100] min-w-[240px]">
+  <div className="grid grid-cols-5 gap-4 mb-3">
+                {PIN_COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSetPinColor?.(event.id, color.value)
+                      setShowColorPicker(false)
+                    }}
+                    className="w-10 h-10 rounded-full hover:scale-125 transition-transform border-2"
+                    style={{
+                      backgroundColor: color.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')'),
+                      borderColor: currentColor.value === color.value ? 'white' : 'transparent',
+                      boxShadow: `0 0 8px ${color.glow}`
+                    }}
+                    title={color.name}
+                  />
+                ))}
+                </div>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onTogglePin?.(event.id)
+                    setShowColorPicker(false)
+                  }}
+                  className="col-span-5 mt-1 text-xs text-red-300 hover:text-red-200 py-1 hover:bg-red-900/30 rounded transition"
+                >
+                  Désépingler
+                </button>
+              </div>
+            )}
+          </div>
+
           <label className="relative inline-flex items-center cursor-pointer group/checkbox">
             <input
               type="checkbox"
@@ -328,7 +496,9 @@ const MessageItem = React.memo(({
     prevProps.event.content === nextProps.event.content &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isExpanded === nextProps.isExpanded &&
-    prevProps.isCopied === nextProps.isCopied
+    prevProps.isCopied === nextProps.isCopied &&
+    prevProps.isPinned === nextProps.isPinned &&
+    prevProps.pinColor === nextProps.pinColor
   )
 })
 

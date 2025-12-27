@@ -98,6 +98,10 @@ interface TimelineContextType {
   getEventDetails: (eventId: string) => EventDetails | undefined
   addEvent: (event: TimelineEvent) => void
   addThread: (thread: ThreadData) => void
+  pinnedEventIds: string[]
+  pinnedEventsColors: Map<string, string>
+  toggleEventPin: (eventId: string, color?: string) => void
+  setPinColor: (eventId: string, color: string) => void
 
   /* Selection */
   selectedEventIds: string[]
@@ -198,6 +202,8 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   /* -------------------- Selection -------------------- */
 
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
+  const [pinnedEventIds, setPinnedEventIds] = useState<string[]>([])
+  const [pinnedEventsColors, setPinnedEventsColors] = useState<Map<string, string>>(new Map())
 
   const toggleEventSelection = useCallback((id: string) => {
     setSelectedEventIds(prev =>
@@ -352,6 +358,39 @@ const addThread = useCallback((thread: ThreadData) => {
   })
 }, [])
 
+const toggleEventPin = useCallback((eventId: string, color: string = 'yellow') => {
+  console.log('🔵 toggleEventPin called:', eventId, 'color:', color)
+  setPinnedEventIds(prev => {
+    const isPinned = prev.includes(eventId)
+    
+    if (isPinned) {
+      // Désépingler → retirer la couleur aussi
+      setPinnedEventsColors(prevColors => {
+        const newColors = new Map(prevColors)
+        newColors.delete(eventId)
+        return newColors
+      })
+      return prev.filter(id => id !== eventId)
+    } else {
+      // Épingler → ajouter la couleur
+      setPinnedEventsColors(prevColors => {
+        const newColors = new Map(prevColors)
+        newColors.set(eventId, color)
+        return newColors
+      })
+      return [...prev, eventId]
+    }
+  })
+}, [])
+
+const setPinColor = useCallback((eventId: string, color: string) => {
+  setPinnedEventsColors(prev => {
+    const newColors = new Map(prev)
+    newColors.set(eventId, color)
+    return newColors
+  })
+}, [])
+
   /* -------------------- Get Event Details -------------------- */
 
   const getEventDetails = useCallback((eventId: string): EventDetails | undefined => {
@@ -399,6 +438,10 @@ const addThread = useCallback((thread: ThreadData) => {
     getEventDetails,
     addEvent,
     addThread,
+    pinnedEventIds,
+    pinnedEventsColors,
+    toggleEventPin,
+    setPinColor,
 
     selectedEventIds,
     setSelectedEventIds,
