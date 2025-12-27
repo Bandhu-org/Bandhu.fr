@@ -598,35 +598,35 @@ marker.innerHTML = `
       })()
 
       // Formatter la date
-      const getDateLabel = (dateString: Date) => {
-        const date = new Date(dateString)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const yesterday = new Date(today.getTime() - 86400000)
-        const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-        
-        if (messageDate.getTime() === today.getTime()) return "Aujourd'hui"
-        if (messageDate.getTime() === yesterday.getTime()) return "Hier"
-        
-        return date.toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        })
-      }
+const getDateLabel = (dateString: Date) => {
+  const date = new Date(dateString)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const yesterday = new Date(today.getTime() - 86400000)
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  if (messageDate.getTime() === today.getTime()) return "Aujourd'hui"
+  if (messageDate.getTime() === yesterday.getTime()) return "Hier"
+  
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  
+  return `${day}/${month}/${year}`
+}
 
       return (
         <React.Fragment key={event.id}>
           {/* Séparateur de date */}
-          {showDateSeparator && eventHeight >= 32 && (
-            <div className="flex items-center gap-2 my-3 px-2">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 bg-gray-800/50 rounded-md border border-gray-700/30">
-                {getDateLabel(event.createdAt)}
-              </span>
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
-            </div>
-          )}
+{showDateSeparator && (
+  <div className="flex items-center gap-2 my-3 px-2">
+    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+    <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+      {getDateLabel(event.createdAt)}
+    </span>
+    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+  </div>
+)}
 
           {/* Event */}
           <div
