@@ -578,16 +578,53 @@ marker.innerHTML = `
 
                 {/* Events */}
                 {isExpanded && (
-                  <div className="bg-gray-900/20 relative px-4 py-2 space-y-2">
-                    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
+  <div className="bg-gray-900/20 relative px-4 py-2 space-y-2">
+    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
 
-                    {thread.events.map((event) => {
-                      const isSelected = selectedEventIds.includes(event.id)
-                      const details = getEventDetails(event.id)
+    {thread.events.map((event, index) => {
+      const isSelected = selectedEventIds.includes(event.id)
+      const details = getEventDetails(event.id)
 
-                      return (
-                        <div
-                          key={event.id}
+      // Détecter si on change de jour
+      const showDateSeparator = index === 0 || (() => {
+        const currentDate = new Date(event.createdAt).toISOString().split('T')[0]
+        const previousDate = new Date(thread.events[index - 1].createdAt).toISOString().split('T')[0]
+        return currentDate !== previousDate
+      })()
+
+      // Formatter la date
+      const getDateLabel = (dateString: Date) => {
+        const date = new Date(dateString)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const yesterday = new Date(today.getTime() - 86400000)
+        const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+        
+        if (messageDate.getTime() === today.getTime()) return "Aujourd'hui"
+        if (messageDate.getTime() === yesterday.getTime()) return "Hier"
+        
+        return date.toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        })
+      }
+
+      return (
+        <React.Fragment key={event.id}>
+          {/* Séparateur de date */}
+          {showDateSeparator && eventHeight >= 32 && (
+            <div className="flex items-center gap-2 my-3 px-2">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 bg-gray-800/50 rounded-md border border-gray-700/30">
+                {getDateLabel(event.createdAt)}
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+            </div>
+          )}
+
+          {/* Event */}
+          <div
                           data-message-id={event.id}
                           style={{ 
                             height: `${eventHeight}px`,
@@ -669,7 +706,8 @@ marker.innerHTML = `
                             )}
                           </div>
                         </div>
-                      )
+                      </React.Fragment>
+                    )
                     })}
                   </div>
                 )}
