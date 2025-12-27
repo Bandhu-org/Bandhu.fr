@@ -1,13 +1,18 @@
 // src/components/TimelineSidebar/TimelineSidebar.tsx
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useTimeline } from '@/contexts/TimelineContext'
 import TimelineView from './TimelineView'
 import ThreadsView from './ThreadsView'
 
-export default function TimelineSidebar() {
-  const { 
+interface TimelineSidebarProps {
+  activeThreadId?: string | null
+  currentVisibleEventId?: string | null
+}
+
+export default function TimelineSidebar({ activeThreadId, currentVisibleEventId }: TimelineSidebarProps) {
+  const {
     isTimelineOpen, 
     closeTimeline,
     densityRatio,
@@ -18,6 +23,13 @@ export default function TimelineSidebar() {
     zoomOut,
     msPerPixel
   } = useTimeline()
+
+  // ✅ Si activeThreadId passé, forcer ThreadsView au mount
+  useEffect(() => {
+    if (activeThreadId) {
+      setViewMode('threads')
+    }
+  }, [activeThreadId, setViewMode])
 
   // ✨ Zoom temporel (pas density)
   const handleZoomOut = () => {
@@ -131,7 +143,7 @@ const currentDensity = getDensityLabel(densityRatio)
 
       {/* Contenu */}
       <div className="flex-1 overflow-y-auto p-4">
-        {viewMode === 'timeline' ? <TimelineView /> : <ThreadsView />}
+        {viewMode === 'timeline' ? <TimelineView /> : <ThreadsView activeThreadId={activeThreadId} currentVisibleEventId={currentVisibleEventId} />}
       </div>
 
       {/* Footer */}

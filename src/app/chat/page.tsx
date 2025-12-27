@@ -115,6 +115,7 @@ export default function ChatPage() {
   const selectedMessageIds = new Set(selectedEventIds)
   const [targetThreadIdForExport, setTargetThreadIdForExport] = useState<string | null>(null)
   const [showClearSelectionModal, setShowClearSelectionModal] = useState(false)
+  const [currentVisibleEventId, setCurrentVisibleEventId] = useState<string | null>(null)
 
   // ========== REFS ==========
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -190,6 +191,27 @@ useEffect(() => {
     
     // 1. Toujours montrer le bouton
     setShowScrollButton(events.length > 0)
+
+    // 2. Calculer quel event est au centre du viewport
+const containerRect = container.getBoundingClientRect()
+const viewportCenterY = containerRect.top + containerRect.height / 2
+
+const allMessages = container.querySelectorAll<HTMLElement>('[data-message-id]')
+let closestEventId: string | null = null
+let minDistance = Infinity
+
+allMessages.forEach((el) => {
+  const rect = el.getBoundingClientRect()
+  const distance = Math.abs(rect.top + rect.height / 2 - viewportCenterY)
+  if (distance < minDistance) {
+    minDistance = distance
+    closestEventId = el.getAttribute('data-message-id')
+  }
+})
+
+if (closestEventId) {
+  setCurrentVisibleEventId(closestEventId)
+}
 
     // 2. Calcul position cible
     const allUserMessages = container.querySelectorAll('[data-message-type="user"]')
@@ -1872,7 +1894,7 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
     right: showExportModal ? '400px' : '0'
   }}
 >
-  {isTimelineOpen && <TimelineSidebar />}
+  {isTimelineOpen && <TimelineSidebar activeThreadId={activeThreadId} currentVisibleEventId={currentVisibleEventId} />}
 </div>
     </div>
 )

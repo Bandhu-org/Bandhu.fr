@@ -31,7 +31,12 @@ interface ThreadGroup {
    MAIN COMPONENT
 ============================================================ */
 
-export default function ThreadsView() {
+interface ThreadsViewProps {
+  activeThreadId?: string | null
+  currentVisibleEventId?: string | null
+}
+
+export default function ThreadsView({ activeThreadId, currentVisibleEventId }: ThreadsViewProps) {
   const {
     threads,
     eventsMetadata,
@@ -50,6 +55,7 @@ export default function ThreadsView() {
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
   const [frozenHeaderHeight, setFrozenHeaderHeight] = useState<number | null>(null)
   const [isMouseOver, setIsMouseOver] = useState(false)
+  const [currentScrollPosition, setCurrentScrollPosition] = useState(0)
   
   // ✨ NOUVEAU : Verrouillage de l'élément d'ancrage
   const anchorElementRef = useRef<Element | null>(null)
@@ -346,6 +352,117 @@ useEffect(() => {
     }, 500)
   }, [])
 
+  /* -------------------- Auto-expand + zoom + scroll au mount (PREMIÈRE FOIS SEULEMENT) -------------------- */
+
+const hasInitializedRef = useRef(false)
+
+useEffect(() => {
+  if (!activeThreadId || hasInitializedRef.current) return
+
+  hasInitializedRef.current = true
+
+  // 1. Forcer un zoom confortable
+  const targetMsPerPixel = 15000 // 15s/px = events à ~64px
+  
+  // Zoomer progressivement
+  if (msPerPixel > targetMsPerPixel * 2) {
+    // Trop dézoomé, zoomer
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => zoomIn(), i * 100)
+    }
+  } else if (msPerPixel < targetMsPerPixel / 2) {
+    // Trop zoomé, dézoomer
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => zoomOut(), i * 100)
+    }
+  }
+
+  // 2. Expand le thread
+  setTimeout(() => {
+    setExpandedThreadIds(prev => {
+      const newSet = new Set(prev)
+      newSet.add(activeThreadId)
+      return newSet
+    })
+  }, 500)
+
+  // 3. Scroll vers currentVisibleEventId si dispo, sinon vers le thread
+  setTimeout(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    let targetElement: Element | null = null
+
+    if (currentVisibleEventId) {
+      targetElement = container.querySelector(`[data-message-id="${currentVisibleEventId}"]`)
+    }
+
+    if (!targetElement) {
+      targetElement = container.querySelector(`[data-thread-id="${activeThreadId}"]`)
+    }
+
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, 600)
+}, [activeThreadId])
+
+/* -------------------- Marqueur "Vous êtes ici" = LIGNE HORIZONTALE sur l'event visible dans ChatPage -------------------- */
+
+useEffect(() => {
+  if (!currentVisibleEventId) {
+    const oldMarker = document.querySelector('.here-marker')
+    if (oldMarker) oldMarker.remove()
+    return
+  }
+
+  const updateMarker = () => {
+  const oldMarker = document.querySelector('.here-marker')
+  if (oldMarker) oldMarker.remove()
+
+  const container = scrollContainerRef.current
+  if (!container) return
+
+  // ✅ CHERCHER SEULEMENT DANS LE CONTAINER DE THREADSVIEW
+  const eventElement = container.querySelector(`[data-message-id="${currentVisibleEventId}"]`)
+  if (!eventElement) return
+    if (container) {
+      const elementRect = eventElement.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      
+      if (elementRect.bottom < containerRect.top || elementRect.top > containerRect.bottom) {
+        return
+      }
+    }
+
+    const marker = document.createElement('div')
+marker.className = 'here-marker absolute left-2 right-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none'
+marker.innerHTML = `
+  <div class="relative w-full h-16 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+`
+
+    if (window.getComputedStyle(eventElement).position === 'static') {
+      eventElement.classList.add('relative')
+    }
+    eventElement.appendChild(marker)
+  }
+
+  updateMarker()
+
+  let animationFrameId: number
+  const continuousUpdate = () => {
+    updateMarker()
+    animationFrameId = requestAnimationFrame(continuousUpdate)
+  }
+  animationFrameId = requestAnimationFrame(continuousUpdate)
+
+  return () => {
+    cancelAnimationFrame(animationFrameId)
+    const oldMarker = document.querySelector('.here-marker')
+    if (oldMarker) oldMarker.remove()
+  }
+}, [currentVisibleEventId])
+
   /* -------------------- Render -------------------- */
 
   if (threadsWithEvents.length === 0) {
@@ -408,9 +525,10 @@ useEffect(() => {
 
             return (
               <div
-                key={thread.id}
-                className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-900/10"
-              >
+  key={thread.id}
+  data-thread-id={thread.id}
+  className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-900/10"
+>
                 {/* Thread header */}
                 <div
                   onClick={() => toggleThread(thread.id)}
