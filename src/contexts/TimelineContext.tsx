@@ -202,8 +202,40 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
   /* -------------------- Selection -------------------- */
 
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
-  const [pinnedEventIds, setPinnedEventIds] = useState<string[]>([])
-  const [pinnedEventsColors, setPinnedEventsColors] = useState<Map<string, string>>(new Map())
+
+// Charger pins depuis localStorage
+const [pinnedEventIds, setPinnedEventIds] = useState<string[]>(() => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('bandhu_pinned_events')
+    return saved ? JSON.parse(saved) : []
+  }
+  return []
+})
+
+const [pinnedEventsColors, setPinnedEventsColors] = useState<Map<string, string>>(() => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('bandhu_pinned_colors')
+    if (saved) {
+      const obj = JSON.parse(saved)
+      return new Map(Object.entries(obj))
+    }
+  }
+  return new Map()
+})
+
+// Sauvegarder pins dans localStorage
+React.useEffect(() => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('bandhu_pinned_events', JSON.stringify(pinnedEventIds))
+  }
+}, [pinnedEventIds])
+
+React.useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const obj = Object.fromEntries(pinnedEventsColors)
+    localStorage.setItem('bandhu_pinned_colors', JSON.stringify(obj))
+  }
+}, [pinnedEventsColors])
 
   const toggleEventSelection = useCallback((id: string) => {
     setSelectedEventIds(prev =>

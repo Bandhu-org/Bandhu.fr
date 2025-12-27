@@ -45,22 +45,33 @@ const MessageItem = React.memo(({
   COLLAPSE_HEIGHT
 }: MessageItemProps) => {
   
-  const [showColorPicker, setShowColorPicker] = useState(false)
-  const currentColor = getPinColor(pinColor)
+const [showColorPicker, setShowColorPicker] = useState(false)
+const currentColor = getPinColor(pinColor)
+const colorPickerRef = React.useRef<HTMLDivElement>(null)
+const buttonRef = React.useRef<HTMLButtonElement>(null)
 
-  // Fermer le menu au clic externe
+// Fermer le menu au clic externe
 React.useEffect(() => {
   if (!showColorPicker) return
 
   const handleClickOutside = (e: MouseEvent) => {
-    const target = e.target as Element
-    if (!target.closest('.pin-color-picker')) {
+    const clickedInsidePicker = colorPickerRef.current?.contains(e.target as Node)
+    const clickedOnButton = buttonRef.current?.contains(e.target as Node)
+    
+    if (!clickedInsidePicker && !clickedOnButton) {
       setShowColorPicker(false)
     }
   }
 
+  // Petit délai pour que le clic d'ouverture soit ignoré
+  const timeoutId = setTimeout(() => {
   document.addEventListener('mousedown', handleClickOutside)
-  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, 50)
+
+  return () => {
+    clearTimeout(timeoutId)
+    document.removeEventListener('mousedown', handleClickOutside)
+  }
 }, [showColorPicker])
   
   const selectedMessageIds = new Set([event.id])
@@ -177,13 +188,15 @@ React.useEffect(() => {
             {/* Bouton PIN avec sélecteur de couleur */}
             <div className="relative">
               <button 
-                onClick={() => {
-                  if (isPinned) {
-                    setShowColorPicker(!showColorPicker)
-                  } else {
-                    onTogglePin?.(event.id, 'yellow')
-                  }
-                }}
+  ref={buttonRef}
+  onClick={(e) => {
+    e.stopPropagation()
+    if (isPinned) {
+      setShowColorPicker(!showColorPicker)
+    } else {
+      onTogglePin?.(event.id, 'yellow')
+    }
+  }}
                 className="group relative p-2 rounded transition-all hover:scale-110 hover:shadow-lg border"
                 style={isPinned ? {
                   color: currentColor.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')'),
@@ -209,7 +222,7 @@ React.useEffect(() => {
 
               {/* Menu sélecteur de couleurs */}
 {isPinned && showColorPicker && (
-  <div className="pin-color-picker absolute top-full mt-2 left-0 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-5 shadow-2xl z-[100] min-w-[240px]">
+  <div ref={colorPickerRef} className="pin-color-picker absolute top-full mt-2 left-0 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-5 shadow-2xl z-[100] min-w-[240px]">
   <div className="grid grid-cols-5 gap-4 mb-3">
                   {PIN_COLORS.map((color) => (
                     <button
@@ -381,13 +394,15 @@ React.useEffect(() => {
           {/* Bouton PIN avec sélecteur de couleur - IDENTIQUE */}
           <div className="relative">
             <button 
-              onClick={() => {
-                if (isPinned) {
-                  setShowColorPicker(!showColorPicker)
-                } else {
-                  onTogglePin?.(event.id, 'yellow')
-                }
-              }}
+  ref={buttonRef}
+  onClick={(e) => {
+    e.stopPropagation()
+    if (isPinned) {
+      setShowColorPicker(!showColorPicker)
+    } else {
+      onTogglePin?.(event.id, 'yellow')
+    }
+  }}
               className="group relative p-2 rounded transition-all hover:scale-110 hover:shadow-lg border"
               style={isPinned ? {
                 color: currentColor.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')'),
@@ -413,7 +428,7 @@ React.useEffect(() => {
 
             {/* Menu sélecteur de couleurs */}
             {isPinned && showColorPicker && (
-  <div className="pin-color-picker absolute bottom-full mb-2 left-0 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-5 shadow-2xl z-[100] min-w-[240px]">
+  <div ref={colorPickerRef} className="pin-color-picker absolute bottom-full mb-2 left-0 bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-5 shadow-2xl z-[100] min-w-[240px]">
   <div className="grid grid-cols-5 gap-4 mb-3">
                 {PIN_COLORS.map((color) => (
                   <button
