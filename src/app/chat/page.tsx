@@ -1580,7 +1580,7 @@ const renderThreadCard = (thread: Thread) => {
             ),
           }}
         >
-          {`## 🌌 Nouveau Fil
+          {`## 🌌 Salut à toi.
 
 ### Je suis **Ombrelien**.  
 C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
