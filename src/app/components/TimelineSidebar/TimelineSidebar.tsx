@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { useTimeline } from '@/contexts/TimelineContext'
+import { useTimeline, useZoom } from '@/contexts/TimelineContext'
 import TimelineView from './TimelineView'
 import ThreadsView from './ThreadsView'
 
@@ -13,16 +13,15 @@ interface TimelineSidebarProps {
 
 export default function TimelineSidebar({ activeThreadId, currentVisibleEventId }: TimelineSidebarProps) {
   const {
-    isTimelineOpen, 
-    closeTimeline,
-    densityRatio,
-    viewMode,
-    setViewMode,
-    // ✨ Zoom temporel
-    zoomIn,
-    zoomOut,
-    msPerPixel
-  } = useTimeline()
+  isTimelineOpen, 
+  closeTimeline,
+  densityRatio,
+  viewMode,
+  setViewMode
+} = useTimeline()
+
+// ✨ Zoom séparé !
+const { zoomIn, zoomOut, msPerPixel } = useZoom()
 
   // ✅ Si activeThreadId passé, forcer ThreadsView au mount
   useEffect(() => {

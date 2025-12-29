@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import { useTimeline } from '@/contexts/TimelineContext'
+import { useTimeline, useZoom } from '@/contexts/TimelineContext'
 import type { EventMetadata, EventDetails } from '@/types/timeline'
 
 /* ============================================================
@@ -122,20 +122,20 @@ function TemporalRuler({ scrollTop, clientHeight, totalHeight, yToDate, dateToY,
 
 export default function TimelineView() {
   const {
-    eventsMetadata,
-    isLoading,
-    densityRatio,
-    selectedEventIds,
-    toggleEventSelection,
-    dateToY,
-    yToDate,
-    getTotalHeight,
-    msPerPixel,
-    zoomIn,
-    zoomOut,
-    loadDetails,
-    getEventDetails
-  } = useTimeline()
+  eventsMetadata,
+  isLoading,
+  densityRatio,
+  selectedEventIds,
+  toggleEventSelection,
+  dateToY,
+  yToDate,
+  getTotalHeight,
+  loadDetails,
+  getEventDetails
+} = useTimeline()
+
+// ✨ Zoom séparé !
+const { msPerPixel, zoomIn, zoomOut } = useZoom()
 
   /* -------------------- Refs & State -------------------- */
 

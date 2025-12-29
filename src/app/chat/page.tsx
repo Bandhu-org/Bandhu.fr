@@ -32,7 +32,7 @@ import { ExportIcon } from '@/app/components/icons/ExportIcon'
 
 import { TimelineProvider, useTimeline } from '@/contexts/TimelineContext'
 import type { TimelineEvent } from '@/types/timeline'
-import TimelineSidebar from '@/app/components/TimelineSidebar/TimelineSidebar'
+import TimelineWrapper from '@/app/components/TimelineSidebar/TimelineWrapper'
 // En haut avec les autres imports :
 import TimelineToggleButton from '@/app/components/TimelineSidebar/TimelineToggleButton'
 // Composants extraits pour performance
@@ -68,6 +68,7 @@ const getActiveThreadKey = (userEmail?: string | null) => {
 const BOTTOM_SPACER = 755 // Marge fixe confortable
 
 export default function ChatPage() {
+  console.log("🔥 CHATPAGE RENDER")
   const router = useRouter()
   const { data: session, status } = useSession()
   const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
@@ -389,7 +390,7 @@ useEffect(() => {
     }
   }
 
-  const loadThread = async (threadId: string) => {
+  const loadThread = useCallback(async (threadId: string) => {
   try {
     setLoadingThreadId(threadId)
     setActiveThreadId(threadId)
@@ -412,7 +413,6 @@ useEffect(() => {
 
     const baseKey = getActiveThreadKey(session?.user?.email)
     if (baseKey && typeof window !== 'undefined') {
-      // On mémorise juste le dernier thread actif
       localStorage.setItem(baseKey, threadId)
 
       const scrollKey = `${baseKey}_scroll_${threadId}`
@@ -430,8 +430,6 @@ useEffect(() => {
           }
         }
 
-        // Fallback : si aucun scroll enregistré pour ce thread,
-        // on va au dernier message user (comportement actuel)
         scrollToBottom()
       }, 50)
     }
@@ -440,21 +438,15 @@ useEffect(() => {
   } finally {
     setLoadingThreadId(null)
   }
-}
+}, [session?.user?.email]) // ← DÉPENDANCES MINIMALES !
 
 // ========== EXPOSE loadThread GLOBALEMENT ==========
 useEffect(() => {
   if (typeof window !== 'undefined') {
-    ;(window as any).loadThread = loadThread
-    console.log('🌐 loadThread exposé globalement')
+    (window as any).loadThread = loadThread
   }
-  return () => {
-    if (typeof window !== 'undefined') {
-      delete (window as any).loadThread
-      console.log('🌐 loadThread nettoyé')
-    }
-  }
-}, [loadThread]) // Dépend de loadThread
+  // PAS de cleanup - inutile et provoque des micro-changements
+}, [loadThread])
 
   const renameThread = async (threadId: string, newLabel: string) => {
   // MAJ OPTIMISTE IMMÉDIATE
@@ -1901,8 +1893,8 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
     right: showExportModal ? '400px' : '0'
   }}
 >
-  {isTimelineOpen && <TimelineSidebar activeThreadId={activeThreadId} currentVisibleEventId={currentVisibleEventId} />}
+  {isTimelineOpen && <TimelineWrapper activeThreadId={activeThreadId} currentVisibleEventId={currentVisibleEventId} />}
 </div>
-    </div>
+    </div>  /*← Fermeture flex-1 chat area */
 )
 }
