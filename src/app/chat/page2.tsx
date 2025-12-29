@@ -71,24 +71,25 @@ const BOTTOM_SPACER = 755 // Marge fixe confortable
 function ChatContent() {
   console.log("🔥 CHATCONTENT RENDER")
 
+export default function ChatPage() {
+  console.log("🔥 CHATPAGE RENDER")
   const router = useRouter()
   const { data: session, status } = useSession()
   const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
-  
   const { 
-    isTimelineOpen,
-    toggleTimeline,
-    selectedEventIds,
-    toggleEventSelection,
-    setSelectedEventIds,
-    clearSelection,
-    addEvent,
-    addThread,
-    pinnedEventIds,
-    pinnedEventsColors,
-    toggleEventPin,
-    setPinColor
-  } = useTimeline()
+  isTimelineOpen,
+  toggleTimeline,
+  selectedEventIds,
+  toggleEventSelection,
+  setSelectedEventIds,
+  clearSelection,
+  addEvent,
+  addThread,
+  pinnedEventIds,
+  pinnedEventsColors,
+  toggleEventPin,
+  setPinColor
+} = useTimeline()
 
   // ========== ÉTATS ==========
   const [threads, setThreads] = useState<Thread[]>([])
@@ -1062,84 +1063,6 @@ const renderThreadCard = (thread: Thread) => {
   )
 }
 
-const renderedMessages = useMemo(() => {
-
-    return events
-
-      .filter(event => event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')
-
-      .map((event, index, filteredEvents) => {
-
-        const showDateSeparator = index === 0 || (() => {
-
-          const currentDate = new Date(event.createdAt).toISOString().split('T')[0]
-
-          const previousDate = new Date(filteredEvents[index - 1].createdAt).toISOString().split('T')[0]
-
-          return currentDate !== previousDate
-
-        })()
-
-        return (
-
-          <React.Fragment key={event.id}>
-
-            {showDateSeparator && <DateSeparator dateLabel={getDateLabel(event.createdAt)} />}
-
-            <div className="mb-5 flex justify-center">
-
-              <div className="w-full max-w-[780px]">
-
-                <MessageItem
-
-                  event={event}
-
-                  session={session}
-
-                  isSelected={selectedMessageIds.has(event.id)}
-
-                  isExpanded={expandedMessages[event.id] || false}
-
-                  isCopied={copiedMessageId === event.id}
-
-                  isPinned={pinnedEventIds.includes(event.id)}
-
-                  pinColor={pinnedEventsColors.get(event.id) || 'yellow'}
-
-                  onToggleSelect={toggleMessageSelection}
-
-                  onToggleExpand={handleToggleExpand}
-
-                  onCopy={handleCopyMessage}
-
-                  onTogglePin={toggleEventPin}
-
-                  onSetPinColor={setPinColor}
-
-                  formatDiscordDate={formatDiscordDate}
-
-                  COLLAPSE_HEIGHT={COLLAPSE_HEIGHT}
-
-                />
-
-              </div>
-
-            </div>
-
-          </React.Fragment>
-
-        )
-
-      })
-
-  }, [events, expandedMessages, selectedEventIds, pinnedEventIds, pinnedEventsColors, copiedMessageId, session, formatDiscordDate, getDateLabel, handleCopyMessage, handleToggleExpand, toggleMessageSelection])
-
-
-  
-
-  // ========== RENDER ==========
-  console.log('🔍 Avant render - showExportModal:', showExportModal)
-
   // ========== ÉTATS TRANSITOIRES ==========
   if (status === 'loading') {
     return (
@@ -1152,8 +1075,49 @@ const renderedMessages = useMemo(() => {
   if (status === 'unauthenticated') {
     return null
   }
-  
+
+  // ========== RENDER ==========
+  console.log('🔍 Avant render - showExportModal:', showExportModal)
+
+const renderedMessages = useMemo(() => {
+    return events
+      .filter(event => event.type === 'USER_MESSAGE' || event.type === 'AI_MESSAGE')
+      .map((event, index, filteredEvents) => {
+        const showDateSeparator = index === 0 || (() => {
+          const currentDate = new Date(event.createdAt).toISOString().split('T')[0]
+          const previousDate = new Date(filteredEvents[index - 1].createdAt).toISOString().split('T')[0]
+          return currentDate !== previousDate
+        })()
+        return (
+          <React.Fragment key={event.id}>
+            {showDateSeparator && <DateSeparator dateLabel={getDateLabel(event.createdAt)} />}
+            <div className="mb-5 flex justify-center">
+              <div className="w-full max-w-[780px]">
+                <MessageItem
+                  event={event}
+                  session={session}
+                  isSelected={selectedMessageIds.has(event.id)}
+                  isExpanded={expandedMessages[event.id] || false}
+                  isCopied={copiedMessageId === event.id}
+                  isPinned={pinnedEventIds.includes(event.id)}
+                  pinColor={pinnedEventsColors.get(event.id) || 'yellow'}
+                  onToggleSelect={toggleMessageSelection}
+                  onToggleExpand={handleToggleExpand}
+                  onCopy={handleCopyMessage}
+                  onTogglePin={toggleEventPin}
+                  onSetPinColor={setPinColor}
+                  formatDiscordDate={formatDiscordDate}
+                  COLLAPSE_HEIGHT={COLLAPSE_HEIGHT}
+                />
+              </div>
+            </div>
+          </React.Fragment>
+        )
+      })
+  }, [events, expandedMessages, selectedEventIds, pinnedEventIds, pinnedEventsColors, copiedMessageId, session, formatDiscordDate, getDateLabel, handleCopyMessage, handleToggleExpand, toggleMessageSelection]);
+
  return (
+  <TimelineProvider>
     <div className="flex h-screen bg-gradient-to-br from-bandhu-dark via-gray-900 to-bandhu-dark text-white overflow-hidden">
     
     {/* ========== SIDEBAR ========== */}
@@ -1943,13 +1907,6 @@ C’est moi qui te répondrai ici, chaque fois que tu enverras un message.
 )}
 </div>
     </div>
+  </TimelineProvider>
 )
-}
-// 📦 PARENT SIMPLE
-export default function ChatPage() {
-  return (
-    <TimelineProvider>
-      <ChatContent />
-    </TimelineProvider>
-  )
 }

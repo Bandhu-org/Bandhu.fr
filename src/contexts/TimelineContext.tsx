@@ -480,7 +480,7 @@ const setPinColor = useCallback((eventId: string, color: string) => {
 
   /* -------------------- Context value -------------------- */
 
-  const value: TimelineContextType = {
+  const value = useMemo<TimelineContextType>(() => ({
     eventsMetadata,
     eventsDetailsCache,
     threads,
@@ -516,9 +516,26 @@ const setPinColor = useCallback((eventId: string, color: string) => {
     setSelectedEventIds,
     toggleEventSelection,
     clearSelection,
-  }
+}), [
+  eventsMetadata,
+  eventsDetailsCache,
+  threads,
+  viewMode,
+  isLoading,
+  densityRatio,
+  timelineStart,
+  timelineEnd,
+  totalTimelineMs,
+  dateToY,
+  yToDate,
+  getTotalHeight,
+  isTimelineOpen,
+  selectedEventIds,
+  pinnedEventIds,
+  pinnedEventsColors
+])
 
-  return (
+return (
     <TimelineContext.Provider value={value}>
       {children}
     </TimelineContext.Provider>
