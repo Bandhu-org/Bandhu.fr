@@ -110,6 +110,82 @@ interface TimelineContextType {
 const TimelineContext = createContext<TimelineContextType | undefined>(undefined)
 
 /* ============================================================
+   TRIPLE CONTEXT ARCHITECTURE
+============================================================ */
+
+// 1. DATA CONTEXT - Contenu statique (events, threads, pins)
+interface TimelineDataContextType {
+  eventsMetadata: EventMetadata[]
+  eventsDetailsCache: Map<string, EventDetails>  // ← EventDetails avec S
+  threads: ThreadData[]                           // ← ThreadData
+  loadMetadata: () => Promise<void>
+  loadDetails: (eventIds: string[]) => Promise<void>
+  getEventDetails: (eventId: string) => EventDetails | undefined  // ← EventDetails
+  addEvent: (event: TimelineEvent) => void
+  addThread: (thread: ThreadData) => void        // ← ThreadData
+  pinnedEventIds: string[]
+  pinnedEventsColors: Map<string, string>        // ← string au lieu de PinColor
+  toggleEventPin: (eventId: string) => void
+  setPinColor: (eventId: string, color: string) => void  // ← string
+  selectedEventIds: string[]
+  setSelectedEventIds: (ids: string[] | ((prev: string[]) => string[])) => void
+  toggleEventSelection: (eventId: string) => void
+  clearSelection: () => void
+}
+
+// 2. RENDER CONTEXT - Calculs visuels (msPerPixel, positions)
+interface TimelineRenderContextType {
+  msPerPixel: number
+  densityRatio: number
+  timelineStart: Date
+  timelineEnd: Date
+  totalTimelineMs: number
+  dateToY: (date: Date) => number
+  yToDate: (y: number) => Date
+  getTotalHeight: () => number
+}
+
+// 3. UI CONTEXT - État interface (open, viewMode)
+interface TimelineUIContextType {
+  isTimelineOpen: boolean
+  toggleTimeline: () => void
+  openTimeline: () => void
+  closeTimeline: () => void
+  viewMode: 'timeline' | 'threads'
+  setViewMode: (mode: 'timeline' | 'threads') => void
+  isLoading: boolean
+}
+
+const TimelineDataContext = createContext<TimelineDataContextType | undefined>(undefined)
+const TimelineRenderContext = createContext<TimelineRenderContextType | undefined>(undefined)
+const TimelineUIContext = createContext<TimelineUIContextType | undefined>(undefined)
+
+// Hooks pour consommer les contextes
+export function useTimelineData() {
+  const ctx = useContext(TimelineDataContext)
+  if (!ctx) {
+    throw new Error('useTimelineData must be used inside TimelineProvider')
+  }
+  return ctx
+}
+
+export function useTimelineRender() {
+  const ctx = useContext(TimelineRenderContext)
+  if (!ctx) {
+    throw new Error('useTimelineRender must be used inside TimelineProvider')
+  }
+  return ctx
+}
+
+export function useTimelineUI() {
+  const ctx = useContext(TimelineUIContext)
+  if (!ctx) {
+    throw new Error('useTimelineUI must be used inside TimelineProvider')
+  }
+  return ctx
+}
+
+/* ============================================================
    ZOOM CONTEXT (SÉPARÉ)
 ============================================================ */
 
@@ -480,48 +556,36 @@ const setPinColor = useCallback((eventId: string, color: string) => {
 
   /* -------------------- Context value -------------------- */
 
-  const value = useMemo<TimelineContextType>(() => ({
-    eventsMetadata,
-    eventsDetailsCache,
-    threads,
-    viewMode,
-    setViewMode,
-    isLoading,
-
-    densityRatio,
-    timelineStart,
-    timelineEnd,
-    totalTimelineMs,
-
-    dateToY,
-    yToDate,
-    getTotalHeight,
-
-    isTimelineOpen,
-    toggleTimeline,
-    openTimeline,
-    closeTimeline,
-
-    loadMetadata,
-    loadDetails,
-    getEventDetails,
-    addEvent,
-    addThread,
-    pinnedEventIds,
-    pinnedEventsColors,
-    toggleEventPin,
-    setPinColor,
-
-    selectedEventIds,
-    setSelectedEventIds,
-    toggleEventSelection,
-    clearSelection,
+  // 1. DATA VALUE - Ne change QUE si events/threads changent
+const dataValue = useMemo<TimelineDataContextType>(() => ({
+  eventsMetadata,
+  eventsDetailsCache,
+  threads,
+  loadMetadata,
+  loadDetails,
+  getEventDetails,
+  addEvent,
+  addThread,
+  pinnedEventIds,
+  pinnedEventsColors,
+  toggleEventPin,
+  setPinColor,
+  selectedEventIds,
+  setSelectedEventIds,
+  toggleEventSelection,
+  clearSelection,
 }), [
   eventsMetadata,
   eventsDetailsCache,
   threads,
-  viewMode,
-  isLoading,
+  pinnedEventIds,
+  pinnedEventsColors,
+  selectedEventIds
+])
+
+// 2. RENDER VALUE - Change à chaque zoom
+const renderValue = useMemo<TimelineRenderContextType>(() => ({
+  msPerPixel,
   densityRatio,
   timelineStart,
   timelineEnd,
@@ -529,17 +593,41 @@ const setPinColor = useCallback((eventId: string, color: string) => {
   dateToY,
   yToDate,
   getTotalHeight,
+}), [
+  msPerPixel,
+  densityRatio,
+  timelineStart,
+  timelineEnd,
+  totalTimelineMs,
+  dateToY,
+  yToDate,
+  getTotalHeight
+])
+
+// 3. UI VALUE - Change rarement
+const uiValue = useMemo<TimelineUIContextType>(() => ({
   isTimelineOpen,
-  selectedEventIds,
-  pinnedEventIds,
-  pinnedEventsColors
+  toggleTimeline,
+  openTimeline,
+  closeTimeline,
+  viewMode,
+  setViewMode,
+  isLoading,
+}), [
+  isTimelineOpen,
+  viewMode,
+  isLoading
 ])
 
 return (
-    <TimelineContext.Provider value={value}>
-      {children}
-    </TimelineContext.Provider>
-  )
+  <TimelineDataContext.Provider value={dataValue}>
+    <TimelineRenderContext.Provider value={renderValue}>
+      <TimelineUIContext.Provider value={uiValue}>
+        {children}
+      </TimelineUIContext.Provider>
+    </TimelineRenderContext.Provider>
+  </TimelineDataContext.Provider>
+)
 }
 
 /* ============================================================

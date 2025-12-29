@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import { useTimeline, useZoom } from '@/contexts/TimelineContext'
+import { useTimelineData, useTimelineRender, useZoom } from '@/contexts/TimelineContext'
 import type { EventMetadata } from '@/types/timeline'
 import { getPinColor } from '@/constants/pinColors'
 
@@ -38,7 +38,8 @@ interface ThreadsViewProps {
 }
 
 export default function ThreadsView({ activeThreadId, currentVisibleEventId }: ThreadsViewProps) {
-  const {
+  // Data Context - Threads, events, sélection, pins
+const {
   threads,
   eventsMetadata,
   selectedEventIds,
@@ -47,10 +48,15 @@ export default function ThreadsView({ activeThreadId, currentVisibleEventId }: T
   loadDetails,
   pinnedEventIds,
   pinnedEventsColors
-} = useTimeline()
+} = useTimelineData()
 
-// ✨ ZOOM séparé !
-const { msPerPixel, zoomIn, zoomOut } = useZoom()
+// Render Context - Calculs de position
+const { msPerPixel, dateToY } = useTimelineRender()
+
+// Zoom Context
+const { zoomIn, zoomOut } = useZoom()
+
+
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isZooming, setIsZooming] = useState(false)

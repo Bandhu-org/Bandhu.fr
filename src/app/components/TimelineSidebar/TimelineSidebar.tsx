@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { useTimeline, useZoom } from '@/contexts/TimelineContext'
+import { useTimelineUI, useTimelineRender, useZoom } from '@/contexts/TimelineContext'
 import TimelineView from './TimelineView'
 import ThreadsView from './ThreadsView'
 
@@ -15,10 +15,12 @@ export default function TimelineSidebar({ activeThreadId, currentVisibleEventId 
   const {
   isTimelineOpen, 
   closeTimeline,
-  densityRatio,
   viewMode,
   setViewMode
-} = useTimeline()
+} = useTimelineUI()
+
+// densityRatio vient du Render Context
+const { densityRatio } = useTimelineRender()
 
 // ✨ Zoom séparé !
 const { zoomIn, zoomOut, msPerPixel } = useZoom()

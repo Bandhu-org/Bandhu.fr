@@ -30,7 +30,7 @@ import { SendIcon } from '@/app/components/icons/SendIcon'
 import Image from 'next/image'
 import { ExportIcon } from '@/app/components/icons/ExportIcon'
 
-import { TimelineProvider, useTimeline } from '@/contexts/TimelineContext'
+import { TimelineProvider, useTimeline, useTimelineData, useTimelineUI } from '@/contexts/TimelineContext'
 import type { TimelineEvent } from '@/types/timeline'
 import TimelineWrapper from '@/app/components/TimelineSidebar/TimelineWrapper'
 // En haut avec les autres imports :
@@ -75,20 +75,24 @@ function ChatContent() {
   const { data: session, status } = useSession()
   const { setHasSidebar, setIsSidebarCollapsed: setGlobalSidebarCollapsed } = useSidebar()
   
-  const { 
-    isTimelineOpen,
-    toggleTimeline,
-    selectedEventIds,
-    toggleEventSelection,
-    setSelectedEventIds,
-    clearSelection,
-    addEvent,
-    addThread,
-    pinnedEventIds,
-    pinnedEventsColors,
-    toggleEventPin,
-    setPinColor
-  } = useTimeline()
+  // ChatContent N'ÉCOUTE PAS le Render Context (msPerPixel, dateToY, etc.)
+const { 
+  selectedEventIds,
+  toggleEventSelection,
+  setSelectedEventIds,
+  clearSelection,
+  addEvent,
+  addThread,
+  pinnedEventIds,
+  pinnedEventsColors,
+  toggleEventPin,
+  setPinColor
+} = useTimelineData()
+
+const {
+  isTimelineOpen,
+  toggleTimeline
+} = useTimelineUI()
 
   // ========== ÉTATS ==========
   const [threads, setThreads] = useState<Thread[]>([])
