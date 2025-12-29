@@ -148,3 +148,13 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
     line-break: strict;
   }
 }
+
+/* --- PROTOCOLE ANTI-DÉRIVE VOR --- */
+* {
+  overflow-anchor: none !important;
+}
+
+.scrollbar-bandhu {
+  overflow-anchor: none !important;
+  scroll-behavior: auto !important;
+}

@@ -68,13 +68,6 @@ interface TimelineContextType {
   setViewMode: (mode: ViewMode) => void
   isLoading: boolean
 
-  /* Zoom */
-  zoomIndex: number
-  msPerPixel: number
-  zoomIn: () => void
-  zoomOut: () => void
-  setZoomIndex: (i: number) => void
-
   /* Derived */
   densityRatio: number
   timelineStart: Date
@@ -117,21 +110,29 @@ interface TimelineContextType {
 const TimelineContext = createContext<TimelineContextType | undefined>(undefined)
 
 /* ============================================================
-   PROVIDER
+   ZOOM CONTEXT (SÉPARÉ)
 ============================================================ */
 
-export function TimelineProvider({ children }: { children: ReactNode }) {
-  /* -------------------- Core state -------------------- */
+interface ZoomContextType {
+  zoomIndex: number
+  msPerPixel: number
+  zoomIn: () => void
+  zoomOut: () => void
+  setZoomIndex: (i: number) => void
+}
 
-  const [eventsMetadata, setEventsMetadata] = useState<EventMetadata[]>([])
-  const [eventsDetailsCache, setEventsDetailsCache] = useState<Map<string, EventDetails>>(new Map())
-  const [threads, setThreads] = useState<ThreadData[]>([])
-  const [viewMode, setViewMode] = useState<ViewMode>('timeline')
-  const [isLoading, setIsLoading] = useState(false)
+const ZoomContext = createContext<ZoomContextType | undefined>(undefined)
 
-  /* -------------------- Zoom discret -------------------- */
+export function useZoom() {
+  const ctx = useContext(ZoomContext)
+  if (!ctx) {
+    throw new Error('useZoom must be used inside ZoomProvider')
+  }
+  return ctx
+}
 
-  const [zoomIndex, setZoomIndex] = useState(12) // Par défaut : 1h/px
+function ZoomProvider({ children }: { children: ReactNode }) {
+  const [zoomIndex, setZoomIndex] = useState(12)
 
   const msPerPixel = useMemo(
     () => ZOOM_STEPS_MS[clamp(zoomIndex, 0, ZOOM_STEPS_MS.length - 1)],
@@ -147,6 +148,48 @@ export function TimelineProvider({ children }: { children: ReactNode }) {
     () => setZoomIndex(i => clamp(i + 1, 0, ZOOM_STEPS_MS.length - 1)),
     []
   )
+
+  const value: ZoomContextType = {
+    zoomIndex,
+    msPerPixel,
+    zoomIn,
+    zoomOut,
+    setZoomIndex
+  }
+
+  return (
+    <ZoomContext.Provider value={value}>
+      {children}
+    </ZoomContext.Provider>
+  )
+}
+
+/* ============================================================
+   PROVIDER
+============================================================ */
+
+export function TimelineProvider({ children }: { children: ReactNode }) {
+  return (
+    <ZoomProvider>
+      <TimelineProviderInner>
+        {children}
+      </TimelineProviderInner>
+    </ZoomProvider>
+  )
+}
+
+
+function TimelineProviderInner({ children }: { children: ReactNode }) {
+  // ✨ IMPORTER msPerPixel depuis ZoomContext
+  const { msPerPixel } = useZoom()
+  /* -------------------- Core state -------------------- */
+
+  const [eventsMetadata, setEventsMetadata] = useState<EventMetadata[]>([])
+  const [eventsDetailsCache, setEventsDetailsCache] = useState<Map<string, EventDetails>>(new Map())
+  const [threads, setThreads] = useState<ThreadData[]>([])
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline')
+  const [isLoading, setIsLoading] = useState(false)
+
 
   /* -------------------- Timeline bounds (basés sur les EVENTS) -------------------- */
 
@@ -444,12 +487,6 @@ const setPinColor = useCallback((eventId: string, color: string) => {
     viewMode,
     setViewMode,
     isLoading,
-
-    zoomIndex,
-    msPerPixel,
-    zoomIn,
-    zoomOut,
-    setZoomIndex,
 
     densityRatio,
     timelineStart,
