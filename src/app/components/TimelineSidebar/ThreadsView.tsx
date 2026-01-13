@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect, startTransition } from 'react'
 import { useTimelineData, useTimelineRender, useZoom } from '@/contexts/TimelineContext'
 import type { EventMetadata } from '@/types/timeline'
 import { getPinColor } from '@/constants/pinColors'
@@ -173,46 +173,32 @@ useEffect(() => {
   const container = scrollContainerRef.current;
   if (!container) return;
 
-  // ✨ THROTTLE GLOBAL
   let lastWheelTime = 0;
-  const WHEEL_THROTTLE_MS = 16; // 50ms entre chaque traitement wheel
+  const WHEEL_THROTTLE_MS = 50;
 
   const handleWheel = (e: WheelEvent) => {
-    // ✨ BLOQUAGE IMMÉDIAT si Ctrl/Cmd (empêche le zoom navigateur)
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      e.stopPropagation();
-    } else {
-      return; // Pas Ctrl, on laisse passer
-    }
+    // Bloquer le zoom navigateur
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    e.stopPropagation();
 
-    // ✨ THROTTLE : ignorer les wheels trop rapprochés
+    // Throttle
     const now = Date.now();
-    if (now - lastWheelTime < WHEEL_THROTTLE_MS) {
-      return;
-    }
+    if (now - lastWheelTime < WHEEL_THROTTLE_MS) return;
     lastWheelTime = now;
 
-    // 1. Verrouillage du moteur de zoom (Throttle interne)
-    if (isZoomingRef.current) return;
-    isZoomingRef.current = true;
-    
-    // UI simple sans déclencher de re-render massif
-    setIsZooming(true);
-
-    // 2. CAPTURE DE L'ANCRE (VERROUILLAGE STRICT)
-    // On ne cherche l'ancre QUE si elle n'existe pas déjà
+    // ✨ CAPTURE L'ANCRE UNE SEULE FOIS au début du zoom
     if (!anchorElementRef.current) {
       const containerRect = container.getBoundingClientRect();
-      const viewportCenterY = containerRect.top + containerRect.height / 2;
-
+      const centerY = containerRect.top + containerRect.height / 2;
+      
       const elements = Array.from(container.querySelectorAll('[data-message-id], .thread-header-item'));
-      let closest = null;
+      let closest: Element | null = null;
       let minDistance = Infinity;
 
       for (const el of elements) {
         const rect = el.getBoundingClientRect();
-        const dist = Math.abs((rect.top + rect.height / 2) - viewportCenterY);
+        const dist = Math.abs((rect.top + rect.height / 2) - centerY);
         if (dist < minDistance) {
           minDistance = dist;
           closest = el;
@@ -221,70 +207,57 @@ useEffect(() => {
 
       if (closest) {
         anchorElementRef.current = closest;
-        // On mémorise sa position RELATIVE au container une fois pour toutes
+        // Position relative au haut du container
         anchorOffsetRef.current = closest.getBoundingClientRect().top - containerRect.top;
+        isZoomingRef.current = true;
+        setIsZooming(true);
       }
     }
 
-    // 3. CAPTURE SYNCHRONE
-    const initialScroll = container.scrollTop;
-    const containerRect = container.getBoundingClientRect();
-    
-    // On capture le rect de l'ancre AVANT le changement de taille
-    const preZoomRect = anchorElementRef.current?.getBoundingClientRect();
-    const preZoomOffset = preZoomRect ? preZoomRect.top - containerRect.top : 0;
-
-    // 4. ACTION (Déclenche le re-render)
+    // Zoom
     if (e.deltaY < 0) zoomIn();
     else zoomOut();
-
-    // ✨ LA SOUDURE : On ré-impose immédiatement la position initiale.
-    // Cela tue le mouvement que le moteur de scroll natif essaie de lancer.
-    container.scrollTop = initialScroll;
-
-    // 5. COMPENSATION HAUTE FIDÉLITÉ (RÉFÉRENCE FIXE)
-    requestAnimationFrame(() => {
-      if (anchorElementRef.current && container) {
-        const _force = container.offsetHeight; // Force le calcul du layout
-
-        const currentRect = anchorElementRef.current.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        
-        // On calcule l'écart par rapport à la RÉFÉRENCE INITIALE
-        // anchorOffsetRef.current ne doit PLUS bouger pendant toute la durée du zoom
-        const actualTop = currentRect.top - containerRect.top;
-        const drift = actualTop - anchorOffsetRef.current;
-
-        // On corrige l'écart
-        container.scrollTop += drift;
-        
-        // --- SURTOUT PAS DE MISE À JOUR DE L'OFFSET ICI ---
-      }
-      isZoomingRef.current = false;
-    });
   };
 
-  // ✨ Reset de l'ancre quand on arrête de zoomer (Inactivité)
-  const stopZooming = () => {
-    setIsZooming(false);
-    isZoomingRef.current = false;
-    anchorElementRef.current = null;
-  };
-
+  // Reset de l'ancre après inactivité
   let timer: NodeJS.Timeout;
   const onWheelEnd = () => {
     clearTimeout(timer);
-    timer = setTimeout(stopZooming, 200);
+    timer = setTimeout(() => {
+      anchorElementRef.current = null;
+      isZoomingRef.current = false;
+      setIsZooming(false);
+    }, 300);
   };
 
-  container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+  container.addEventListener('wheel', handleWheel, { passive: false });
   container.addEventListener('wheel', onWheelEnd);
 
   return () => {
     container.removeEventListener('wheel', handleWheel);
     container.removeEventListener('wheel', onWheelEnd);
   };
-}, [zoomIn, zoomOut]); // ✨ DÉPENDANCES MINIMALES : Plus de stroboscope
+}, [zoomIn, zoomOut]);
+
+// ✨ COMPENSATION SYNCHRONE - S'exécute après le render mais avant l'affichage
+useLayoutEffect(() => {
+  if (!anchorElementRef.current || !scrollContainerRef.current || !isZoomingRef.current) return;
+
+  const container = scrollContainerRef.current;
+  const anchor = anchorElementRef.current;
+  
+  const containerRect = container.getBoundingClientRect();
+  const currentAnchorRect = anchor.getBoundingClientRect();
+
+  // Calculer de combien l'élément a bougé par rapport à notre offset cible
+  const currentOffset = currentAnchorRect.top - containerRect.top;
+  const diff = currentOffset - anchorOffsetRef.current;
+
+  if (Math.abs(diff) > 0.5) {
+    // Ajuster le scroll pour annuler le mouvement
+    container.scrollTop += diff;
+  }
+}, [msPerPixel]); // ← Se déclenche automatiquement à chaque zoom
 
 /* -------------------- 🔍 DIAGNOSTIC : Détecteur de conflit d'ancrage -------------------- */
 useEffect(() => {
