@@ -498,15 +498,12 @@ marker.innerHTML = `
     onMouseLeave={() => setIsMouseOver(false)}
   >
       {/* Header */}
-      <div className="text-xs text-gray-500 mb-4 px-2">
-        {threadsWithEvents.length} threads •{' '}
-        <span className="text-bandhu-primary ml-1">
-          {eventHeight.toFixed(0)}px/event
-        </span>
-        <span className="text-purple-400 ml-2">
-          • header: {threadHeaderHeight}px
-        </span>
-      </div>
+      <div className="text-xs text-gray-500 mb-4 px-2 flex items-center justify-between">
+  <span>{threadsWithEvents.length} threads</span>
+  <span className="text-bandhu-primary">
+    {Math.round((eventHeight / 280) * 100)}%
+  </span>
+</div>
 
       {/* Scroll container */}
       <div
@@ -653,30 +650,40 @@ const getDateLabel = (dateString: Date) => {
                           onClick={() => handleEventClick(event.id, event.threadId)}
                         >
                           {/* Dot */}
-                          <div 
-                            className="absolute left-0 top-1/2 -translate-y-1/2 w-8 flex justify-center z-20"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleEventSelection(event.id)
-                            }}
-                          >
-                            {isSelected && (
-                              <div className="absolute inset-0 rounded-full bg-bandhu-primary/30 animate-ping scale-75" />
-                            )}
-                            <div
-                              className={`rounded-full border transition-all duration-200 flex-shrink-0 ${
-                                isSelected
-                                  ? 'w-2.5 h-2.5 bg-bandhu-primary border-bandhu-primary shadow-[0_0_8px_rgba(168,85,247,0.6)]'
-                                  : event.role === 'user'
-                                    ? 'w-1.5 h-1.5 bg-blue-500/40 border-blue-400'
-                                    : 'w-1.5 h-1.5 bg-purple-500/40 border-purple-400'
-                              }`}
-                              style={{ 
-                                minWidth: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px', 
-                                minHeight: eventHeight < 15 ? '4px' : isSelected ? '10px' : '6px' 
-                              }}
-                            />
-                          </div>
+<div 
+  className="absolute left-0 top-1/2 -translate-y-1/2 w-8 flex justify-center z-20"
+  onClick={(e) => {
+    e.stopPropagation()
+    toggleEventSelection(event.id)
+  }}
+>
+  {isSelected && (
+    <div 
+      className="absolute inset-0 rounded-full bg-bandhu-primary/30 animate-ping"
+      style={{
+        width: Math.max(14, eventHeight * 0.20),
+        height: Math.max(14, eventHeight * 0.20)
+      }}
+    />
+  )}
+  <div
+    className={`rounded-full border transition-all duration-200 flex-shrink-0 ${
+      isSelected
+        ? 'bg-bandhu-primary border-bandhu-primary shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+        : event.role === 'user'
+          ? 'bg-blue-500/40 border-blue-400'
+          : 'bg-purple-500/40 border-purple-400'
+    }`}
+    style={{ 
+      width: isSelected 
+        ? Math.max(12, eventHeight * 0.18) 
+        : Math.max(6, eventHeight * 0.14),
+      height: isSelected 
+        ? Math.max(12, eventHeight * 0.18) 
+        : Math.max(6, eventHeight * 0.14)
+    }}
+  />
+</div>
 
                           {/* Bâtonnet PIN - À DROITE, COULEUR DYNAMIQUE */}
 {isPinned && (
@@ -743,11 +750,6 @@ const getDateLabel = (dateString: Date) => {
             )
           })}
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="text-xs text-gray-600 text-center py-1 border-t border-gray-800/30">
-        <span className="opacity-70">Ctrl+Molette pour zoomer</span>
       </div>
     </div>
   )
