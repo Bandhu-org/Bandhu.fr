@@ -133,3 +133,28 @@ textarea.scrollbar-bandhu::-webkit-scrollbar {
 .text-gradient-bandhu {
   @apply bg-gradient-to-r from-[#7c3aed] to-[#2563eb] bg-clip-text text-transparent;
 }
+
+.chat-area-margin {
+  transition: margin-right 300ms ease-in-out;
+}
+
+@layer utilities {
+  .break-safe {
+    /* Coupe uniquement si le mot dépasse la largeur du conteneur */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: normal; 
+    /* Force la rupture pour les chaînes sans espaces (le BIIIIIM) */
+    line-break: strict;
+  }
+}
+
+/* --- PROTOCOLE ANTI-DÉRIVE VOR --- */
+* {
+  overflow-anchor: none !important;
+}
+
+.scrollbar-bandhu {
+  overflow-anchor: none !important;
+  scroll-behavior: auto !important;
+}

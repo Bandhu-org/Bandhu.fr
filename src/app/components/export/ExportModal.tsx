@@ -525,17 +525,7 @@ setTimeout(() => {
   return (
     <>
       {/* SIDEBAR CONTAINER */}
-      <div className="
-  fixed inset-y-0 right-0 
-  w-full sm:w-[400px] md:w-[500px]
-  max-w-full z-50 
-  transform transition-transform duration-300 ease-in-out
-  lg:absolute lg:right-0 lg:transform-none lg:w-[600px] lg:h-full
-"
-  style={{ 
-    transform: isOpen ? 'translateX(0)' : 'translateX(100%)' 
-  }}
->
+      <div className="w-[400px] h-full bg-gray-900/50 backdrop-blur-sm border-l border-gray-800 flex flex-col">
         <div className="h-full bg-gray-900/50 backdrop-blur-sm border-l border-gray-800 flex flex-col">
           
           {/* Header avec style Bandhu */}
@@ -682,14 +672,19 @@ setTimeout(() => {
                   Chargement de vos conversations...
                 </div>
               </div>
-            ) : threads.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <div className="text-4xl mb-4">💬</div>
-                Aucune conversation à exporter pour le moment.
-              </div>
+            ) : threads.filter(t => t.events.some(e => e.selected)).length === 0 ? (
+  <div className="text-center py-12 text-gray-400">
+    <div className="text-4xl mb-4">🔍</div>
+    Aucun message sélectionné.
+    <p className="text-sm mt-2 text-gray-500">
+      Sélectionne des messages dans le chat pour les voir ici.
+    </p>
+  </div>
             ) : (
               <div className="space-y-6">
-                {threads.map((thread, threadIndex) => (
+                {threads
+  .filter(thread => thread.events.some(event => event.selected))
+  .map((thread, threadIndex) => (
                   <div 
                     key={thread.threadId} 
                     className="bg-gray-800/20 rounded-lg border border-gray-700/50 overflow-hidden hover:border-gray-600 transition-colors"
@@ -750,10 +745,12 @@ setTimeout(() => {
                     </div>
 
                     {/* Messages (seulement si expandé) */}
-                    {expandedThreads.has(thread.threadId) && (
-                      <div className="border-t border-gray-700/50 p-4 bg-gray-900/20">
-                        <div className="space-y-2">
-                          {thread.events.map((event) => (
+{expandedThreads.has(thread.threadId) && (
+  <div className="border-t border-gray-700/50 p-4 bg-gray-900/20">
+    <div className="space-y-2">
+      {thread.events
+        .filter(event => event.selected)  // ← AJOUTE CE FILTRE
+        .map((event) => (
                             <label
                               key={event.id}
                               data-event-id={event.id}

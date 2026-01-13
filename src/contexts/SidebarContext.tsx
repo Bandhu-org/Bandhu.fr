@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, ReactNode } from 'react'
 
 interface SidebarContextType {
   isSidebarCollapsed: boolean
@@ -15,15 +15,19 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [hasSidebar, setHasSidebar] = useState(false)
 
+  // ✨ MÉMOÏSER le value pour éviter les re-renders inutiles
+  const value = React.useMemo(
+    () => ({
+      isSidebarCollapsed,
+      setIsSidebarCollapsed,
+      hasSidebar,
+      setHasSidebar,
+    }),
+    [isSidebarCollapsed, hasSidebar]
+  )
+
   return (
-    <SidebarContext.Provider
-      value={{
-        isSidebarCollapsed,
-        setIsSidebarCollapsed,
-        hasSidebar,
-        setHasSidebar,
-      }}
-    >
+    <SidebarContext.Provider value={value}>
       {children}
     </SidebarContext.Provider>
   )
