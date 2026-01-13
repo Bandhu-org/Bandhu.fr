@@ -1,70 +1,342 @@
-// src/components/TimelineSidebar/ThreadsView.tsx
 'use client'
 
-import React, { useState, useCallback, useMemo } from 'react'
-import { useTimeline, type TimelineEvent, type ThreadData } from '@/contexts/TimelineContext'
+import React, { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect, startTransition } from 'react'
+import { useTimelineData, useTimelineRender, useZoom } from '@/contexts/TimelineContext'
+import type { EventMetadata } from '@/types/timeline'
+import { getPinColor } from '@/constants/pinColors'
 
-interface ThreadGroup extends ThreadData {
-  events: TimelineEvent[]
+/* ============================================================
+   CONSTANTS
+============================================================ */
+
+const THREAD_HEADER_HEIGHT_NORMAL = 48  // Header normal 2 lignes
+const THREAD_HEADER_HEIGHT_COMPACT = 24 // Header réduit 1 ligne
+const THREAD_HEADER_HEIGHT_STICK = 8    // Header bâtonnet
+
+const EVENT_MIN_HEIGHT = 6    // Bâtonnet ultra-dense
+const EVENT_MAX_HEIGHT = 120  // Preview 10 lignes
+
+/* ============================================================
+   TYPES
+============================================================ */
+
+interface ThreadGroup {
+  id: string
+  label: string
+  messageCount: number
+  lastActivity: Date
+  events: EventMetadata[]
 }
 
-export default function ThreadsView() {
-  const { 
-    threads, // threads du contexte
-    events,
-    densityLevel, 
-    getItemHeight, 
-    selectedEventIds, 
-    toggleEventSelection 
-  } = useTimeline()
-  
+/* ============================================================
+   MAIN COMPONENT
+============================================================ */
+
+interface ThreadsViewProps {
+  activeThreadId?: string | null
+  currentVisibleEventId?: string | null
+}
+
+export default function ThreadsView({ activeThreadId, currentVisibleEventId }: ThreadsViewProps) {
+  // Data Context - Threads, events, sélection, pins
+const {
+  threads,
+  eventsMetadata,
+  selectedEventIds,
+  toggleEventSelection,
+  getEventDetails,
+  loadDetails,
+  pinnedEventIds,
+  pinnedEventsColors
+} = useTimelineData()
+
+// Render Context - Calculs de position
+const { msPerPixel, dateToY } = useTimelineRender()
+
+// Zoom Context
+const { zoomIn, zoomOut } = useZoom()
+
+
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isZooming, setIsZooming] = useState(false)
+  const isZoomingRef = useRef(false)
   const [expandedThreadIds, setExpandedThreadIds] = useState<Set<string>>(new Set())
-  const itemHeight = getItemHeight()
+  const [frozenHeaderHeight, setFrozenHeaderHeight] = useState<number | null>(null)
+  const [isMouseOver, setIsMouseOver] = useState(false)
+  const [currentScrollPosition, setCurrentScrollPosition] = useState(0)
+  
+  // ✨ NOUVEAU : Verrouillage de l'élément d'ancrage
+  const anchorElementRef = useRef<Element | null>(null)
+  const anchorOffsetRef = useRef<number>(0)
 
-const threadsWithEvents = useMemo(() => {
-  const eventsByThread = new Map<string, TimelineEvent[]>()
-  
-  events.forEach(event => {
-    if (!eventsByThread.has(event.threadId)) {
-      eventsByThread.set(event.threadId, [])
-    }
-    eventsByThread.get(event.threadId)!.push(event)
-  })
-  
-  const result = threads
-    .map(thread => ({
-      ...thread,
-      events: eventsByThread.get(thread.id) || []
-    }))
-    .sort((a, b) => {
-      // Tri par lastActivity : ANCIEN en haut, RÉCENT en bas
-      return a.lastActivity.getTime() - b.lastActivity.getTime()
+  /* -------------------- Threads avec events -------------------- */
+
+  const threadsWithEvents = useMemo(() => {
+    const eventsByThread = new Map<string, EventMetadata[]>()
+
+    eventsMetadata.forEach(event => {
+      if (!eventsByThread.has(event.threadId)) {
+        eventsByThread.set(event.threadId, [])
+      }
+      eventsByThread.get(event.threadId)!.push(event)
     })
-  
-  return result
-}, [threads, events])
 
-const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
-    // 1. Charge le thread
-    if (typeof window !== 'undefined' && (window as any).loadThread) {
-      await (window as any).loadThread(threadId)
+    return threads
+      .map(thread => ({
+        id: thread.id,
+        label: thread.label,
+        messageCount: thread.messageCount,
+        lastActivity: thread.lastActivity,
+        events: (eventsByThread.get(thread.id) || [])
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      }))
+      .sort((a, b) => a.lastActivity.getTime() - b.lastActivity.getTime())
+  }, [threads, eventsMetadata])
+
+  /* -------------------- Calcul hauteur event -------------------- */
+
+  const eventHeight = useMemo(() => {
+    const mappings = [
+  // --- ZOOM EXTRÊME (plafond réduit à 280px) ---
+  { msPerPixel: 20,          height: 280 }, 
+  { msPerPixel: 100,         height: 200 }, 
+  { msPerPixel: 500,         height: 140 },
+  { msPerPixel: 1000,        height: 100 },
+
+  // --- TRANSITION DOUCE ---
+  { msPerPixel: 2000,        height: 95 },
+  { msPerPixel: 3500,        height: 90 },
+  { msPerPixel: 5000,        height: 85 },
+  { msPerPixel: 15000,       height: 64 },
+  { msPerPixel: 60000,       height: 48 },
+  { msPerPixel: 120000,      height: 42 },
+  { msPerPixel: 300000,      height: 20 },
+  { msPerPixel: 1000000,     height: 15 },
+  { msPerPixel: 3600000,     height: 12 },
+  { msPerPixel: 604800000,   height: 6 },
+]
+
+    if (msPerPixel <= mappings[0].msPerPixel) return mappings[0].height
+    if (msPerPixel >= mappings[mappings.length - 1].msPerPixel) return mappings[mappings.length - 1].height
+
+    let lower = mappings[0]
+    let upper = mappings[mappings.length - 1]
+
+    for (let i = 0; i < mappings.length - 1; i++) {
+      if (msPerPixel >= mappings[i].msPerPixel && msPerPixel <= mappings[i + 1].msPerPixel) {
+        lower = mappings[i]
+        upper = mappings[i + 1]
+        break
+      }
+    }
+
+    const ratio = (msPerPixel - lower.msPerPixel) / (upper.msPerPixel - lower.msPerPixel)
+    const interpolated = lower.height + (upper.height - lower.height) * ratio
+
+    return Math.round(interpolated * 10) / 10
+  }, [msPerPixel])
+
+  /* -------------------- Calcul hauteur thread header -------------------- */
+
+  const threadHeaderHeight = useMemo(() => {
+    if (eventHeight <= 12) return 8
+    
+    if (eventHeight < 64) {
+      const ratio = (eventHeight - 12) / (64 - 12)
+      return Math.round(8 + (24 - 8) * ratio)
+    }
+
+    if (eventHeight < 150) {
+      const ratio = (eventHeight - 64) / (150 - 64)
+      return Math.round(24 + (48 - 24) * ratio)
+    }
+
+    return 48
+  }, [eventHeight])
+
+  /* -------------------- Charger détails des events visibles -------------------- */
+
+  useEffect(() => {
+    const allExpandedEvents = threadsWithEvents
+      .filter(t => expandedThreadIds.has(t.id))
+      .flatMap(t => t.events)
+      .map(e => e.id)
+
+    if (allExpandedEvents.length > 0) {
+      loadDetails(allExpandedEvents)
+    }
+  }, [expandedThreadIds, threadsWithEvents, loadDetails])
+
+  /* -------------------- GESTION DU ZOOM (VERSION STABILISÉE) -------------------- */
+useEffect(() => {
+  const container = scrollContainerRef.current;
+  if (!container) return;
+
+  let lastWheelTime = 0;
+  const WHEEL_THROTTLE_MS = 50;
+
+  const handleWheel = (e: WheelEvent) => {
+    // Bloquer le zoom navigateur
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Throttle
+    const now = Date.now();
+    if (now - lastWheelTime < WHEEL_THROTTLE_MS) return;
+    lastWheelTime = now;
+
+    // ✨ CAPTURE L'ANCRE UNE SEULE FOIS au début du zoom
+    if (!anchorElementRef.current) {
+      const containerRect = container.getBoundingClientRect();
+      const centerY = containerRect.top + containerRect.height / 2;
+      
+      const elements = Array.from(container.querySelectorAll('[data-message-id], .thread-header-item'));
+      let closest: Element | null = null;
+      let minDistance = Infinity;
+
+      for (const el of elements) {
+        const rect = el.getBoundingClientRect();
+        const dist = Math.abs((rect.top + rect.height / 2) - centerY);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closest = el;
+        }
+      }
+
+      if (closest) {
+        anchorElementRef.current = closest;
+        // Position relative au haut du container
+        anchorOffsetRef.current = closest.getBoundingClientRect().top - containerRect.top;
+        isZoomingRef.current = true;
+        setIsZooming(true);
+      }
+    }
+
+    // Zoom
+    if (e.deltaY < 0) zoomIn();
+    else zoomOut();
+  };
+
+  // Reset de l'ancre après inactivité
+  let timer: NodeJS.Timeout;
+  const onWheelEnd = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      anchorElementRef.current = null;
+      isZoomingRef.current = false;
+      setIsZooming(false);
+    }, 300);
+  };
+
+  container.addEventListener('wheel', handleWheel, { passive: false });
+  container.addEventListener('wheel', onWheelEnd);
+
+  return () => {
+    container.removeEventListener('wheel', handleWheel);
+    container.removeEventListener('wheel', onWheelEnd);
+  };
+}, [zoomIn, zoomOut]);
+
+// ✨ COMPENSATION SYNCHRONE - S'exécute après le render mais avant l'affichage
+useLayoutEffect(() => {
+  if (!anchorElementRef.current || !scrollContainerRef.current || !isZoomingRef.current) return;
+
+  const container = scrollContainerRef.current;
+  const anchor = anchorElementRef.current;
+  
+  const containerRect = container.getBoundingClientRect();
+  const currentAnchorRect = anchor.getBoundingClientRect();
+
+  // Calculer de combien l'élément a bougé par rapport à notre offset cible
+  const currentOffset = currentAnchorRect.top - containerRect.top;
+  const diff = currentOffset - anchorOffsetRef.current;
+
+  if (Math.abs(diff) > 0.5) {
+    // Ajuster le scroll pour annuler le mouvement
+    container.scrollTop += diff;
+  }
+}, [msPerPixel]); // ← Se déclenche automatiquement à chaque zoom
+
+/* -------------------- 🔍 DIAGNOSTIC : Détecteur de conflit d'ancrage -------------------- */
+useEffect(() => {
+  const container = scrollContainerRef.current
+  if (!container) return
+
+  let lastScrollTop = container.scrollTop
+  
+  const detectScrollChange = () => {
+    const currentScrollTop = container.scrollTop
+    
+    if (Math.abs(currentScrollTop - lastScrollTop) > 2 && isZoomingRef.current) {
+      console.warn('🚨 SCROLL MODIFIÉ PENDANT LE ZOOM !')
+      console.warn('   Delta:', currentScrollTop - lastScrollTop)
+      console.warn('   Coupable: Probablement Scroll Anchoring natif')
     }
     
-    // 2. Scroll après un délai
-    setTimeout(() => {
-      const targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
-      if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        targetElement.classList.add('timeline-event-highlight')
-        setTimeout(() => {
-          targetElement.classList.remove('timeline-event-highlight')
-        }, 1500)
-      }
-    }, 500) // Délai pour laisser le thread se charger
+    lastScrollTop = currentScrollTop
+    requestAnimationFrame(detectScrollChange)
   }
-, [densityLevel])
+  
+  const rafId = requestAnimationFrame(detectScrollChange)
+  
+  return () => cancelAnimationFrame(rafId)
+}, [])
 
-  const toggleThread = (threadId: string) => {
+/* -------------------- GESTION UI CTRL/CMD -------------------- */
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      setIsZooming(true);
+    }
+  };
+  
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      setIsZooming(false);
+    }
+  };
+  
+  const handleBlur = () => {
+    setIsZooming(false);
+  };
+  
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+  window.addEventListener('blur', handleBlur);
+  
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
+    window.removeEventListener('blur', handleBlur);
+  };
+}, []);
+
+/* -------------------- CURSEUR ZOOM CTRL/CMD -------------------- */
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) setIsZooming(true)
+  }
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) setIsZooming(false)
+  }
+  const handleBlur = () => setIsZooming(false)
+
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+  window.addEventListener('blur', handleBlur)
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
+    window.removeEventListener('blur', handleBlur)
+  }
+}, [])
+
+  /* -------------------- Toggle thread -------------------- */
+
+  const toggleThread = useCallback((threadId: string) => {
     setExpandedThreadIds(prev => {
       const newSet = new Set(prev)
       if (newSet.has(threadId)) {
@@ -74,369 +346,139 @@ const handleEventClick = useCallback(async (eventId: string, threadId: string) =
       }
       return newSet
     })
+  }, [])
+
+  /* -------------------- Handle event click -------------------- */
+
+  const handleEventClick = useCallback(async (eventId: string, threadId: string) => {
+    if (typeof window !== 'undefined' && (window as any).loadThread) {
+      await (window as any).loadThread(threadId)
+    }
+
+    setTimeout(() => {
+      const targetElement = document.querySelector(`[data-message-id="${eventId}"]`)
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        targetElement.classList.add('timeline-event-highlight')
+        setTimeout(() => {
+          targetElement.classList.remove('timeline-event-highlight')
+        }, 1500)
+      }
+    }, 500)
+  }, [])
+
+  /* -------------------- Auto-expand + zoom + scroll au mount (PREMIÈRE FOIS SEULEMENT) -------------------- */
+
+const hasInitializedRef = useRef(false)
+
+useEffect(() => {
+  if (!activeThreadId || hasInitializedRef.current) return
+
+  hasInitializedRef.current = true
+
+  // 1. Forcer un zoom confortable
+  const targetMsPerPixel = 15000 // 15s/px = events à ~64px
+  
+  // Zoomer progressivement
+  if (msPerPixel > targetMsPerPixel * 2) {
+    // Trop dézoomé, zoomer
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => zoomIn(), i * 100)
+    }
+  } else if (msPerPixel < targetMsPerPixel / 2) {
+    // Trop zoomé, dézoomer
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => zoomOut(), i * 100)
+    }
   }
 
-  // Re-calculer les events sélectionnés quand selectedEventIds change
-const selectedEventsSet = useMemo(() => 
-  new Set(selectedEventIds),
-  [selectedEventIds]
-)
+  // 2. Expand le thread
+  setTimeout(() => {
+    setExpandedThreadIds(prev => {
+      const newSet = new Set(prev)
+      newSet.add(activeThreadId)
+      return newSet
+    })
+  }, 500)
 
-  // ============================================================
-  // RENDER HEADER SELON DENSITÉ
-  // ============================================================
-  const renderThreadHeader = useCallback((thread: ThreadGroup, isExpanded: boolean) => {
-    const baseClasses = "cursor-pointer transition"
-    
-    
-    switch (densityLevel) {
-      case 0: // Détaillé (même hauteur qu'un event)
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} p-3 bg-gray-800/40 hover:bg-gray-800/60`}
-            style={{ height: itemHeight }}
-          >
-            <div className="flex items-center justify-between h-full">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-sm ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                    {isExpanded ? '▼' : '▶'}
-                  </span>
-                  <h3 className="font-medium text-gray-200">{thread.label}</h3>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500 ml-6">
-                  <span>{thread.messageCount} messages</span>
-                  <span>•</span>
-                  <span>{thread.lastActivity.toLocaleDateString('fr-FR')}</span>
-                </div>
-              </div>
-              <div className="w-2 h-2 rounded-full bg-bandhu-primary/60" />
-            </div>
-          </div>
-        )
+  // 3. Scroll vers currentVisibleEventId si dispo, sinon vers le thread
+  setTimeout(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
 
-      case 1: // Condensé
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} p-2 bg-gray-800/40 hover:bg-gray-800/60`}
-            style={{ height: itemHeight }}
-          >
-            <div className="flex items-center justify-between h-full">
-              <div className="flex items-center gap-2 flex-1">
-                <span className={`text-xs ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                  {isExpanded ? '▼' : '▶'}
-                </span>
-                <span className="font-medium text-sm text-gray-200 truncate">{thread.label}</span>
-                <span className="text-xs text-gray-500">({thread.messageCount})</span>
-              </div>
-              <div className="w-1.5 h-1.5 rounded-full bg-bandhu-primary/60" />
-            </div>
-          </div>
-        )
+    let targetElement: Element | null = null
 
-      case 2: // Dense
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} px-2 py-1 bg-gray-800/40 hover:bg-gray-800/60 flex items-center justify-between`}
-            style={{ height: itemHeight }}
-          >
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={`text-xs ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}>
-                {isExpanded ? '▼' : '▶'}
-              </span>
-              <span className="text-xs text-gray-300 truncate">{thread.label}</span>
-              <span className="text-xs text-gray-500">({thread.messageCount})</span>
-            </div>
-          </div>
-        )
-
-      case 3: // Bâtonnets
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} px-2 bg-gray-800/50 hover:bg-gray-800/70 flex items-center gap-1`}
-            style={{ height: itemHeight }}
-          >
-            <span className={`text-[10px] ${isExpanded ? 'text-bandhu-primary' : 'text-gray-500'}`}>
-              {isExpanded ? '▼' : '▶'}
-            </span>
-            <span className="text-[10px] text-gray-400 truncate flex-1">
-              {thread.label}
-            </span>
-            <span className="text-[10px] text-gray-600">{thread.messageCount}</span>
-          </div>
-        )
-
-      case 4: // Ultra-dense
-        return (
-          <div
-            onClick={() => toggleThread(thread.id)}
-            className={`${baseClasses} px-1 bg-gray-800/60 hover:bg-gray-800/80`}
-            style={{ height: itemHeight }}
-            title={`${thread.label} (${thread.messageCount} messages)`}
-          >
-            <div className={`h-full w-full rounded-sm ${
-              isExpanded ? 'bg-bandhu-primary/80' : 'bg-gray-600/80'
-            }`} />
-          </div>
-        )
+    if (currentVisibleEventId) {
+      targetElement = container.querySelector(`[data-message-id="${currentVisibleEventId}"]`)
     }
-  }, [densityLevel, itemHeight])
 
-  // ============================================================
-  // RENDER EVENT SELON DENSITÉ
-  // ============================================================
-  const renderEvent = useCallback((event: TimelineEvent) => {
-    const isSelected = selectedEventIds.includes(event.id)
-    switch (densityLevel) {
-      case 0:
-  return (
-    <div 
-      className="relative pl-6 h-full cursor-pointer"
-      onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
-    >
-            {/* Barre latérale cliquable avec tooltip et animations */}
-<div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {/* Effet de halo pulse quand sélectionné */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
-  )}
-  
-  {/* Le point principal */}
-  <div className={`
-    relative w-3 h-3 rounded-full border-2 transition-all duration-300
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-125 shadow-lg shadow-bandhu-primary/30' 
-      : event.role === 'user' 
-        ? 'bg-blue-500/20 border-blue-400 hover:border-blue-300 hover:scale-110' 
-        : event.role === 'assistant' 
-          ? 'bg-purple-500/20 border-purple-400 hover:border-purple-300 hover:scale-110'
-          : 'bg-gray-500/20 border-gray-400 hover:scale-110'
+    if (!targetElement) {
+      targetElement = container.querySelector(`[data-thread-id="${activeThreadId}"]`)
     }
-  `} />
-  
-  {/* Animation d'onde quand sélectionné */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-2 rounded-full bg-bandhu-primary/20 animate-pulse" />
-  )}
-  
-  {/* Tooltip */}
-  <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
-    {isSelected ? 'Désélectionner' : 'Sélectionner'}
-    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-  </div>
-</div>
-            <div className={`
-  ml-6 p-3 rounded-lg border-2 transition-all duration-300 h-full flex flex-col
-  ${isSelected
-    ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-md shadow-bandhu-primary/20'
-    : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600/70'
+
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, 600)
+}, [activeThreadId])
+
+/* -------------------- Marqueur "Vous êtes ici" = LIGNE HORIZONTALE sur l'event visible dans ChatPage -------------------- */
+
+useEffect(() => {
+  if (!currentVisibleEventId) {
+    const oldMarker = document.querySelector('.here-marker')
+    if (oldMarker) oldMarker.remove()
+    return
   }
-`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  event.role === 'user' ? 'bg-blue-900/30 text-blue-300' : 'bg-purple-900/30 text-purple-300'
-                }`}>
-                  {event.role === 'user' ? '👤' : '🌑'}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {event.createdAt.toLocaleDateString('fr-FR', {
-                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                  })}
-                </span>
-              </div>
-              <p className="text-sm text-gray-200 line-clamp-2 flex-1">{event.contentPreview}</p>
-            </div>
-          </div>
-        )
 
-      case 1:
-        case 1:
-  return (
-    <div 
-      className="relative pl-6 h-full cursor-pointer"
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-            <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {/* Halo pulse quand sélectionné */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/30 animate-ping" />
-  )}
-  
-  {/* Halo statique */}
-  {isSelected && (
-    <div className="absolute inset-0 -m-0.5 rounded-full bg-bandhu-primary/20" />
-  )}
-  
-  {/* Le point principal */}
-  <div className={`
-    relative w-2 h-2 rounded-full border transition-all duration-300
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-150 shadow-lg shadow-bandhu-primary/40' 
-      : event.role === 'user' 
-        ? 'bg-blue-500/40 border-blue-400/60 hover:border-blue-300 hover:scale-125' 
-        : event.role === 'assistant' 
-          ? 'bg-purple-500/40 border-purple-400/60 hover:border-purple-300 hover:scale-125'
-          : 'bg-gray-500/40 border-gray-400/60 hover:scale-125'
+  const updateMarker = () => {
+  const oldMarker = document.querySelector('.here-marker')
+  if (oldMarker) oldMarker.remove()
+
+  const container = scrollContainerRef.current
+  if (!container) return
+
+  // ✅ CHERCHER SEULEMENT DANS LE CONTAINER DE THREADSVIEW
+  const eventElement = container.querySelector(`[data-message-id="${currentVisibleEventId}"]`)
+  if (!eventElement) return
+    if (container) {
+      const elementRect = eventElement.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+      
+      if (elementRect.bottom < containerRect.top || elementRect.top > containerRect.bottom) {
+        return
+      }
     }
-  `} />
-  
-  {/* Animation d'onde au survol */}
-  <div className="absolute inset-0 -m-1 rounded-full bg-current opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-  
-  {/* Tooltip */}
-  <div className="absolute left-1/2 bottom-full transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-gray-700 shadow-xl z-20">
-    {isSelected ? 'Désélectionner ✓' : 'Sélectionner'}
-    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900/95 rotate-45 border-b border-r border-gray-700"></div>
-  </div>
-</div>
-            <div className={`
-  ml-6 p-2 rounded-lg border transition-all duration-200 h-full flex flex-col
-  ${isSelected
-    ? 'bg-gradient-to-r from-bandhu-primary/5 to-purple-500/5 border-bandhu-primary shadow-sm shadow-bandhu-primary/20'
-    : 'bg-gray-800/20 border-gray-700/30'
+
+    const marker = document.createElement('div')
+marker.className = 'here-marker absolute left-2 right-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none'
+marker.innerHTML = `
+  <div class="relative w-full h-16 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+`
+
+    if (window.getComputedStyle(eventElement).position === 'static') {
+      eventElement.classList.add('relative')
+    }
+    eventElement.appendChild(marker)
   }
-`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs text-gray-400">
-                  {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                  event.role === 'user' ? 'bg-blue-900/20 text-blue-300' : 'bg-purple-900/20 text-purple-300'
-                }`}>
-                  {event.role === 'user' ? 'Vous' : 'Assistant'}
-                </span>
-              </div>
-              <p className="text-xs text-gray-300 truncate flex-1">{event.contentPreview}</p>
-            </div>
-          </div>
-        )
 
-      case 2:
-  return (
-    <div 
-      className="relative pl-4 h-full flex items-center cursor-pointer"
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-            <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {isSelected && (
-    <>
-      <div className="absolute inset-0 -m-1 rounded-full bg-bandhu-primary/20 animate-pulse" />
-      <div className="absolute inset-0 -m-0.5 rounded-full bg-bandhu-primary/40" />
-    </>
-  )}
-  <div className={`
-    relative w-1.5 h-1.5 rounded-full border transition-all duration-200
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary scale-150 shadow-md shadow-bandhu-primary/30' 
-      : event.role === 'user' ? 'bg-blue-500/60 border-blue-400/50' 
-      : event.role === 'assistant' ? 'bg-purple-500/60 border-purple-400/50' 
-      : 'bg-gray-500/60 border-gray-400/50'
-    }
-  `} />
-</div>
-            <div className={`
-  ml-4 flex items-center justify-between w-full pr-2 transition-all duration-200
-  ${isSelected
-    ? 'px-2 py-1 rounded bg-bandhu-primary/5 border-l-2 border-bandhu-primary'
-    : ''
+  updateMarker()
+
+  let animationFrameId: number
+  const continuousUpdate = () => {
+    updateMarker()
+    animationFrameId = requestAnimationFrame(continuousUpdate)
   }
-`}>
-              <span className="text-xs text-gray-400 truncate">
-                {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-              <span className="text-xs text-gray-300 truncate max-w-[60%]">{event.contentPreview}</span>
-            </div>
-          </div>
-        )
+  animationFrameId = requestAnimationFrame(continuousUpdate)
 
-      case 3:
-  return (
-    <div 
-      className="relative pl-3 h-full flex items-center cursor-pointer"
-      onClick={() => handleEventClick(event.id, event.threadId)}
-    >
-            <div 
-  className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
-  title={isSelected ? "Désélectionner" : "Sélectionner"}
->
-  {isSelected && (
-    <div className="absolute inset-0 -m-0.5 rounded-sm bg-bandhu-primary/30 animate-pulse" />
-  )}
-  <div className={`
-    relative w-1 h-6 rounded-sm border transition-all duration-200
-    ${isSelected 
-      ? 'bg-bandhu-primary border-bandhu-primary shadow-sm shadow-bandhu-primary/40' 
-      : event.role === 'user' ? 'bg-blue-500/70 border-blue-400/60' 
-      : event.role === 'assistant' ? 'bg-purple-500/70 border-purple-400/60' 
-      : 'bg-gray-500/70 border-gray-400/60'
-    }
-  `} />
-</div>
-            <div className={`
-  ml-3 text-[10px] truncate w-full pr-2 px-1 py-0.5 rounded transition-all duration-200
-  ${isSelected
-    ? 'text-bandhu-primary bg-bandhu-primary/10 font-medium'
-    : 'text-gray-400'
+  return () => {
+    cancelAnimationFrame(animationFrameId)
+    const oldMarker = document.querySelector('.here-marker')
+    if (oldMarker) oldMarker.remove()
   }
-`}>
-              {event.contentPreview.substring(0, 40)}
-            </div>
-          </div>
-        )
+}, [currentVisibleEventId])
 
-      case 4:
-        return (
-          <div 
-  className={`absolute left-0 right-0 mx-2 rounded-sm cursor-pointer group transition-all duration-200 ${
-    isSelected 
-      ? 'bg-bandhu-primary shadow-md shadow-bandhu-primary/40 h-2 -my-0.5' 
-      : event.role === 'user' ? 'bg-blue-500/80' 
-      : event.role === 'assistant' ? 'bg-purple-500/80' 
-      : 'bg-gray-500/80'
-  }`}
-  style={{ height: isSelected ? '8px' : '6px' }}
-  title={isSelected ? "Désélectionner" : `${event.createdAt.toLocaleString()}: ${event.contentPreview}`}
-  onClick={(e) => {
-    e.stopPropagation()
-    toggleEventSelection(event.id)
-  }}
->
-  {isSelected && (
-    <div className="absolute inset-0 rounded-sm bg-white/20 animate-pulse" />
-  )}
-</div>
-        )
-    }
-  }, [densityLevel, selectedEventIds, handleEventClick, toggleEventSelection])  // ← AJOUTE LES DÉPENDANCES
+  /* -------------------- Render -------------------- */
 
   if (threadsWithEvents.length === 0) {
     return (
@@ -450,42 +492,265 @@ const selectedEventsSet = useMemo(() =>
   }
 
   return (
-    <div className="space-y-0.5">
-      {threadsWithEvents.map(thread => {
-        const isExpanded = expandedThreadIds.has(thread.id)
-        const threadHeight = isExpanded ? thread.events.length * itemHeight : 0
-
-        return (
-          <div key={thread.id} className="border border-gray-700/50 rounded overflow-hidden">
-            {/* Header adaptatif */}
-            {renderThreadHeader(thread, isExpanded)}
-
-            {/* Events du thread */}
-            {isExpanded && (
-              <div style={{ height: threadHeight }} className="relative bg-gray-900/20">
-                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
-                {thread.events.map((event, idx) => (
-                  <div
-  key={event.id}
-  style={{
-    position: 'absolute',
-    top: idx * itemHeight,
-    height: itemHeight,
-    width: '100%'
-  }}
-  className={`px-4 ${densityLevel >= 3 ? 'py-0' : 'py-2'} ${
-    densityLevel === 0 ? 'cursor-pointer' : ''
-  }`}
-  onClick={() => densityLevel === 0 && handleEventClick(event.id, event.threadId)}
->
-  {renderEvent(event)}
+  <div 
+    className="h-full flex flex-col"
+    onMouseEnter={() => setIsMouseOver(true)}
+    onMouseLeave={() => setIsMouseOver(false)}
+  >
+      {/* Header */}
+      <div className="text-xs text-gray-500 mb-4 px-2 flex items-center justify-between">
+  <span>{threadsWithEvents.length} threads</span>
+  <span className="text-bandhu-primary">
+    {Math.round((eventHeight / 280) * 100)}%
+  </span>
 </div>
-                ))}
-              </div>
-            )}
+
+      {/* Scroll container */}
+      <div
+  ref={scrollContainerRef}
+  className="flex-1 overflow-y-auto pl-2 overscroll-none relative scrollbar-bandhu"
+  style={{ 
+    overflowAnchor: 'none', 
+    scrollBehavior: 'auto',
+  }}
+>
+        {/* Viseur de zoom */}
+        <div 
+          className={`sticky top-1/2 left-0 right-0 -translate-y-1/2 pointer-events-none z-50 flex items-center justify-between transition-all duration-500 ${
+            isMouseOver && isZooming ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+          }`}
+          style={{ height: '0px' }} 
+        >
+          <div className="absolute left-0 right-0 h-[60px] bg-blue-600/10 blur-2xl -translate-y-1/2" />
+          <div className="absolute left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+          <div className="absolute left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-white/80 to-transparent shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
+          <div className="flex justify-between w-full px-2">
+            <div className="text-[14px] text-blue-400 animate-pulse font-black drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">▶</div>
+            <div className="text-[14px] text-blue-400 animate-pulse font-black drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">◀</div>
           </div>
-        )
-      })}
+        </div>
+
+        {/* Threads list */}
+        <div className="space-y-2 pb-10">
+          {threadsWithEvents.map(thread => {
+            const isExpanded = expandedThreadIds.has(thread.id)
+
+            return (
+              <div
+  key={thread.id}
+  data-thread-id={thread.id}
+  className="border border-gray-700/50 rounded-lg overflow-hidden bg-gray-900/10"
+>
+                {/* Thread header */}
+                <div
+                  onClick={() => toggleThread(thread.id)}
+                  className="cursor-pointer transition-colors bg-gray-800/40 hover:bg-gray-800/60 overflow-hidden relative"
+                  style={{ 
+                    height: frozenHeaderHeight ?? threadHeaderHeight,
+                    paddingLeft: threadHeaderHeight > 15 ? '0.75rem' : '0.25rem',
+                    paddingRight: threadHeaderHeight > 15 ? '0.75rem' : '0.25rem'
+                  }}
+                >
+                  <div className="flex items-center h-full gap-2">
+                    <span 
+                      className={`text-[10px] transition-all duration-300 flex-shrink-0 ${isExpanded ? 'text-bandhu-primary' : 'text-gray-400'}`}
+                      style={{ 
+                        opacity: threadHeaderHeight > 18 ? 1 : 0,
+                        transform: `scale(${threadHeaderHeight > 18 ? 1 : 0.5})`
+                      }}
+                    >
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                    
+                    <span 
+                      className="text-gray-200 truncate flex-1 transition-all duration-300 font-bold"
+                      style={{ 
+                        fontSize: threadHeaderHeight > 32 ? '14px' : '11px',
+                        opacity: threadHeaderHeight > 22 ? 1 : 0,
+                        textShadow: threadHeaderHeight > 40 ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'
+                      }}
+                    >
+                      {thread.label}
+                    </span>
+
+                    {threadHeaderHeight > 30 && (
+                      <span className="text-[10px] text-gray-500 opacity-60">
+                        ({thread.messageCount})
+                      </span>
+                    )}
+
+                    <div 
+                      className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${
+                        isExpanded ? 'bg-gradient-to-r from-bandhu-primary/40 to-bandhu-secondary/20' : 'bg-gray-700/40'
+                      }`}
+                      style={{ opacity: threadHeaderHeight <= 18 ? 1 : 0 }}
+                    />
+                  </div>
+                </div>
+
+                {/* Events */}
+                {isExpanded && (
+  <div className="bg-gray-900/20 relative px-4 py-2 space-y-2">
+    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-bandhu-primary/30 to-bandhu-secondary/30" />
+
+    {thread.events.map((event, index) => {
+  const isSelected = selectedEventIds.includes(event.id)
+  const isPinned = pinnedEventIds.includes(event.id)
+  const pinColor = getPinColor(pinnedEventsColors.get(event.id) || 'yellow')
+  const details = getEventDetails(event.id)
+
+      // Détecter si on change de jour
+      const showDateSeparator = index === 0 || (() => {
+        const currentDate = new Date(event.createdAt).toISOString().split('T')[0]
+        const previousDate = new Date(thread.events[index - 1].createdAt).toISOString().split('T')[0]
+        return currentDate !== previousDate
+      })()
+
+      // Formatter la date
+const getDateLabel = (dateString: Date) => {
+  const date = new Date(dateString)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const yesterday = new Date(today.getTime() - 86400000)
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  if (messageDate.getTime() === today.getTime()) return "Aujourd'hui"
+  if (messageDate.getTime() === yesterday.getTime()) return "Hier"
+  
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  
+  return `${day}/${month}/${year}`
+}
+
+      return (
+        <React.Fragment key={event.id}>
+          {/* Séparateur de date */}
+{showDateSeparator && (
+  <div className="flex items-center gap-2 my-3 px-2">
+    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+    <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+      {getDateLabel(event.createdAt)}
+    </span>
+    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+  </div>
+)}
+
+          {/* Event */}
+          <div
+                          data-message-id={event.id}
+                          style={{ 
+                            height: `${eventHeight}px`,
+                            minHeight: `${eventHeight}px`,
+                          }}
+                          className={`relative cursor-pointer group transition-colors duration-300 ${
+                            isSelected ? 'z-30' : 'z-10'
+                          }`}
+                          onClick={() => handleEventClick(event.id, event.threadId)}
+                        >
+                          {/* Dot */}
+<div 
+  className="absolute left-0 top-1/2 -translate-y-1/2 w-8 flex justify-center z-20"
+  onClick={(e) => {
+    e.stopPropagation()
+    toggleEventSelection(event.id)
+  }}
+>
+  {isSelected && (
+    <div 
+      className="absolute inset-0 rounded-full bg-bandhu-primary/30 animate-ping"
+      style={{
+        width: Math.max(14, eventHeight * 0.20),
+        height: Math.max(14, eventHeight * 0.20)
+      }}
+    />
+  )}
+  <div
+    className={`rounded-full border transition-all duration-200 flex-shrink-0 ${
+      isSelected
+        ? 'bg-bandhu-primary border-bandhu-primary shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+        : event.role === 'user'
+          ? 'bg-blue-500/40 border-blue-400'
+          : 'bg-purple-500/40 border-purple-400'
+    }`}
+    style={{ 
+      width: isSelected 
+        ? Math.max(12, eventHeight * 0.18) 
+        : Math.max(6, eventHeight * 0.14),
+      height: isSelected 
+        ? Math.max(12, eventHeight * 0.18) 
+        : Math.max(6, eventHeight * 0.14)
+    }}
+  />
+</div>
+
+                          {/* Bâtonnet PIN - À DROITE, COULEUR DYNAMIQUE */}
+{isPinned && (
+  <div 
+    className="absolute -right-1 top-0 bottom-0 w-1 rounded-full"
+    style={{
+      background: `linear-gradient(to bottom, ${pinColor.glow.replace('rgba(', 'rgb(').replace(',0.6)', ')')}, ${pinColor.glow.replace('0.6)', '0.8)')}, ${pinColor.glow.replace('0.6)', '1)')})`,
+      boxShadow: `0 0 8px ${pinColor.glow}`
+    }}
+  />
+)}
+
+                          {/* Container event */}
+                          <div 
+                            className={`ml-10 mr-2 flex flex-col transition-colors duration-200 ${
+                              eventHeight >= 32 
+                                ? 'rounded-lg border bg-gray-800/20 border-gray-700/30 shadow-sm' 
+                                : 'border-l-2 border-white/10'
+                            }`}
+                            style={{
+                              height: `${eventHeight}px`,
+                              padding: eventHeight > 48 ? '12px' : eventHeight > 32 ? '8px' : '4px',
+                              opacity: eventHeight <= 10 ? 0 : eventHeight <= 20 ? (eventHeight - 10) / 10 : 1,
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {/* Header (heure/role) */}
+                            {eventHeight >= 58 && (
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] text-gray-500 font-medium">
+                                  {event.createdAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold ${
+                                  event.role === 'user' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'
+                                }`}>
+                                  {event.role === 'user' ? 'Vous' : 'AI'}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Preview */}
+                            {details && eventHeight >= 20 && (
+                              <p 
+                                className="text-gray-200 leading-tight break-words"
+                                style={{
+  fontSize: eventHeight >= 120 ? '15px' : eventHeight <= 40 ? '11px' : `${11 + (eventHeight - 40) * (4 / 80)}px`,
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: Math.floor(eventHeight / 20),
+  overflow: 'hidden'
+}}
+                              >
+                                {details.contentPreview}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
