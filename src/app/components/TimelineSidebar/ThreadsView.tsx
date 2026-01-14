@@ -239,6 +239,72 @@ useEffect(() => {
   };
 }, [zoomIn, zoomOut]);
 
+/* -------------------- GESTION DU PINCH-TO-ZOOM MOBILE -------------------- */
+useEffect(() => {
+  const container = scrollContainerRef.current
+  if (!container) return
+
+  let initialDistance = 0
+  let lastZoomTime = 0
+  const ZOOM_THROTTLE = 100 // ms entre chaque zoom
+
+  const handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Capturer la distance initiale entre les 2 doigts
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      initialDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      )
+    }
+  }
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault() // Empêche le zoom du navigateur
+      
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      const currentDistance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      )
+
+      // Throttle pour éviter trop de zooms
+      const now = Date.now()
+      if (now - lastZoomTime < ZOOM_THROTTLE) return
+      lastZoomTime = now
+
+      // Calculer la différence
+      const diff = currentDistance - initialDistance
+
+      if (Math.abs(diff) > 20) { // Seuil de sensibilité
+        if (diff > 0) {
+          zoomIn() // Écarter les doigts = zoom avant
+        } else {
+          zoomOut() // Rapprocher les doigts = zoom arrière
+        }
+        initialDistance = currentDistance // Reset la référence
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    initialDistance = 0
+  }
+
+  container.addEventListener('touchstart', handleTouchStart, { passive: false })
+  container.addEventListener('touchmove', handleTouchMove, { passive: false })
+  container.addEventListener('touchend', handleTouchEnd)
+
+  return () => {
+    container.removeEventListener('touchstart', handleTouchStart)
+    container.removeEventListener('touchmove', handleTouchMove)
+    container.removeEventListener('touchend', handleTouchEnd)
+  }
+}, [zoomIn, zoomOut])
+
 // ✨ COMPENSATION SYNCHRONE - S'exécute après le render mais avant l'affichage
 useLayoutEffect(() => {
   if (!anchorElementRef.current || !scrollContainerRef.current || !isZoomingRef.current) return;
