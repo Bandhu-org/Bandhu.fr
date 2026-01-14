@@ -239,24 +239,50 @@ useEffect(() => {
   };
 }, [zoomIn, zoomOut]);
 
-/* -------------------- GESTION DU PINCH-TO-ZOOM MOBILE -------------------- */
+/* -------------------- GESTION DU PINCH-TO-ZOOM MOBILE (VERSION STABILISÉE) -------------------- */
 useEffect(() => {
   const container = scrollContainerRef.current
   if (!container) return
 
   let initialDistance = 0
   let lastZoomTime = 0
-  const ZOOM_THROTTLE = 100 // ms entre chaque zoom
+  const ZOOM_THROTTLE = 100
 
   const handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
-      // Capturer la distance initiale entre les 2 doigts
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
       initialDistance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       )
+
+      // ✨ CAPTURE L'ANCRE UNE SEULE FOIS au début du pinch
+      if (!anchorElementRef.current) {
+        const containerRect = container.getBoundingClientRect()
+        const centerY = containerRect.top + containerRect.height / 2
+
+        const elements = Array.from(container.querySelectorAll('[data-message-id], .thread-header-item'))
+        let closest: Element | null = null
+        let minDistance = Infinity
+
+        for (const el of elements) {
+          const rect = el.getBoundingClientRect()
+          const dist = Math.abs((rect.top + rect.height / 2) - centerY)
+          if (dist < minDistance) {
+            minDistance = dist
+            closest = el
+          }
+        }
+
+        if (closest) {
+          anchorElementRef.current = closest
+          // Position relative au haut du container
+          anchorOffsetRef.current = closest.getBoundingClientRect().top - containerRect.top
+          isZoomingRef.current = true
+          setIsZooming(true)
+        }
+      }
     }
   }
 
@@ -271,7 +297,7 @@ useEffect(() => {
         touch2.clientY - touch1.clientY
       )
 
-      // Throttle pour éviter trop de zooms
+      // Throttle
       const now = Date.now()
       if (now - lastZoomTime < ZOOM_THROTTLE) return
       lastZoomTime = now
@@ -279,7 +305,7 @@ useEffect(() => {
       // Calculer la différence
       const diff = currentDistance - initialDistance
 
-      if (Math.abs(diff) > 20) { // Seuil de sensibilité
+      if (Math.abs(diff) > 30) { // Seuil plus élevé pour éviter les zooms accidentels
         if (diff > 0) {
           zoomIn() // Écarter les doigts = zoom avant
         } else {
@@ -292,16 +318,25 @@ useEffect(() => {
 
   const handleTouchEnd = () => {
     initialDistance = 0
+    
+    // Reset de l'ancre après un délai
+    setTimeout(() => {
+      anchorElementRef.current = null
+      isZoomingRef.current = false
+      setIsZooming(false)
+    }, 300)
   }
 
   container.addEventListener('touchstart', handleTouchStart, { passive: false })
   container.addEventListener('touchmove', handleTouchMove, { passive: false })
   container.addEventListener('touchend', handleTouchEnd)
+  container.addEventListener('touchcancel', handleTouchEnd) // Au cas où le geste est interrompu
 
   return () => {
     container.removeEventListener('touchstart', handleTouchStart)
     container.removeEventListener('touchmove', handleTouchMove)
     container.removeEventListener('touchend', handleTouchEnd)
+    container.removeEventListener('touchcancel', handleTouchEnd)
   }
 }, [zoomIn, zoomOut])
 
