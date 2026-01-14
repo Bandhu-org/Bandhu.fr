@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-export default function ResetPasswordPage() {
+// 1. On crée le composant qui contient toute la logique
+function ResetPasswordContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [token, setToken] = useState('')
@@ -97,6 +98,19 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+// 2. Le composant exporté qui protège le build avec Suspense
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div style={styles.container}>
+        <p>Chargement du formulaire de sécurité...</p>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
 
