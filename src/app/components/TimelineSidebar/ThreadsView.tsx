@@ -246,10 +246,11 @@ useEffect(() => {
 
   let initialDistance = 0
   let lastZoomTime = 0
-  const ZOOM_THROTTLE = 100
+  const ZOOM_THROTTLE = 150 // Plus élevé pour mobile
 
   const handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
+      // Capturer la distance initiale
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
       initialDistance = Math.hypot(
@@ -280,7 +281,7 @@ useEffect(() => {
           // Position relative au haut du container
           anchorOffsetRef.current = closest.getBoundingClientRect().top - containerRect.top
           isZoomingRef.current = true
-          setIsZooming(true)
+          setIsZooming(true) // ← Active l'indicateur bleu
         }
       }
     }
@@ -289,6 +290,7 @@ useEffect(() => {
   const handleTouchMove = (e: TouchEvent) => {
     if (e.touches.length === 2) {
       e.preventDefault() // Empêche le zoom du navigateur
+      e.stopPropagation()
       
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
@@ -305,38 +307,41 @@ useEffect(() => {
       // Calculer la différence
       const diff = currentDistance - initialDistance
 
-      if (Math.abs(diff) > 30) { // Seuil plus élevé pour éviter les zooms accidentels
+      if (Math.abs(diff) > 40) { // Seuil encore plus élevé pour mobile
         if (diff > 0) {
           zoomIn() // Écarter les doigts = zoom avant
         } else {
           zoomOut() // Rapprocher les doigts = zoom arrière
         }
-        initialDistance = currentDistance // Reset la référence
+        initialDistance = currentDistance // Reset la référence pour le prochain mouvement
       }
     }
   }
 
+  // ✨ Reset de l'ancre après inactivité (COMME LA MOLETTE)
+  let timer: NodeJS.Timeout
   const handleTouchEnd = () => {
     initialDistance = 0
     
-    // Reset de l'ancre après un délai
-    setTimeout(() => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
       anchorElementRef.current = null
       isZoomingRef.current = false
-      setIsZooming(false)
+      setIsZooming(false) // ← Désactive l'indicateur bleu
     }, 300)
   }
 
   container.addEventListener('touchstart', handleTouchStart, { passive: false })
   container.addEventListener('touchmove', handleTouchMove, { passive: false })
   container.addEventListener('touchend', handleTouchEnd)
-  container.addEventListener('touchcancel', handleTouchEnd) // Au cas où le geste est interrompu
+  container.addEventListener('touchcancel', handleTouchEnd)
 
   return () => {
     container.removeEventListener('touchstart', handleTouchStart)
     container.removeEventListener('touchmove', handleTouchMove)
     container.removeEventListener('touchend', handleTouchEnd)
     container.removeEventListener('touchcancel', handleTouchEnd)
+    clearTimeout(timer)
   }
 }, [zoomIn, zoomOut])
 
