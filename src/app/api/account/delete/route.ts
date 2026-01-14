@@ -1,6 +1,6 @@
 // app/api/account/delete/route.ts
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from "@/lib/auth";
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
@@ -22,7 +22,7 @@ export async function DELETE(req: Request) {
     }
 
     // Supprime d'abord toutes les conversations (et messages en cascade)
-    await prisma.conversation.deleteMany({
+    await prisma.thread.deleteMany({
       where: { userId: user.id }
     })
 
