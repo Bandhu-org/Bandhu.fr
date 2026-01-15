@@ -246,7 +246,7 @@ useEffect(() => {
 
   let initialDistance = 0
   let lastZoomTime = 0
-  const ZOOM_THROTTLE = 150 // Plus élevé pour mobile
+  const ZOOM_THROTTLE = 50 // Plus élevé pour mobile
 
   const handleTouchStart = (e: TouchEvent) => {
     if (e.touches.length === 2) {
@@ -307,7 +307,7 @@ useEffect(() => {
       // Calculer la différence
       const diff = currentDistance - initialDistance
 
-      if (Math.abs(diff) > 40) { // Seuil encore plus élevé pour mobile
+      if (Math.abs(diff) > 20) { // Seuil encore plus élevé pour mobile
         if (diff > 0) {
           zoomIn() // Écarter les doigts = zoom avant
         } else {
