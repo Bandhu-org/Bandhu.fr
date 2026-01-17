@@ -11,9 +11,9 @@ export default function ClientLayout({
   return (
     <SidebarProvider>
       <div className="flex h-screen">
-        <div className="flex-1 overflow-hidden">
-          {children}
-        </div>
+        <div className="flex-1 overflow-y-auto scrollbar-bandhu">
+  {children}
+</div>
         <AuthFooter />
       </div>
     </SidebarProvider>
