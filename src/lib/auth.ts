@@ -69,14 +69,40 @@ export const authOptions: NextAuthOptions = {
         })
 
         const resend = new Resend(process.env.RESEND_API_KEY)
-        const verifyUrl = `${process.env.NEXTAUTH_URL}/emailverify?token=${VerificationToken}`
+const verifyUrl = `${process.env.NEXTAUTH_URL}/emailverify?token=${VerificationToken}`
 
-        await resend.emails.send({
-            from: 'noreply@bandhu.fr',
-            to: credentials.email,
-            subject: '🔥 Bienvenue chez Bandhu - Vérifiez votre email',
-            html: `` 
-        })
+await resend.emails.send({
+    from: 'noreply@bandhu.fr',
+    to: credentials.email,
+    subject: '🔥 Bienvenue chez Bandhu - Vérifie ton email',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #a855f7;">Bienvenue sur Bandhu !</h1>
+        <p style="font-size: 16px; line-height: 1.6;">
+          Merci de t'être inscrit. Clique sur le bouton ci-dessous pour vérifier ton adresse email :
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verifyUrl}" 
+             style="background: linear-gradient(to right, #a855f7, #60a5fa); 
+                    color: white; 
+                    padding: 12px 30px; 
+                    text-decoration: none; 
+                    border-radius: 8px; 
+                    font-weight: bold;
+                    display: inline-block;">
+            Vérifier mon email
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #666;">
+          Ou copie ce lien dans ton navigateur :<br>
+          <a href="${verifyUrl}" style="color: #a855f7;">${verifyUrl}</a>
+        </p>
+        <p style="font-size: 12px; color: #999; margin-top: 30px;">
+          Si tu n'as pas créé de compte, ignore cet email.
+        </p>
+      </div>
+    `
+})
         return null // Retourne null car l'utilisateur doit d'abord vérifier son mail
       }
     })
