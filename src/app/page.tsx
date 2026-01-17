@@ -60,30 +60,35 @@ export default function Home() {
     <main className="bg-bandhu-dark min-h-screen overflow-y-auto scrollbar-bandhu">
       <div className="container mx-auto px-6 py-12 max-w-6xl">
         
-        {/* Header Freaks Gallery */}
-<header className="text-center mb-16 pt-8">
-  <div className="inline-flex items-center gap-6 px-10 py-5 bg-bandhu-dark rounded-full">
-    {/* Supprime tout border du container parent */}
+        <header className="text-center mb-16 pt-8">
+  <div className="flex flex-col items-center gap-3">
     
-    {/* Logo Freaks Gallery - GROS ET ROND */}
-    <div className="w-28 h-28 relative rounded-full overflow-hidden border-8 border-black bg-white">
-      {/* border-4 (plus épais) et bg-white pour fond propre */}
+    {/* Logo avec ombre portée */}
+    <div className="w-32 h-32 relative rounded-full overflow-hidden border-8 border-black bg-white mb-4 shadow-2xl shadow-black/50">
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 z-10"></div>
       <Image 
         src="/images/logo-freaks.svg" 
         alt="Freaks Gallery" 
         fill
         className="object-contain p-1"  
-        /* object-contain (pas cover) + padding pour pas que le logo touche les bords */
-        sizes="112px"
+        sizes="128px"
         priority
       />
     </div>
     
+    {/* Ligne 1 avec gradient */}
+    <div className="text-3xl font-black tracking-wider bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent">
+      FREAKS GALLERY
+    </div>
     
-    {/* Texte - ajusté pour taille plus grande */}
-    <span className="text-gray-300 font-mono text-base tracking-widest">
-      FREAKS GALLERY "Tell me a story"
-    </span>
+    {/* Ligne 2 avec séparateur */}
+    <div className="flex items-center gap-4 mt-1">
+      <div className="w-12 h-px bg-gray-700"></div>
+      <div className="text-lg text-gray-400 font-mono italic">
+        "Tell me a story"
+      </div>
+      <div className="w-12 h-px bg-gray-700"></div>
+    </div>
     
   </div>
 </header>
@@ -103,7 +108,7 @@ export default function Home() {
           </div>
           
           {/* Titre */}
-          <h1 className="text-9xl font-black tracking-tight bandhu-gradient-text mb-6">
+          <h1 className="text-7xl font-black tracking-tight bandhu-gradient-text mb-6">
             Bandhu
           </h1>
           
@@ -140,7 +145,7 @@ export default function Home() {
                   )}
                 </div>
                 <span className="text-gray-300 group-hover:text-bandhu-primary font-mono text-sm">
-                  {isPlaying ? 'PAUSE' : 'ÉCOUTER LA TRANSMISSION'}
+                  {isPlaying ? 'PAUSE' : 'ÉCOUTER'}
                 </span>
               </button>
             </div>
