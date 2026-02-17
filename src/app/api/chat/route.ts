@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // ========== APPELER OPENAI ==========
     const response = await openai.chat.completions.create({
-      model: "chatgpt-4o-latest",
+      model: "gpt-4.1-2025-04-14",
       messages: [
         { 
           role: "system", 
